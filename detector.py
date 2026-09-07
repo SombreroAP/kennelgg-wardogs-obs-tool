@@ -1,0 +1,204 @@
+"""Track kill-feed rows across frames, decide each row once it has enough reads, then apply
+the event rules from config (multi-kill, long range, deaths, vehicles, team kills)."""
+import os
+import re
+import time
+from collections import Counter
+from dataclasses import dataclass, field
+
+import cv2
+import numpy as np
+
+from ocr import read_rows, sig_iou, vote_distance, name_matches
+from colors import relation
+
+
+@dataclass
+class FeedEvent:
+    killer: str          # OCR text of the killer column
+    victim: str          # OCR text of the victim column
+    distance_m: int
+    dist_conf: int       # number of OCR reads supporting distance_m
+    icons: list[str]
+    killer_rel: str      # me | squad | team | enemy | neutral | unknown
+    victim_rel: str
+    ts: float
+
+    @property
+    def killer_me(self): return self.killer_rel == "me"
+    @property
+    def victim_me(self): return self.victim_rel == "me"
+
+
+@dataclass
+class Trigger:
+    kind: str
+    title: str
+    events: list[FeedEvent]
+    tags: list[str] = field(default_factory=list)
+
+    @staticmethod
+    def build(kind, title, events, extra=()):
+        tags = {kind, *extra}
+        for ev in events:
+            tags.update(ev.icons)
+            if "skull" in ev.icons:
+                tags.add("headshot")
+            if ev.victim_rel in ("squad", "team"):
+                tags.add("teamkill")
+            if ev.victim_me:
+                tags.add("death")
+        return Trigger(kind, title, events, sorted(tags))
+
+
+@dataclass
+class _Row:
+    sig: np.ndarray
+    y: int
+    first: float
+    last: float
+    reads: list = field(default_factory=list)
+    done: bool = False
+    crop: np.ndarray | None = None
+
+
+class KillDetector:
+    SIG_MATCH = 0.40           # IoU vs the previous frame above this = same row still on screen
+    Y_MATCH = 8                # ...and within this many ROI px vertically
+    ROW_TTL_S = 0.3            # a row must be seen every frame (4 fps); the feed blanks ~0.5 s
+                               # between kills, and pixels can't tell two kills in one slot apart
+    FADE_IN_S = 0.5            # rows fade in; OCR is garbage before this
+    VOTES = 10                 # OCR samples before a row is decided (~2.5 s at 4 fps)
+    DUP_S = 15.0               # same slot + same distance + same roles within this = same kill
+
+    def __init__(self, cfg, dump_rows: str | None = None):
+        self.cfg = cfg
+        self.me = cfg["player_name"]
+        self.my_team = cfg.get("my_team", "auto")      # 'red' | 'blue' | 'green' | 'auto' (set by main from the HUD)
+        self.rules = cfg.get("rules") or []
+        self.dump_rows = dump_rows
+        self._rows: list[_Row] = []
+        self._decided: list[tuple[float, int, int, tuple]] = []   # (ts, y, dist, roles)
+        self._my_kills: list[FeedEvent] = []
+        self._last_trigger = float('-inf')
+        self._multikill_fired_for = 0
+        self._n = 0
+
+    # ---- frame in ---------------------------------------------------------------
+    def feed_frame(self, roi_bgr) -> list[Trigger]:
+        now = time.time()
+        events = []
+        for rd in read_rows(roi_bgr):
+            best, best_iou = None, 0.0
+            for r in self._rows:
+                if abs(r.y - rd.y) > self.Y_MATCH or r.last == now:
+                    continue
+                iou = sig_iou(r.sig, rd.sig)
+                if iou > best_iou:
+                    best, best_iou = r, iou
+            if best is None or best_iou < self.SIG_MATCH:
+                best = _Row(sig=rd.sig, y=rd.y, first=now, last=now)
+                self._rows.append(best)
+            best.last, best.sig, best.y = now, rd.sig, rd.y
+            if best.done or now - best.first < self.FADE_IN_S:
+                continue
+            best.reads.append(rd.ocr())              # only undecided rows cost tesseract time
+            if best.crop is None:
+                best.crop = rd._bgr
+            if len(best.reads) >= self.VOTES:
+                best.done = True
+                ev = self._decide(best)
+                if ev:
+                    events.append(ev)
+        # rows that vanish before VOTES reads are HUD noise / blips, not kills - dropped
+        self._rows = [r for r in self._rows if now - r.last < self.ROW_TTL_S]
+        return self._apply_rules(events, now)
+
+    def _decide(self, row: _Row) -> FeedEvent | None:
+        names = [r.name for r in row.reads]
+        victims = [r.victim for r in row.reads]
+        # majority of reads normally; crash rows (vehicle + explosion icons) sit on whatever the
+        # crash site looks like, so there two agreeing reads are enough
+        icon_reads = sum((r.icons for r in row.reads), [])
+        crash = "explosion" in icon_reads
+        need = 2 if crash else (len(names) // 2 + 1)
+        killer_me = (sum(name_matches(n, self.me) for n in names) >= need
+                     or sum(r.name_is_me for r in row.reads) >= 2)
+        victim_me = (sum(name_matches(v, self.me) for v in victims) >= need
+                     or sum(r.victim_is_me for r in row.reads) >= 2)
+        top = Counter(names).most_common(1)[0][0]
+        if len(re.sub(r"[^A-Za-z0-9]", "", top)) < 4 and not crash and not (killer_me or victim_me):
+            return None                                # no readable killer name: HUD/texture noise
+        kcol = Counter(r.name_color for r in row.reads).most_common(1)[0][0]
+        vcol = Counter(r.victim_color for r in row.reads).most_common(1)[0][0]
+        team = self.my_team if self.my_team in ("red", "blue", "green") else "unknown"
+        killer_rel = "me" if killer_me else relation(kcol, team)
+        victim_rel = "me" if victim_me else relation(vcol, team)
+        if not (killer_me or victim_me or "squad" in (killer_rel, victim_rel)):
+            return None                                # someone else's kill
+        dist, conf = vote_distance(sum((r.dists for r in row.reads), []))
+        dist = dist or 0
+        icons = [i for i, c in Counter(sum((r.icons for r in row.reads), [])).items()
+                 if c * 2 > len(row.reads)]
+        roles = (killer_rel, victim_rel)
+        # the feed shifts rows down as new ones arrive, so identity is (roles, distance, icons)
+        # inside a window, not the y position
+        self._decided = [x for x in self._decided if row.first - x[0] < self.DUP_S]
+        key = (roles, dist, tuple(sorted(icons)))
+        if any(x[1] == key for x in self._decided):
+            return None                                # same kill re-acquired after a shift / dropped frame
+        self._decided.append((row.first, key))
+        ev = FeedEvent(killer=Counter(names).most_common(1)[0][0], victim=Counter(victims).most_common(1)[0][0],
+                       distance_m=dist, dist_conf=conf, icons=icons,
+                       killer_rel=killer_rel, victim_rel=victim_rel, ts=row.first)
+        print(f"[feed] {killer_rel}({kcol}) {ev.killer!r} -> {victim_rel}({vcol}) {ev.victim!r}  "
+              f"{dist} m (x{conf}) icons={icons} reads={sum((r.dists for r in row.reads), [])}")
+        if self.dump_rows is not None and row.crop is not None:
+            os.makedirs(self.dump_rows, exist_ok=True)
+            self._n += 1
+            cv2.imwrite(os.path.join(self.dump_rows, f"row_{self._n:03d}_{dist}m.png"), row.crop)
+        return ev
+
+    # ---- events -> triggers ----------------------------------------------------------
+    def _apply_rules(self, events: list[FeedEvent], now) -> list[Trigger]:
+        out = []
+        win = self.cfg["multikill_window_s"]
+        self._my_kills = [k for k in self._my_kills if now - k.ts <= win]
+        if not self._my_kills:
+            self._multikill_fired_for = 0
+        for ev in events:
+            if ev.killer_me and ev.victim_rel not in ("me", "squad", "team"):
+                self._my_kills.append(ev)
+            for rule in self.rules:
+                if self._rule_hits(rule, ev):
+                    title = rule["title"].format(dist=ev.distance_m, killer=ev.killer, victim=ev.victim)
+                    out.append(Trigger.build(rule.get("kind", "rule"), title, [ev], rule.get("tags", ())))
+                    break                                  # first matching rule wins
+        n = len(self._my_kills)
+        if n >= self.cfg["multikill_min"] and n > self._multikill_fired_for:
+            names = {2: "Double", 3: "Triple", 4: "Quad", 5: "Penta"}.get(n, f"{n}x")
+            out.append(Trigger.build("multikill", f"{names} kill ({n} players)", list(self._my_kills), ("multikill",)))
+            self._multikill_fired_for = n
+        # cooldown: one trigger burst per cooldown_s (a multikill upgrade is always allowed)
+        keep = [t for t in out if t.kind == "multikill" or now - self._last_trigger >= self.cfg["cooldown_s"]]
+        if keep:
+            self._last_trigger = now
+        return keep
+
+    @staticmethod
+    def _rule_hits(rule: dict, ev: FeedEvent) -> bool:
+        # killer / victim in a rule: me | squad | team | friendly (squad or team) | enemy | other (not me) | any
+        def ok(want, rel):
+            return {"any": True, "me": rel == "me", "squad": rel == "squad", "team": rel == "team",
+                    "friendly": rel in ("squad", "team"), "enemy": rel == "enemy",
+                    "other": rel != "me"}[want]
+        if not ok(rule.get("killer", "any"), ev.killer_rel) or not ok(rule.get("victim", "any"), ev.victim_rel):
+            return False
+        if ev.distance_m < rule.get("min_dist", 0):
+            return False
+        if "min_dist" in rule and ev.dist_conf < rule.get("min_conf", 3):
+            return False                               # distance too uncertain for a range rule
+        need = rule.get("icon")
+        if need and not any(i.startswith(need) for i in ev.icons):
+            return False
+        return True

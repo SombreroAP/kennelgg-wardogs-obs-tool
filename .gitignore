@@ -1,0 +1,5 @@
+.venv/
+vod/
+debug/
+clips.jsonl
+__pycache__/
