@@ -42,6 +42,8 @@ COLOR_BANDS = None            # set from config by main/calibrate; None = colors
 class RowRead:
     y: int                    # row top in ROI pixels
     sig: np.ndarray           # bool array SIG_SHAPE[::-1]
+    prof: np.ndarray          # normalised column profile of the killer-name text (row identity)
+    vprof: np.ndarray         # same for the victim side (tells identical no-distance kills apart)
     _inv: np.ndarray          # inverted upscaled mask of the whole row (for lazy OCR)
     _mask: np.ndarray         # upscaled mask of the row (for icon matching)
     _bgr: np.ndarray          # original-resolution row crop (for dumping / labelling)
@@ -192,9 +194,26 @@ def read_rows(roi_bgr: np.ndarray) -> list[RowRead]:
         h = SIG_H_PX * SCALE
         S0 = int(max(0, min(H - h, cy - h / 2)))
         sig = cv2.resize(mask[S0:S0 + h], SIG_SHAPE, interpolation=cv2.INTER_AREA) > 64
-        out.append(RowRead(y=y0, sig=sig, _inv=inv[Y0:Y1], _mask=mask[Y0:Y1], _bgr=roi_bgr[y0:y1],
+        out.append(RowRead(y=y0, sig=sig, prof=name_profile(mask[Y0:Y1]), vprof=name_profile(mask[Y0:Y1], (0.5, 1.0)), _inv=inv[Y0:Y1], _mask=mask[Y0:Y1], _bgr=roi_bgr[y0:y1],
                            _hsv=hsv[Y0:Y1]))
     return out
+
+
+def name_profile(row_mask: np.ndarray, cols: tuple[float, float] = (0.05, NAME_COL[1])) -> np.ndarray:
+    """Column-sum profile of the killer-name glyphs, resampled to 128 and normalised. The feed
+    inserts new rows at the top and pushes the rest down, so a slot can change owner without
+    blanking; pixel IoU can't tell (~0.5 either way) but this profile can (swap ~0.1, same
+    row 0.5-1.0)."""
+    W = row_mask.shape[1]
+    p = (row_mask[:, int(W * cols[0]):int(W * cols[1])] > 0).sum(0).astype(np.float32)
+    p = cv2.resize(p.reshape(1, -1), (128, 1), interpolation=cv2.INTER_AREA).ravel()
+    p -= p.mean()
+    n = np.linalg.norm(p)
+    return p / n if n else p
+
+
+def prof_corr(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.dot(a, b))
 
 
 def sig_iou(a: np.ndarray, b: np.ndarray, cols: tuple[float, float] = (0.0, 1.0)) -> float:

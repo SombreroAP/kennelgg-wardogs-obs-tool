@@ -12,8 +12,10 @@ times a second, and when it sees **Sombrero** get a multi-kill or a long-range k
 ```
 pip install -r requirements.txt
 ```
-Windows (streaming PC): install Python 3.11+ from python.org with "Add to PATH" ticked,
-then `run.bat` creates the venv and starts the bot.
+**Windows (streaming PC):** unzip, run `install.bat` once (installs Python and Tesseract via
+winget if missing, creates the venv), fill `config.yaml`, run `setup.bat` (OBS sources, feed
+region check, Twitch login), then `ClipHound.bat` (`ClipHound.bat --dry-run` to test).
+Manual route: install Python 3.11+ with "Add to PATH" ticked and
 Install Tesseract: Windows → https://github.com/UB-Mannheim/tesseract/wiki (add to PATH),
 macOS → `brew install tesseract`.
 
@@ -98,9 +100,17 @@ python clips.py --tags            # tag counts
 Every trigger saves the replay buffer locally, so compilations can be cut from the renamed
 files without touching Twitch. Set the buffer to 90-120 s in OBS so the lead-up is included.
 
+## Icon catalogue
+`tools/extract_icons.py vod/*.mp4` harvests every feed icon from video slices, averages the
+sightings of each distinct shape into a clean mask and writes `icons/unlabelled/` plus a
+contact sheet. Label them in `icons/labels.json` (same label on several ids = variants), then
+`tools/build_catalogue.py` writes `icons/catalogue/<label>.png` (white on transparent, 4x),
+`<label>_64.png` and `<label>_dark.png` for overlays, the website or Discord. `?` entries in
+labels.json still need a name.
+
 ## Icons (tank / chopper / vehicle rules)
 Vehicle rules need a template of the feed icon. Included templates, cut from the 7 Sep VODs:
-`rifle`, `boltgun`, `sniper`, `heli`, `explosion`, `tank`, `artillery`, `car`, `rpg`, `c4`, `skull` (headshot),
+`rifle`, `boltgun`, `sniper`, `heli`, `explosion`, `tank`, `artillery`, `car`, `mortar`, `hammer`, `rpg`, `c4`, `skull` (headshot),
 and `name_me` (the streamer's own feed name; matched as pixels so identity survives
 backgrounds where OCR fails). Weapon icons are exclusive per row (best score wins);
 `skull` and `explosion` stack on top.

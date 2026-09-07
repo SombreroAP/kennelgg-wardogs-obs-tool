@@ -48,6 +48,12 @@ detection:
     - {kind: arty_kill,    killer: me,                         icon: artillery, title: "Artillery kill",  tags: [artillery]}
     - {kind: arty_death,   victim: me,                         icon: artillery, title: "Killed by artillery", tags: [artillery, death]}
     - {kind: car_death,    victim: me,                         icon: car,  title: "Run over",             tags: [car, death]}
+    - {kind: grenade_kill, killer: me,                         icon: grenade, title: "Grenade kill",       tags: [grenade, explosive]}
+    - {kind: grenade_death, victim: me,                        icon: grenade, title: "Killed by a grenade", tags: [grenade, death]}
+    - {kind: mortar_kill,  killer: me,                         icon: mortar, title: "Mortar kill",         tags: [mortar, explosive]}
+    - {kind: mortar_death, victim: me,                         icon: mortar, title: "Killed by a mortar",  tags: [mortar, death]}
+    - {kind: melee_kill,   killer: me,                         icon: hammer, title: "Hammer kill",         tags: [melee, hammer]}
+    - {kind: melee_death,  victim: me,                         icon: hammer, title: "Hammered",            tags: [melee, hammer, death]}
     - {kind: longrange,    killer: me,       victim: other,  min_dist: 120, title: "Long range shot {dist}m", tags: [longrange]}
     - {kind: sniped,       killer: other,    victim: me,     min_dist: 120, title: "Sniped from {dist}m", tags: [longrange, death]}
     - {kind: headshot,     killer: me,       victim: other,  icon: skull,   title: "Headshot {dist}m",    tags: [headshot]}

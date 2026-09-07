@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 import cv2
 import numpy as np
 
-from ocr import read_rows, sig_iou, vote_distance, name_matches
+from ocr import read_rows, sig_iou, prof_corr, vote_distance, name_matches
 from colors import relation
 
 
@@ -54,6 +54,8 @@ class Trigger:
 @dataclass
 class _Row:
     sig: np.ndarray
+    prof: np.ndarray
+    vprof: np.ndarray
     y: int
     first: float
     last: float
@@ -64,6 +66,7 @@ class _Row:
 
 class KillDetector:
     SIG_MATCH = 0.40           # IoU vs the previous frame above this = same row still on screen
+    PROF_MATCH = 0.45          # ...and the killer-name profile must correlate (catches slot swaps)
     Y_MATCH = 8                # ...and within this many ROI px vertically
     ROW_TTL_S = 0.3            # a row must be seen every frame (4 fps); the feed blanks ~0.5 s
                                # between kills, and pixels can't tell two kills in one slot apart
@@ -94,12 +97,12 @@ class KillDetector:
                 if abs(r.y - rd.y) > self.Y_MATCH or r.last == now:
                     continue
                 iou = sig_iou(r.sig, rd.sig)
-                if iou > best_iou:
+                if iou > best_iou and prof_corr(r.prof, rd.prof) >= self.PROF_MATCH:
                     best, best_iou = r, iou
             if best is None or best_iou < self.SIG_MATCH:
-                best = _Row(sig=rd.sig, y=rd.y, first=now, last=now)
+                best = _Row(sig=rd.sig, prof=rd.prof, vprof=rd.vprof, y=rd.y, first=now, last=now)
                 self._rows.append(best)
-            best.last, best.sig, best.y = now, rd.sig, rd.y
+            best.last, best.sig, best.prof, best.y = now, rd.sig, rd.prof, rd.y
             if best.done or now - best.first < self.FADE_IN_S:
                 continue
             best.reads.append(rd.ocr())              # only undecided rows cost tesseract time
@@ -138,16 +141,19 @@ class KillDetector:
             return None                                # someone else's kill
         dist, conf = vote_distance(sum((r.dists for r in row.reads), []))
         dist = dist or 0
-        icons = [i for i, c in Counter(sum((r.icons for r in row.reads), [])).items()
-                 if c * 2 > len(row.reads)]
+        # weapon icon: majority of reads; skull / explosion are small and flicker on busy
+        # backgrounds, so 30 % of reads (at least 2) is enough
+        cnt = Counter(sum((r.icons for r in row.reads), []))
+        icons = [i for i, c in cnt.items()
+                 if (c >= max(2, 0.3 * len(row.reads)) if i in ("skull", "explosion") else c * 2 > len(row.reads))]
         roles = (killer_rel, victim_rel)
         # the feed shifts rows down as new ones arrive, so identity is (roles, distance, icons)
         # inside a window, not the y position
         self._decided = [x for x in self._decided if row.first - x[0] < self.DUP_S]
         key = (roles, dist, tuple(sorted(icons)))
-        if any(x[1] == key for x in self._decided):
+        if any(x[1] == key and prof_corr(x[2], row.vprof) >= 0.8 for x in self._decided):
             return None                                # same kill re-acquired after a shift / dropped frame
-        self._decided.append((row.first, key))
+        self._decided.append((row.first, key, row.vprof))
         ev = FeedEvent(killer=Counter(names).most_common(1)[0][0], victim=Counter(victims).most_common(1)[0][0],
                        distance_m=dist, dist_conf=conf, icons=icons,
                        killer_rel=killer_rel, victim_rel=victim_rel, ts=row.first)
@@ -179,8 +185,16 @@ class KillDetector:
             names = {2: "Double", 3: "Triple", 4: "Quad", 5: "Penta"}.get(n, f"{n}x")
             out.append(Trigger.build("multikill", f"{names} kill ({n} players)", list(self._my_kills), ("multikill",)))
             self._multikill_fired_for = n
-        # cooldown: one trigger burst per cooldown_s (a multikill upgrade is always allowed)
-        keep = [t for t in out if t.kind == "multikill" or now - self._last_trigger >= self.cfg["cooldown_s"]]
+        # cooldown: one rule trigger per cooldown_s (a multikill upgrade is always allowed);
+        # several rows decided in the same frame share one clip
+        rule_ok = now - self._last_trigger >= self.cfg["cooldown_s"]
+        keep = []
+        for t in out:
+            if t.kind == "multikill":
+                keep.append(t)
+            elif rule_ok:
+                keep.append(t)
+                rule_ok = False
         if keep:
             self._last_trigger = now
         return keep
