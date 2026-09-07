@@ -93,12 +93,17 @@ bool obs_module_load(void)
 	g_engine = new Engine(main);
 	g_dock = new Dock(g_engine);
 	obs_frontend_add_dock_by_id("povbridge_dock", obs_module_text("POVBridge"), g_dock);
-	obs_frontend_add_tools_menu_item(obs_module_text("POVBridge.Settings"), [](void *) {
-		if (g_dock)
-			g_dock->openSettings();
-	}, nullptr);
-	g_hkToggle = obs_hotkey_register_frontend("povbridge.toggle", obs_module_text("POVBridge.Hotkey.Toggle"), hotkeyToggle, nullptr);
-	g_hkCapture = obs_hotkey_register_frontend("povbridge.capture", obs_module_text("POVBridge.Hotkey.Capture"), hotkeyCapture, nullptr);
+	obs_frontend_add_tools_menu_item(
+		obs_module_text("POVBridge.Settings"),
+		[](void *) {
+			if (g_dock)
+				g_dock->openSettings();
+		},
+		nullptr);
+	g_hkToggle = obs_hotkey_register_frontend("povbridge.toggle", obs_module_text("POVBridge.Hotkey.Toggle"),
+						  hotkeyToggle, nullptr);
+	g_hkCapture = obs_hotkey_register_frontend("povbridge.capture", obs_module_text("POVBridge.Hotkey.Capture"),
+						   hotkeyCapture, nullptr);
 	loadHotkeys();
 	obs_frontend_add_event_callback(onFrontendEvent, nullptr);
 	obs_log(LOG_INFO, "POVBridge loaded (version %s)", PLUGIN_VERSION);

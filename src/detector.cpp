@@ -94,7 +94,8 @@ std::vector<float> Detector::blur3(const std::vector<float> &g, int W, int H)
 	std::copy(tmp.end() - W, tmp.end(), out.end() - W);
 	for (int y = 1; y < H - 1; y++)
 		for (int x = 0; x < W; x++)
-			out[(size_t)y * W + x] = a * tmp[(size_t)(y - 1) * W + x] + b * tmp[(size_t)y * W + x] + a * tmp[(size_t)(y + 1) * W + x];
+			out[(size_t)y * W + x] = a * tmp[(size_t)(y - 1) * W + x] + b * tmp[(size_t)y * W + x] +
+						 a * tmp[(size_t)(y + 1) * W + x];
 	return out;
 }
 
@@ -145,8 +146,9 @@ void Detector::setTemplate(const std::vector<float> &gray, int w, int h, float w
 	}
 }
 
-Detector::Hit Detector::search(const std::vector<float> &g, const std::vector<double> &sum, const std::vector<double> &sq, int W, int H,
-			       const std::vector<float> &t, int tw, int th, int x0, int y0, int x1, int y1, int stride)
+Detector::Hit Detector::search(const std::vector<float> &g, const std::vector<double> &sum,
+			       const std::vector<double> &sq, int W, int H, const std::vector<float> &t, int tw, int th,
+			       int x0, int y0, int x1, int y1, int stride)
 {
 	(void)H;
 	Hit best;
@@ -154,7 +156,8 @@ Detector::Hit Detector::search(const std::vector<float> &g, const std::vector<do
 	int n = tw * th, iw = W + 1;
 	for (int y = y0; y <= y1; y += stride) {
 		for (int x = x0; x <= x1; x += stride) {
-			size_t a = (size_t)y * iw + x, b = (size_t)y * iw + x + tw, c = (size_t)(y + th) * iw + x, d = (size_t)(y + th) * iw + x + tw;
+			size_t a = (size_t)y * iw + x, b = (size_t)y * iw + x + tw, c = (size_t)(y + th) * iw + x,
+			       d = (size_t)(y + th) * iw + x + tw;
 			double ps = sum[d] - sum[b] - sum[c] + sum[a];
 			double pq = sq[d] - sq[b] - sq[c] + sq[a];
 			double var = pq - ps * ps / n;
@@ -193,8 +196,8 @@ Match Detector::compare(const Frame &f)
 	integral(g, W, H, sum, sq);
 
 	auto refine = [&](const Scaled &s, int cx, int cy, int r) {
-		return search(g, sum, sq, W, H, s.t, s.w, s.h, std::max(0, cx - r), std::max(0, cy - r), std::min(W - s.w, cx + r),
-			      std::min(H - s.h, cy + r), 1);
+		return search(g, sum, sq, W, H, s.t, s.w, s.h, std::max(0, cx - r), std::max(0, cy - r),
+			      std::min(W - s.w, cx + r), std::min(H - s.h, cy + r), 1);
 	};
 	auto fill = [&](const Scaled &s, const Hit &h) {
 		m.score = std::max(0.0, h.score);

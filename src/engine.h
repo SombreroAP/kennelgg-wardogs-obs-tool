@@ -36,7 +36,7 @@ public:
 
 	void start();
 	void stop();
-	void reloadConfig();   // after the settings dialog saved
+	void reloadConfig(); // after the settings dialog saved
 	void loadTemplates();
 
 public slots:

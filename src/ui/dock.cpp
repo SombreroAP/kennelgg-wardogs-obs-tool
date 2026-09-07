@@ -60,7 +60,8 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 		Match m = e_->lastGame();
 		meter_->setValue(m.score < 0 ? 0 : (int)(m.score * 1000));
 		if (e_->revivingRecent())
-			state_->setText(QString::fromStdString(e_->stateText()) + QString(" (%1%)").arg((int)(std::max(0.0, e_->reviveProgress()) * 100)));
+			state_->setText(QString::fromStdString(e_->stateText()) +
+					QString(" (%1%)").arg((int)(std::max(0.0, e_->reviveProgress()) * 100)));
 	});
 	connect(e_, &Engine::logged, this, [this](const QString &s) { last_->setText(s); });
 	refresh();

@@ -9,7 +9,9 @@ using clock_ = std::chrono::steady_clock;
 
 Engine::Engine(QObject *parent) : QObject(parent)
 {
-	sw.log = [this](const std::string &s) { log(QString::fromStdString(s)); };
+	sw.log = [this](const std::string &s) {
+		log(QString::fromStdString(s));
+	};
 	cfg.load();
 	loadTemplates();
 	detRevive_.fromX = 0.15f;
@@ -156,14 +158,19 @@ void Engine::tick()
 					if (r.revive.score >= detRevive_.threshold) {
 						// the progress ring sits at a fixed offset below the word (measured on a real frame)
 						float tw = r.revive.w * w;
-						float cx = r.revive.x * w + 0.47f * tw, cy = r.revive.y * h + 1.31f * tw, rad = 0.39f * tw;
+						float cx = r.revive.x * w + 0.47f * tw,
+						      cy = r.revive.y * h + 1.31f * tw, rad = 0.39f * tw;
 						int lit = 0, n = 72;
 						for (int i = 0; i < n; i++) {
 							float a = (float)i / n * 6.2831853f;
 							bool on = false;
 							for (int dr = -1; dr <= 1 && !on; dr++) {
-								int px = (int)std::lround(cx + (rad + dr) * std::cos(a)), py = (int)std::lround(cy + (rad + dr) * std::sin(a));
-								if (px >= 0 && py >= 0 && px < w && py < h && f.gray[(size_t)py * w + px] > 170)
+								int px = (int)std::lround(cx +
+											  (rad + dr) * std::cos(a)),
+								    py = (int)std::lround(cy +
+											  (rad + dr) * std::sin(a));
+								if (px >= 0 && py >= 0 && px < w && py < h &&
+								    f.gray[(size_t)py * w + px] > 170)
 									on = true;
 							}
 							lit += on;
@@ -174,7 +181,8 @@ void Engine::tick()
 				obs_source_release(fs);
 			}
 		}
-		QMetaObject::invokeMethod(this, [this, r = std::move(r)]() mutable { onResult(std::move(r)); }, Qt::QueuedConnection);
+		QMetaObject::invokeMethod(
+			this, [this, r = std::move(r)]() mutable { onResult(std::move(r)); }, Qt::QueuedConnection);
 	}).detach();
 }
 
@@ -234,7 +242,8 @@ void Engine::detect(const Match &m)
 	} else if (detected_ && upRun_ >= needUp && clock_::now() - downSince_ >= std::chrono::milliseconds(minDown)) {
 		detected_ = false;
 		if (applied_)
-			applyNow(false, fast ? "revived (friend's revive seen, damage log gone)" : QString("damage log gone (%1)").arg(m.score, 0, 'f', 3));
+			applyNow(false, fast ? "revived (friend's revive seen, damage log gone)"
+					     : QString("damage log gone (%1)").arg(m.score, 0, 'f', 3));
 	}
 }
 
@@ -256,7 +265,9 @@ void Engine::applyNow(bool on, const QString &why)
 		downSince_ = clock_::now();
 	else
 		detRevive_.unlock();
-	QString msg = (on ? QString("Showing %1's POV").arg(QString::fromStdString(cfg.active()->name)) : QString("Back to your POV")) + " - " + why + ".";
+	QString msg = (on ? QString("Showing %1's POV").arg(QString::fromStdString(cfg.active()->name))
+			  : QString("Back to your POV")) +
+		      " - " + why + ".";
 	if (!errors.empty()) {
 		msg += "  Problems: ";
 		for (size_t i = 0; i < errors.size(); i++)
@@ -309,7 +320,8 @@ void Engine::captureTemplate()
 		return;
 	}
 	int x = (int)std::lround(cfg.boxX * img.width()), y = (int)std::lround(cfg.boxY * img.height());
-	int w = std::max(8, (int)std::lround(cfg.boxW * img.width())), h = std::max(8, (int)std::lround(cfg.boxH * img.height()));
+	int w = std::max(8, (int)std::lround(cfg.boxW * img.width())),
+	    h = std::max(8, (int)std::lround(cfg.boxH * img.height()));
 	x = std::clamp(x, 0, img.width() - 8);
 	y = std::clamp(y, 0, img.height() - 8);
 	w = std::min(w, img.width() - x);
@@ -346,5 +358,6 @@ void Engine::previewLook(bool on)
 {
 	lookPreview_ = on && !applied_;
 	std::string e = sw.updateLook(cfg, lookPreview_ || applied_);
-	log(!e.empty() ? QString::fromStdString("Look: " + e) : (lookPreview_ ? "Look overlay showing in OBS." : "Look overlay hidden."));
+	log(!e.empty() ? QString::fromStdString("Look: " + e)
+		       : (lookPreview_ ? "Look overlay showing in OBS." : "Look overlay hidden."));
 }

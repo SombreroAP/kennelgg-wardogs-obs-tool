@@ -11,7 +11,7 @@ struct Frame {
 };
 
 struct Match {
-	double score = -1; // best normalised cross-correlation, 0..1; -1 = no template
+	double score = -1;                // best normalised cross-correlation, 0..1; -1 = no template
 	float x = 0, y = 0, w = 0, h = 0; // where, as fractions of the frame
 	bool locked = false;
 };
@@ -58,6 +58,7 @@ private:
 		double score = -1;
 		int x = 0, y = 0;
 	};
-	static Hit search(const std::vector<float> &g, const std::vector<double> &sum, const std::vector<double> &sq, int W, int H,
-			  const std::vector<float> &t, int tw, int th, int x0, int y0, int x1, int y1, int stride);
+	static Hit search(const std::vector<float> &g, const std::vector<double> &sum, const std::vector<double> &sq,
+			  int W, int H, const std::vector<float> &t, int tw, int th, int x0, int y0, int x1, int y1,
+			  int stride);
 };

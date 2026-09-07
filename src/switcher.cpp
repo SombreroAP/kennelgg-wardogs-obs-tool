@@ -39,7 +39,8 @@ std::string Switcher::webUrl(const Friend &f)
 
 std::string Switcher::vdoPushUrl(const std::string &id)
 {
-	return "https://vdo.ninja/?push=" + urlEncode(id) + "&screenshare&audiodevice=0&quality=0&stereo&label=" + urlEncode(id);
+	return "https://vdo.ninja/?push=" + urlEncode(id) +
+	       "&screenshare&audiodevice=0&quality=0&stereo&label=" + urlEncode(id);
 }
 
 std::string Switcher::overlayUrl(const Config &cfg, const std::string &friendName)
@@ -50,7 +51,8 @@ std::string Switcher::overlayUrl(const Config &cfg, const std::string &friendNam
 	std::replace(path.begin(), path.end(), '\\', '/');
 	std::string q;
 	if (cfg.lookName) {
-		q += "name=" + urlEncode(friendName.empty() ? "friend" : friendName) + "&label=" + urlEncode(cfg.lookLabel);
+		q += "name=" + urlEncode(friendName.empty() ? "friend" : friendName) +
+		     "&label=" + urlEncode(cfg.lookLabel);
 		if (cfg.lookPlate)
 			q += "&plate=1";
 	}
@@ -102,7 +104,8 @@ obs_source_t *Switcher::sceneSource(const Config &cfg)
 	return obs_frontend_get_current_scene();
 }
 
-std::string Switcher::ensureBrowserSource(obs_scene_t *scene, const char *name, const std::string &url, bool rerouteAudio)
+std::string Switcher::ensureBrowserSource(obs_scene_t *scene, const char *name, const std::string &url,
+					  bool rerouteAudio)
 {
 	struct obs_video_info ovi;
 	obs_get_video_info(&ovi);
@@ -119,7 +122,8 @@ std::string Switcher::ensureBrowserSource(obs_scene_t *scene, const char *name, 
 		src = obs_source_create("browser_source", name, st, nullptr);
 		obs_data_release(st);
 		if (!src)
-			return std::string("could not create browser source '") + name + "' (is the Browser Source available in this OBS?)";
+			return std::string("could not create browser source '") + name +
+			       "' (is the Browser Source available in this OBS?)";
 		if (log)
 			log(std::string("Added browser source '") + name + "'.");
 	} else {
@@ -249,7 +253,8 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 		obs_source_t *src = obs_get_source_by_name(name.c_str());
 		obs_sceneitem_t *item = obs_scene_find_source(scene, name.c_str());
 		if (!src || !item) {
-			errors.push_back("friend source '" + name + "' is not in scene '" + obs_source_get_name(ss) + "'");
+			errors.push_back("friend source '" + name + "' is not in scene '" + obs_source_get_name(ss) +
+					 "'");
 		} else {
 			if (on && cfg.bringToFront)
 				moveToTop(item);

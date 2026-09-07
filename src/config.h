@@ -33,16 +33,20 @@ struct Config {
 	double threshold = 0.85;
 	int pollMs = 200;
 	int downFrames = 3, upFrames = 5, minDownMs = 2000;
-	bool watchRevive = true;   // look for "REVIVING" on the friend's feed and switch back instantly when the damage log goes
+	bool watchRevive =
+		true; // look for "REVIVING" on the friend's feed and switch back instantly when the damage log goes
 	double reviveThreshold = 0.80;
-	double customTemplateWidthFrac = 0; // 0 = built-in damage-log template
+	double customTemplateWidthFrac = 0;                        // 0 = built-in damage-log template
 	double boxX = 0.80, boxY = 0.45, boxW = 0.15, boxH = 0.04; // capture box for a custom template
 
 	static const char *webSourceName() { return "POVBridge web"; }
 	static const char *overlaySourceName() { return "POVBridge look"; }
 	static const char *hideFilterName() { return "POVBridge hide"; }
 	static std::string sourceFor(const Friend &f) { return f.isWeb() ? webSourceName() : f.source; }
-	const Friend *active() const { return activeFriend >= 0 && activeFriend < (int)friends.size() ? &friends[activeFriend] : nullptr; }
+	const Friend *active() const
+	{
+		return activeFriend >= 0 && activeFriend < (int)friends.size() ? &friends[activeFriend] : nullptr;
+	}
 	bool lookEnabled() const { return lookName || lookCam || lookGrain || lookVignette; }
 
 	void load();

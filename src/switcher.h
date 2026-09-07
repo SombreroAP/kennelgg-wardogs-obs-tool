@@ -28,7 +28,8 @@ public:
 private:
 	std::map<std::string, bool> prevMute_;
 	obs_source_t *sceneSource(const Config &cfg); // +ref
-	std::string ensureBrowserSource(obs_scene_t *scene, const char *name, const std::string &url, bool rerouteAudio);
+	std::string ensureBrowserSource(obs_scene_t *scene, const char *name, const std::string &url,
+					bool rerouteAudio);
 	std::string ensureHideFilter(obs_source_t *src);
 	static void moveToTop(obs_sceneitem_t *item) { obs_sceneitem_set_order(item, OBS_ORDER_MOVE_TOP); }
 };

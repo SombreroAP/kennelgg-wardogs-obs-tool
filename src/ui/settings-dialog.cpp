@@ -47,13 +47,15 @@ void FramePreview::paintEvent(QPaintEvent *)
 	p.fillRect(rect(), QColor(11, 14, 16));
 	if (img_.isNull()) {
 		p.setPen(QColor(139, 144, 150));
-		p.drawText(rect(), Qt::AlignCenter | Qt::TextWordWrap, "No frame yet. Set the game source on the Switch tab and keep this window open.");
+		p.drawText(rect(), Qt::AlignCenter | Qt::TextWordWrap,
+			   "No frame yet. Set the game source on the Switch tab and keep this window open.");
 		return;
 	}
 	QRect ir = imageRect();
 	p.drawImage(ir, img_);
 	auto draw = [&](QRectF f, QColor c, double w, bool dashed) {
-		QRectF r(ir.x() + f.x() * ir.width(), ir.y() + f.y() * ir.height(), f.width() * ir.width(), f.height() * ir.height());
+		QRectF r(ir.x() + f.x() * ir.width(), ir.y() + f.y() * ir.height(), f.width() * ir.width(),
+			 f.height() * ir.height());
 		QPen pen(c, w);
 		if (dashed)
 			pen.setStyle(Qt::DashLine);
@@ -63,14 +65,16 @@ void FramePreview::paintEvent(QPaintEvent *)
 	};
 	bool match = m_.score >= thr_;
 	if (m_.w > 0)
-		draw(QRectF(m_.x, m_.y, m_.w, m_.h), match ? QColor(206, 96, 80) : QColor(139, 144, 150), match ? 3 : 1.5, false);
+		draw(QRectF(m_.x, m_.y, m_.w, m_.h), match ? QColor(206, 96, 80) : QColor(139, 144, 150),
+		     match ? 3 : 1.5, false);
 	draw(box_, QColor(201, 154, 59), 1, true);
 	if (dragging_ && drag_.width() > 0)
 		draw(drag_, QColor(232, 229, 221), 1, true);
 	p.setPen(QColor(232, 229, 221));
-	QString txt = match ? QString("Damage log header found (%1) - downed").arg(m_.score, 0, 'f', 3)
-			    : m_.w > 0 ? QString("Best candidate %1 is under the threshold - not downed").arg(m_.score, 0, 'f', 3)
-				       : "Looking for the damage log header on the right of the game";
+	QString txt =
+		match      ? QString("Damage log header found (%1) - downed").arg(m_.score, 0, 'f', 3)
+		: m_.w > 0 ? QString("Best candidate %1 is under the threshold - not downed").arg(m_.score, 0, 'f', 3)
+			   : "Looking for the damage log header on the right of the game";
 	p.fillRect(QRect(ir.x(), ir.bottom() - 20, ir.width(), 20), QColor(11, 14, 16, 170));
 	p.drawText(QRect(ir.x(), ir.bottom() - 20, ir.width(), 20), Qt::AlignCenter, txt);
 }
@@ -90,7 +94,8 @@ void FramePreview::mouseMoveEvent(QMouseEvent *ev)
 		return;
 	QRect ir = imageRect();
 	auto frac = [&](QPoint p) {
-		return QPointF(std::clamp((p.x() - ir.x()) / (double)ir.width(), 0.0, 1.0), std::clamp((p.y() - ir.y()) / (double)ir.height(), 0.0, 1.0));
+		return QPointF(std::clamp((p.x() - ir.x()) / (double)ir.width(), 0.0, 1.0),
+			       std::clamp((p.y() - ir.y()) / (double)ir.height(), 0.0, 1.0));
 	};
 	drag_ = QRectF(frac(start_), frac(ev->pos())).normalized();
 	update();
@@ -115,7 +120,9 @@ namespace {
 class FriendDialog : public QDialog {
 public:
 	Friend result;
-	FriendDialog(const Friend *existing, const std::vector<std::pair<std::string, std::string>> &sources, QWidget *parent) : QDialog(parent)
+	FriendDialog(const Friend *existing, const std::vector<std::pair<std::string, std::string>> &sources,
+		     QWidget *parent)
+		: QDialog(parent)
 	{
 		if (existing)
 			result = *existing;
@@ -125,7 +132,9 @@ public:
 		name_->setPlaceholderText("shown on the POV tag");
 		form->addRow("Name", name_);
 		kind_ = new QComboBox(this);
-		kind_->addItems({"Twitch stream (~2 s, nothing for them to set up)", "VDO.Ninja / WebRTC (~0.3 s, they open one link)", "OBS source (NDI on the LAN or over a VPN)"});
+		kind_->addItems({"Twitch stream (~2 s, nothing for them to set up)",
+				 "VDO.Ninja / WebRTC (~0.3 s, they open one link)",
+				 "OBS source (NDI on the LAN or over a VPN)"});
 		form->addRow("Comes in as", kind_);
 		channel_ = new QLineEdit(QString::fromStdString(result.channel), this);
 		chanLbl_ = new QLabel("Twitch channel", this);
@@ -152,7 +161,8 @@ public:
 		form->addRow(bb);
 		connect(bb, &QDialogButtonBox::accepted, this, [this]() { save(); });
 		connect(bb, &QDialogButtonBox::rejected, this, &QDialog::reject);
-		connect(copy, &QPushButton::clicked, this, [this]() { QApplication::clipboard()->setText(link_->text()); });
+		connect(copy, &QPushButton::clicked, this,
+			[this]() { QApplication::clipboard()->setText(link_->text()); });
 		connect(kind_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { refresh(); });
 		connect(channel_, &QLineEdit::textChanged, this, [this](const QString &) { refresh(); });
 		kind_->setCurrentIndex((int)result.kind);
@@ -171,7 +181,8 @@ private:
 		channel_->setEnabled(k != FriendKind::ObsSource);
 		source_->setEnabled(k == FriendKind::ObsSource);
 		chanLbl_->setText(k == FriendKind::VdoNinja ? "Stream ID" : "Twitch channel");
-		channel_->setPlaceholderText(k == FriendKind::VdoNinja ? "any word you both agree on, e.g. pup-pov" : "channel name, e.g. sombrero");
+		channel_->setPlaceholderText(k == FriendKind::VdoNinja ? "any word you both agree on, e.g. pup-pov"
+								       : "channel name, e.g. sombrero");
 		QString id = channel_->text().trimmed();
 		if (k == FriendKind::VdoNinja && !id.isEmpty())
 			link_->setText(QString::fromStdString(Switcher::vdoPushUrl(id.toStdString())));
@@ -179,11 +190,12 @@ private:
 			link_->setText("https://twitch.tv/" + id.toLower().remove('@'));
 		else
 			link_->clear();
-		hint_->setText(k == FriendKind::Twitch
-				       ? "POVBridge adds a browser source named \"POVBridge web\" playing this channel with its audio routed through OBS. They just need to be live; ask them to keep Twitch low-latency mode on. Their stream includes their mic."
-			       : k == FriendKind::VdoNinja
-				       ? "WebRTC through vdo.ninja, usually under half a second, anywhere in the world. Send them the link: they open it in Chrome or Edge, pick their game window or screen and tick \"Share system audio\". No mic is sent."
-				       : "Any source already in OBS: an NDI Source (DistroAV) for a friend on the LAN or over a VPN, a capture card, a second PC. Lowest latency. Its audio comes with it.");
+		hint_->setText(
+			k == FriendKind::Twitch
+				? "POVBridge adds a browser source named \"POVBridge web\" playing this channel with its audio routed through OBS. They just need to be live; ask them to keep Twitch low-latency mode on. Their stream includes their mic."
+			: k == FriendKind::VdoNinja
+				? "WebRTC through vdo.ninja, usually under half a second, anywhere in the world. Send them the link: they open it in Chrome or Edge, pick their game window or screen and tick \"Share system audio\". No mic is sent."
+				: "Any source already in OBS: an NDI Source (DistroAV) for a friend on the LAN or over a VPN, a capture card, a second PC. Lowest latency. Its audio comes with it.");
 	}
 	void save()
 	{
@@ -199,7 +211,8 @@ private:
 			return;
 		}
 		if (result.kind != FriendKind::ObsSource && result.channel.empty()) {
-			hint_->setText(result.kind == FriendKind::Twitch ? "Type the Twitch channel name." : "Type a stream ID.");
+			hint_->setText(result.kind == FriendKind::Twitch ? "Type the Twitch channel name."
+									 : "Type a stream ID.");
 			return;
 		}
 		if (result.name.empty())
@@ -231,10 +244,13 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	connect(e_, &Engine::frameUpdated, this, [this]() {
 		Match m = e_->lastGame();
 		meter_->setValue(m.score < 0 ? 0 : (int)(m.score * 1000));
-		frame_->setFrame(e_->lastFrame(), m, e_->cfg.threshold, QRectF(e_->cfg.boxX, e_->cfg.boxY, e_->cfg.boxW, e_->cfg.boxH));
+		frame_->setFrame(e_->lastFrame(), m, e_->cfg.threshold,
+				 QRectF(e_->cfg.boxX, e_->cfg.boxY, e_->cfg.boxW, e_->cfg.boxH));
 	});
 	connect(e_, &Engine::stateChanged, this, [this]() {
-		tplLbl_->setText(!e_->hasTemplate() ? "No template" : e_->customTemplate() ? "Custom template" : "Built-in template");
+		tplLbl_->setText(!e_->hasTemplate()     ? "No template"
+				 : e_->customTemplate() ? "Custom template"
+							: "Built-in template");
 	});
 }
 
@@ -268,7 +284,9 @@ QWidget *SettingsDialog::buildSwitchTab()
 	gr->addWidget(refresh);
 	f1->addRow("Your game source", gr);
 	f1->addRow("Scene", scene_);
-	f1->addRow(muted("The game source is watched for the damage log (rendered on its own, so it can stay under the friend). Squad mates are shown on top of it in this scene. Browser sources for Twitch / VDO.Ninja and the look overlay are created here when first needed.", g1));
+	f1->addRow(muted(
+		"The game source is watched for the damage log (rendered on its own, so it can stay under the friend). Squad mates are shown on top of it in this scene. Browser sources for Twitch / VDO.Ninja and the look overlay are created here when first needed.",
+		g1));
 	v->addWidget(g1);
 	connect(refresh, &QPushButton::clicked, this, [this]() { fillSources(); });
 	connect(game_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { saveAndApply(); });
@@ -320,14 +338,19 @@ QWidget *SettingsDialog::buildSwitchTab()
 	auto *h3 = new QHBoxLayout(g3);
 	mute_ = new QListWidget(g3);
 	h3->addWidget(mute_, 1);
-	h3->addWidget(muted("Tick what carries your game's sound: usually Desktop Audio, or the game / capture-card source if that captures audio. Do NOT tick your microphone - it keeps going while you watch your friend. Ticked inputs are muted when the friend appears and put back exactly as they were when you are revived.", g3), 1);
+	h3->addWidget(
+		muted("Tick what carries your game's sound: usually Desktop Audio, or the game / capture-card source if that captures audio. Do NOT tick your microphone - it keeps going while you watch your friend. Ticked inputs are muted when the friend appears and put back exactly as they were when you are revived.",
+		      g3),
+		1);
 	v->addWidget(g3, 1);
 	connect(mute_, &QListWidget::itemChanged, this, [this](QListWidgetItem *) { saveAndApply(); });
 
 	auto *g4 = new QGroupBox("Extras", w);
 	auto *v4 = new QVBoxLayout(g4);
 	bringFront_ = new QCheckBox("Move the friend source to the top of the scene when shown", g4);
-	keepWarm_ = new QCheckBox("Keep the friend feed warm: leave the source on but invisible and muted, so NDI / the player never reconnects (instant switch)", g4);
+	keepWarm_ = new QCheckBox(
+		"Keep the friend feed warm: leave the source on but invisible and muted, so NDI / the player never reconnects (instant switch)",
+		g4);
 	v4->addWidget(bringFront_);
 	v4->addWidget(keepWarm_);
 	v->addWidget(g4);
@@ -369,7 +392,9 @@ QWidget *SettingsDialog::buildLookTab()
 	f->addRow(lookVig_);
 	preview_ = new QPushButton("Preview look in OBS", g);
 	f->addRow(preview_);
-	f->addRow(muted("Drawn by a browser source named \"POVBridge look\" that POVBridge adds to your scene and shows on top of the friend while you are downed. Nothing touches the friend's feed itself, so it is the same for Twitch, VDO.Ninja and NDI.", g));
+	f->addRow(muted(
+		"Drawn by a browser source named \"POVBridge look\" that POVBridge adds to your scene and shows on top of the friend while you are downed. Nothing touches the friend's feed itself, so it is the same for Twitch, VDO.Ninja and NDI.",
+		g));
 	v->addWidget(g);
 	v->addStretch(1);
 	lookName_->setChecked(e_->cfg.lookName);
@@ -423,8 +448,12 @@ QWidget *SettingsDialog::buildDetectTab()
 	v->addLayout(row);
 	connect(cap, &QPushButton::clicked, this, [this]() { e_->captureTemplate(); });
 	connect(builtin, &QPushButton::clicked, this, [this]() { e_->useBuiltInTemplate(); });
-	tplLbl_->setText(!e_->hasTemplate() ? "No template" : e_->customTemplate() ? "Custom template" : "Built-in template");
-	v->addWidget(muted("WARDOGS shows the damage log (\"B  VIEW DAMAGE LOG\" and the body silhouette) the whole time you are downed, map open or not, and hides it when you are revived. POVBridge looks for that header anywhere on the right of your game source, at any HUD size, with a template cut from a real frame. Nothing to set up: get downed once and watch the bar go red (~0.9). Only if it never locks on: drag the dotted box tightly around the header while downed and press Capture.", w));
+	tplLbl_->setText(!e_->hasTemplate()     ? "No template"
+			 : e_->customTemplate() ? "Custom template"
+						: "Built-in template");
+	v->addWidget(muted(
+		"WARDOGS shows the damage log (\"B  VIEW DAMAGE LOG\" and the body silhouette) the whole time you are downed, map open or not, and hides it when you are revived. POVBridge looks for that header anywhere on the right of your game source, at any HUD size, with a template cut from a real frame. Nothing to set up: get downed once and watch the bar go red (~0.9). Only if it never locks on: drag the dotted box tightly around the header while downed and press Capture.",
+		w));
 
 	auto *g = new QGroupBox("Tuning", w);
 	auto *f = new QFormLayout(g);
@@ -467,7 +496,9 @@ QWidget *SettingsDialog::buildDetectTab()
 	auto_ = new QCheckBox("Switch automatically when the damage log is detected", g);
 	auto_->setChecked(e_->cfg.autoDetect);
 	f->addRow(auto_);
-	revive_ = new QCheckBox("Watch the friend's feed for \"REVIVING\": when they are on you, switch back the instant the damage log goes (no confirm delay, 10 polls / s)", g);
+	revive_ = new QCheckBox(
+		"Watch the friend's feed for \"REVIVING\": when they are on you, switch back the instant the damage log goes (no confirm delay, 10 polls / s)",
+		g);
 	revive_->setChecked(e_->cfg.watchRevive);
 	f->addRow(revive_);
 	auto *rvRow = new QHBoxLayout();
@@ -478,12 +509,16 @@ QWidget *SettingsDialog::buildDetectTab()
 	rvRow->addWidget(reviveThr_, 1);
 	rvRow->addWidget(reviveLbl_);
 	f->addRow("Revive match threshold", rvRow);
-	f->addRow(muted("Hotkeys live in OBS Settings → Hotkeys: \"POVBridge: show friend's POV / back to me\" and \"...capture damage-log template\". On a two-PC setup send them from the gaming PC with KeyBridge.", g));
+	f->addRow(muted(
+		"Hotkeys live in OBS Settings → Hotkeys: \"POVBridge: show friend's POV / back to me\" and \"...capture damage-log template\". On a two-PC setup send them from the gaming PC with KeyBridge.",
+		g));
 	v->addWidget(g);
 
-	connect(thr_, &QSlider::valueChanged, this, [this](int val) { thrLbl_->setText(QString::number(val / 100.0, 'f', 2)); });
+	connect(thr_, &QSlider::valueChanged, this,
+		[this](int val) { thrLbl_->setText(QString::number(val / 100.0, 'f', 2)); });
 	connect(thr_, &QSlider::sliderReleased, this, [this]() { saveAndApply(); });
-	connect(reviveThr_, &QSlider::valueChanged, this, [this](int val) { reviveLbl_->setText(QString::number(val / 100.0, 'f', 2)); });
+	connect(reviveThr_, &QSlider::valueChanged, this,
+		[this](int val) { reviveLbl_->setText(QString::number(val / 100.0, 'f', 2)); });
 	connect(reviveThr_, &QSlider::sliderReleased, this, [this]() { saveAndApply(); });
 	for (auto *s : {downFrames_, upFrames_, minDown_, pollMs_})
 		connect(s, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
@@ -514,7 +549,8 @@ QWidget *SettingsDialog::buildAboutTab()
 		"<p><b>Timing the switch back.</b> While your friend is on screen, POVBridge also watches their feed for the word REVIVING and the progress ring. "
 		"When it sees it, the switch back fires the instant the damage log disappears from your own game, with no confirmation delay. "
 		"Your own feed is the trigger because it has no latency; the friend's feed only arms it.</p>"
-		"<p>Settings and templates: <code>" + QString::fromStdString(Config::configDir()) + "</code></p>");
+		"<p>Settings and templates: <code>" +
+		QString::fromStdString(Config::configDir()) + "</code></p>");
 	v->addWidget(l);
 	v->addStretch(1);
 	return w;
@@ -532,7 +568,8 @@ void SettingsDialog::fillSources()
 	if (!chosen.isEmpty())
 		game_->addItem(chosen);
 	for (auto &i : inputs)
-		if (i.first != e_->cfg.gameSource && i.first != Config::webSourceName() && i.first != Config::overlaySourceName())
+		if (i.first != e_->cfg.gameSource && i.first != Config::webSourceName() &&
+		    i.first != Config::overlaySourceName())
 			game_->addItem(QString::fromStdString(i.first));
 	game_->setCurrentIndex(chosen.isEmpty() ? -1 : 0);
 	scene_->clear();
@@ -559,7 +596,8 @@ void SettingsDialog::fillSources()
 		auto *it = new QListWidgetItem(label, mute_);
 		it->setData(Qt::UserRole, QString::fromStdString(i.first));
 		it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
-		bool on = std::find(e_->cfg.muteWhileDowned.begin(), e_->cfg.muteWhileDowned.end(), i.first) != e_->cfg.muteWhileDowned.end();
+		bool on = std::find(e_->cfg.muteWhileDowned.begin(), e_->cfg.muteWhileDowned.end(), i.first) !=
+			  e_->cfg.muteWhileDowned.end();
 		it->setCheckState(on ? Qt::Checked : Qt::Unchecked);
 	}
 	game_->blockSignals(false);
@@ -575,7 +613,9 @@ void SettingsDialog::fillFriends()
 		int r = friends_->rowCount();
 		friends_->insertRow(r);
 		QString name = QString::fromStdString(f.name) + ((int)i == e_->cfg.activeFriend ? "   ●" : "");
-		const char *kind = f.kind == FriendKind::Twitch ? "Twitch stream" : f.kind == FriendKind::VdoNinja ? "VDO.Ninja (WebRTC)" : "OBS source";
+		const char *kind = f.kind == FriendKind::Twitch     ? "Twitch stream"
+				   : f.kind == FriendKind::VdoNinja ? "VDO.Ninja (WebRTC)"
+								    : "OBS source";
 		friends_->setItem(r, 0, new QTableWidgetItem(name));
 		friends_->setItem(r, 1, new QTableWidgetItem(kind));
 		friends_->setItem(r, 2, new QTableWidgetItem(QString::fromStdString(f.isWeb() ? f.channel : f.source)));

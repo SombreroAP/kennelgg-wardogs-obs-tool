@@ -73,6 +73,6 @@ private:
 	void fillSources();
 	void fillFriends();
 	void editFriend(int row);
-	void collect();   // UI -> cfg
+	void collect(); // UI -> cfg
 	void saveAndApply();
 };
