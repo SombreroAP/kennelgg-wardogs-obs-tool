@@ -26,7 +26,8 @@ several squad mates on the list and pick who is active from the dock.
 
 ## Setup
 
-1. Install the plugin (zip → your OBS folder, or the installer). Restart OBS.
+1. Close OBS, run `povbridge-<version>-windows-x64-installer.exe`, start OBS. (The zip is the same
+   files for manual installs: copy its `povbridge` folder into `C:\ProgramData\obs-studio\plugins\`.)
 2. **Tools → POVBridge Settings → Switch**: pick your game source and the scene; **Add...** squad
    mates; tick the game-audio inputs to mute (Desktop Audio, or the game / capture-card source if
    that carries the audio). The mic is labelled - leave it unticked.
@@ -63,5 +64,6 @@ Config, hotkeys and a custom template live in OBS's plugin config folder
 
 Based on the official [obs-plugintemplate](https://github.com/obsproject/obs-plugintemplate).
 Windows builds come from GitHub Actions (`.github/workflows/build-project.yaml`): every push builds
-`povbridge-<version>-windows-x64.zip` and an installer as workflow artifacts. Locally on Windows:
+`povbridge-<version>-windows-x64.zip` and, via `installer/povbridge.iss` (Inno Setup),
+`povbridge-<version>-windows-x64-installer.exe`, both as workflow artifacts. Locally on Windows:
 `cmake --preset windows-x64 && cmake --build --preset windows-x64`.
