@@ -2,9 +2,9 @@
 
 **OBS plugin (C++ / Qt, obs-plugintemplate) for Windows OBS.** While the streamer is downed in
 WARDOGS, OBS shows a squad mate's POV (Twitch stream first, VDO.Ninja WebRTC, or an NDI/OBS source)
-on top of the game with its audio; the mic is never touched. Supersedes the C# tray app in
-`../POVBridge/` (same logic, obs-websocket based; kept as a fallback, ships from Drive).
-The user asked for a plugin on 7 Sep 2026 and to focus on Windows OBS.
+on top of the game with its audio; the mic is never touched. This is **purely an OBS plugin** —
+an earlier C# tray app was deleted on the user's instruction (7 Sep 2026); do not resurrect it.
+Focus is Windows OBS. Builds go to Google Drive `My Drive/POVBridge-OBS/`.
 
 | File | What |
 |---|---|
@@ -17,7 +17,7 @@ The user asked for a plugin on 7 Sep 2026 and to focus on Windows OBS.
 | `src/ui/dock.*`, `src/ui/settings-dialog.*` | dock; settings tabs Switch / Look / Detect / Help; FriendDialog; FramePreview with drag box |
 | `data/templates/damagelog.png` | "B VIEW DAMAGE LOG" header cut from the user's 1704-wide screenshot (widthFrac 262/1704) |
 | `data/templates/reviving.png` | "REVIVING" word cut from the user's 1875-wide revive screenshot (widthFrac 98/1875); ring centre = template top-left + (0.47, 1.31)·tw, radius 0.39·tw, lit if gray > 170 |
-| `data/overlay/` | the look page + two brand fonts (same as the C# app) |
+| `data/overlay/` | the look page + two brand fonts (from kennel-brand) |
 
 ## Measurements that set the constants (do not re-derive)
 
