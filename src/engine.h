@@ -1,0 +1,82 @@
+#pragma once
+#include <atomic>
+#include <chrono>
+#include <mutex>
+#include <string>
+#include <vector>
+#include <QObject>
+#include <QImage>
+#include <QTimer>
+#include "capture.h"
+#include "config.h"
+#include "detector.h"
+#include "switcher.h"
+
+/// The state machine. Lives on the Qt main thread; capture + matching run on a worker per poll.
+class Engine : public QObject {
+	Q_OBJECT
+public:
+	explicit Engine(QObject *parent = nullptr);
+	~Engine() override;
+
+	Config cfg;
+	Switcher sw;
+
+	bool applied() const { return applied_; }
+	bool detected() const { return detected_; }
+	bool revivingRecent() const;
+	double reviveProgress() const { return reviveProgress_; }
+	Match lastGame() const { return lastGame_; }
+	Match lastRevive() const { return lastRevive_; }
+	bool hasTemplate() const { return detGame_.hasTemplate(); }
+	bool customTemplate() const { return cfg.customTemplateWidthFrac > 0; }
+	QImage lastFrame() const;
+	void wantPreview(bool on) { previewWanted_ = on; }
+	std::string stateText() const;
+
+	void start();
+	void stop();
+	void reloadConfig();   // after the settings dialog saved
+	void loadTemplates();
+
+public slots:
+	void applyNow(bool on, const QString &why);
+	void toggle();
+	void setActive(int idx);
+	void setEnabled(bool on);
+	void captureTemplate();
+	void useBuiltInTemplate();
+	void previewLook(bool on);
+	void log(const QString &msg);
+
+signals:
+	void stateChanged();
+	void logged(const QString &msg);
+	void frameUpdated();
+
+private:
+	struct Result {
+		bool ok = false;
+		Match game;
+		Match revive;
+		double progress = -1;
+		std::vector<uint8_t> bgra;
+		int w = 0, h = 0, ls = 0;
+	};
+	void tick();
+	void onResult(Result r);
+	void detect(const Match &m);
+
+	QTimer timer_;
+	std::atomic<bool> busy_{false}, stopping_{false};
+	Capture capGame_, capFriend_;
+	Detector detGame_, detRevive_;
+	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
+	int downRun_ = 0, upRun_ = 0;
+	std::chrono::steady_clock::time_point downSince_, lastReviveSeen_;
+	Match lastGame_, lastRevive_;
+	double reviveProgress_ = -1;
+	mutable std::mutex frameMx_;
+	QImage lastFrame_;
+	std::string lastWatchError_;
+};

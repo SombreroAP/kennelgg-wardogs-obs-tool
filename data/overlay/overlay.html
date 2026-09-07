@@ -1,0 +1,76 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: "Saira Condensed"; src: url("SairaCondensed-Bold.ttf"); font-weight: 700; }
+@font-face { font-family: "IBM Plex Mono"; src: url("IBMPlexMono-SemiBold.ttf"); font-weight: 600; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+body { font-family: "Saira Condensed", "Segoe UI", sans-serif; color: #fff; }
+#grain { position: absolute; inset: 0; width: 100%; height: 100%; mix-blend-mode: overlay; pointer-events: none; opacity: 0; }
+#vig { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.6) 100%); display: none; }
+#cam { display: none; }
+.corner { position: absolute; width: 4vw; height: 4vw; border: 0.3vw solid #fff; opacity: .92; filter: drop-shadow(0 0 6px rgba(0,0,0,.7)); }
+.tl { top: 3vw; left: 3vw; border-right: 0; border-bottom: 0; }
+.tr { top: 3vw; right: 3vw; border-left: 0; border-bottom: 0; }
+.bl { bottom: 3vw; left: 3vw; border-right: 0; border-top: 0; }
+.br { bottom: 3vw; right: 3vw; border-left: 0; border-top: 0; }
+.hud { position: absolute; font-size: 2.2vw; letter-spacing: 0.15vw; text-shadow: 0 2px 8px rgba(0,0,0,.8); font-family: "IBM Plex Mono", Consolas, monospace; font-weight: 600; }
+#rec { top: 3.4vw; left: 8.5vw; }
+#rec i { display: inline-block; width: 1.3vw; height: 1.3vw; border-radius: 50%; background: #e0352b; margin-right: 0.7vw; vertical-align: -0.1vw; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+#clock { top: 3.4vw; right: 8.5vw; font-variant-numeric: tabular-nums; }
+#bat { bottom: 3.6vw; right: 8.5vw; }
+#bat span { display: inline-block; width: 2.6vw; height: 1.3vw; border: 0.16vw solid #fff; border-radius: 0.2vw; vertical-align: -0.2vw; position: relative; margin-left: 0.5vw; }
+#bat span::before { content: ""; position: absolute; left: 0.15vw; top: 0.15vw; bottom: 0.15vw; width: 62%; background: #fff; }
+#bat span::after { content: ""; position: absolute; right: -0.4vw; top: 0.3vw; width: 0.25vw; height: 0.6vw; background: #fff; }
+#name { position: absolute; bottom: 3.2vw; left: 8.5vw; font-size: 3.4vw; text-transform: uppercase; letter-spacing: 0.25vw; text-shadow: 0 3px 10px rgba(0,0,0,.85); display: none; line-height: 1; }
+#name small { font-size: 1.8vw; color: #E8E5DD; opacity: .85; margin-right: 0.8vw; letter-spacing: 0.15vw; }
+#name b { color: #C99A3B; }
+#name.plate { background: rgba(11,14,16,.78); padding: 0.8vw 1.4vw; border-left: 0.35vw solid #C99A3B; }
+</style></head>
+<body>
+<canvas id="grain"></canvas>
+<div id="vig"></div>
+<div id="cam">
+  <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+  <div class="hud" id="rec"><i></i>REC</div>
+  <div class="hud" id="clock">00:00:00</div>
+  <div class="hud" id="bat">BATT<span></span></div>
+</div>
+<div id="name"><small>POV</small><b>FRIEND</b></div>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var name = q.get("name") || "";
+  var cam = q.get("cam") === "1", vig = q.get("vig") === "1", plate = q.get("plate") === "1";
+  var grain = Math.max(0, Math.min(100, parseInt(q.get("grain") || "0", 10) || 0));
+  var label = q.get("label") || "POV";
+
+  if (name) { var n = document.getElementById("name"); n.style.display = "block"; n.querySelector("small").textContent = label; n.querySelector("b").textContent = name; if (plate) n.classList.add("plate"); }
+  if (vig) document.getElementById("vig").style.display = "block";
+  if (cam) {
+    document.getElementById("cam").style.display = "block";
+    var t0 = Date.now(), clock = document.getElementById("clock");
+    setInterval(function () {
+      var s = Math.floor((Date.now() - t0) / 1000);
+      var h = String(Math.floor(s / 3600)).padStart(2, "0"), m = String(Math.floor(s % 3600 / 60)).padStart(2, "0"), ss = String(s % 60).padStart(2, "0");
+      clock.textContent = h + ":" + m + ":" + ss;
+    }, 500);
+  }
+  if (grain > 0) {
+    var c = document.getElementById("grain"), ctx = c.getContext("2d");
+    c.style.opacity = (grain / 100 * 0.45).toFixed(2);
+    var W = 480, H = 270; c.width = W; c.height = H;
+    var img = ctx.createImageData(W, H), d = img.data, last = 0;
+    function frame(t) {
+      if (t - last > 1000 / 15) {
+        last = t;
+        for (var i = 0; i < d.length; i += 4) { var v = 96 + (Math.random() * 128) | 0; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+        ctx.putImageData(img, 0, 0);
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+})();
+</script>
+</body></html>
