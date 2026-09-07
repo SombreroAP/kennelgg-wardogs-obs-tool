@@ -291,15 +291,23 @@ def _scores(mask_band: np.ndarray, names) -> dict[str, float]:
     return out
 
 
+def _base(name: str) -> str:
+    return re.sub(r"_\d+$", "", name)              # tank_2.png -> "tank" (variants of one icon)
+
+
 def match_icons(mask_band: np.ndarray) -> list[str]:
     names = [n for n in load_templates() if not n.startswith("name_")]
     s = _scores(mask_band, names)
-    hits = [n for n in KILLTYPE_ICONS if s.get(n, 0) >= ICON_MATCH]
-    weapons = {n: v for n, v in s.items() if n not in KILLTYPE_ICONS}
+    best = {}                                         # base icon -> best score over its variants
+    for n, v in s.items():
+        b = _base(n)
+        best[b] = max(best.get(b, 0.0), v)
+    hits = [b for b in KILLTYPE_ICONS if best.get(b, 0) >= ICON_MATCH]
+    weapons = {b: v for b, v in best.items() if b not in KILLTYPE_ICONS}
     if weapons:
-        best = max(weapons, key=weapons.get)
-        if weapons[best] >= ICON_MATCH:
-            hits.append(re.sub(r"_\d+$", "", best))   # tank_2.png -> "tank" (variants of one icon)
+        w = max(weapons, key=weapons.get)
+        if weapons[w] >= ICON_MATCH:
+            hits.append(w)
     return hits
 
 
