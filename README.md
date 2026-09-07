@@ -100,12 +100,12 @@ files without touching Twitch. Set the buffer to 90-120 s in OBS so the lead-up 
 
 ## Icons (tank / chopper / vehicle rules)
 Vehicle rules need a template of the feed icon. Included templates, cut from the 7 Sep VODs:
-`rifle`, `boltgun`, `sniper`, `heli`, `explosion`, `tank`, `artillery`, `rpg`, `c4`, `skull` (headshot),
+`rifle`, `boltgun`, `sniper`, `heli`, `explosion`, `tank`, `artillery`, `car`, `rpg`, `c4`, `skull` (headshot),
 and `name_me` (the streamer's own feed name; matched as pixels so identity survives
 backgrounds where OCR fails). Weapon icons are exclusive per row (best score wins);
-`skull` and `explosion` stack on top. Missing so far: `car`.
+`skull` and `explosion` stack on top.
 The feed uses a weapon icon for guns and a helicopter / car / tank icon for vehicles; a
-crash shows the vehicle icon plus the explosion icon and no distance, made from the 24:06 rows. To add `car.png` (or a variant like `tank_2.png`):
+crash shows the vehicle icon plus the explosion icon and no distance, made from the 24:06 rows. To add a variant (e.g. `car_2.png` for a different vehicle icon):
 1. Run `vod_test.py` (or the live bot with `debug_dump: true`) over footage containing the
    event; the decided rows land in `debug/rows/`.
 2. Upscale the row 4x, threshold to the pure-white pixels, and tight-crop the icon:
