@@ -100,7 +100,7 @@ files without touching Twitch. Set the buffer to 90-120 s in OBS so the lead-up 
 
 ## Icons (tank / chopper / vehicle rules)
 Vehicle rules need a template of the feed icon. Included templates, cut from the 7 Sep VODs:
-`rifle`, `boltgun`, `sniper`, `heli`, `explosion`, `tank`, `rpg`, `c4`, `skull` (headshot),
+`rifle`, `boltgun`, `sniper`, `heli`, `explosion`, `tank`, `artillery`, `rpg`, `c4`, `skull` (headshot),
 and `name_me` (the streamer's own feed name; matched as pixels so identity survives
 backgrounds where OCR fails). Weapon icons are exclusive per row (best score wins);
 `skull` and `explosion` stack on top. Missing so far: `car`.

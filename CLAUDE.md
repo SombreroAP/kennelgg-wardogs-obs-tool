@@ -15,7 +15,7 @@ Sombrero; sibling apps live next door (HotkeyBridge, InputOverlayBridge, povbrid
 | `detector.py` | row tracking across frames, votes, dedupe, rule engine (`config.yaml` rules), multi-kill |
 | `twitch.py` / `obs.py` | Helix create clip (title logged, API can't set titles); replay save + rename |
 | `vod_test.py`, `calibrate.py` | offline test on a video slice; ROI / colour / source checks |
-| `templates/` | white-on-black icon masks at 4x: rifle, boltgun, sniper, heli, explosion, tank, rpg, c4, skull, name_me |
+| `templates/` | white-on-black icon masks at 4x: rifle, boltgun, sniper, heli, explosion, tank, artillery (x2), rpg, c4, skull, name_me |
 
 ## Facts that set the constants (measured on the 7 Sep 2026 VODs, 1080p)
 - Kill feed: x 0–24 %, y 42–58 % of the frame; rows 24 px apart, ~9 px text; a row fades in
@@ -24,8 +24,8 @@ Sombrero; sibling apps live next door (HotkeyBridge, InputOverlayBridge, povbrid
   before a killer / after a victim; squad = orange text + shield; own name is white.
   Distance `[68 m]` only appears on rows involving the streamer.
 - Distance OCR: whole-row read, bracket regex, votes; partial reads support longer ones.
-- Verified: 24:06 double kill (68 m, 61 m), 24:24 chopper crash, 1:38:52 tank + headshot
-  icons, 1:40:35 C4, 1:45:43 RPG + 80 m heli death. Still missing: `car` template.
+- Verified: 24:06 double kill (68 m, 61 m), 24:24 chopper crash, 1:38:52 artillery + headshot
+  icons, 15:03 first stream tank, 1:40:35 C4, 1:45:43 RPG + 80 m heli death. Still missing: `car` template.
 
 ## Standing rules
 - Ask before pushing to GitHub. No emoji-laden prose; lead with what changed.
