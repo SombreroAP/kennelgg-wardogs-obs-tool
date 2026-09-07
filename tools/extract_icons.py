@@ -34,7 +34,9 @@ def icon_blobs(roi_bgr):
     up = cv2.resize(roi_bgr, None, fx=SCALE, fy=SCALE, interpolation=cv2.INTER_CUBIC)
     hsv = cv2.cvtColor(up, cv2.COLOR_BGR2HSV)
     white = ((hsv[:, :, 2] > 170) & (hsv[:, :, 1] < 70)).astype(np.uint8) * 255
-    soft = hsv[:, :, 2].astype(np.float32) / 255.0 * (hsv[:, :, 1] < 90)   # graded brightness for averaging
+    # graded brightness for averaging: 0 below 120, 1 at 255, only low-saturation (white) pixels
+    v = hsv[:, :, 2].astype(np.float32)
+    soft = np.clip((v - 120) / 135.0, 0, 1) * (hsv[:, :, 1] < 90)
     _, mask = binarize(roi_bgr)
     W = up.shape[1]
     x0, x1 = int(W * ICON_COL[0]), int(W * ICON_COL[1])
@@ -66,17 +68,30 @@ def ncc(a, b):
     return float(cv2.matchTemplate(pad(big), small, cv2.TM_CCOEFF_NORMED).max())
 
 
+def _place(img, oy, ox):
+    """Paste img onto a CANVAS-sized float canvas at integer offset (oy, ox)."""
+    out = np.zeros(CANVAS, np.float32)
+    y0, x0 = max(0, oy), max(0, ox)
+    y1, x1 = min(CANVAS[0], oy + img.shape[0]), min(CANVAS[1], ox + img.shape[1])
+    if y1 > y0 and x1 > x0:
+        out[y0:y1, x0:x1] = img[y0 - oy:y1 - oy, x0 - ox:x1 - ox]
+    return out
+
+
 def accumulate(c, b):
-    """Align blob b to the cluster's reference by centroid and add its graded brightness."""
+    """Add blob b to the cluster: coarse centroid placement, then sub-pixel alignment to the
+    running average by phase correlation, so the average sharpens instead of smearing."""
     m = b["mask"]
     ys, xs = np.where(m > 0)
     cy, cx = ys.mean(), xs.mean()
-    oy, ox = int(CANVAS[0] / 2 - cy), int(CANVAS[1] / 2 - cx)
-    y0, x0 = max(0, oy), max(0, ox)
-    y1, x1 = min(CANVAS[0], oy + m.shape[0]), min(CANVAS[1], ox + m.shape[1])
-    if y1 <= y0 or x1 <= x0:
-        return
-    c["acc"][y0:y1, x0:x1] += b["soft"][y0 - oy:y1 - oy, x0 - ox:x1 - ox]
+    img = _place(b["soft"], int(CANVAS[0] / 2 - cy), int(CANVAS[1] / 2 - cx))
+    if c["n"] > 0:
+        ref = c["acc"] / c["n"]
+        (dx, dy), resp = cv2.phaseCorrelate(ref, img)
+        if abs(dx) < 12 and abs(dy) < 12:
+            M = np.float32([[1, 0, -dx], [0, 1, -dy]])
+            img = cv2.warpAffine(img, M, (CANVAS[1], CANVAS[0]), flags=cv2.INTER_LINEAR)
+    c["acc"] += img
     c["n"] += 1
 
 
