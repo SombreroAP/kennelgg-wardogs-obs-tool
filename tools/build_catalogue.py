@@ -24,7 +24,7 @@ os.makedirs(OUT, exist_ok=True)
 labels = json.load(open(os.path.join(ROOT, "labels.json")))
 groups = {}
 for icon_id, label in labels.items():
-    if icon_id.startswith("_") or label in ("?", "text", ""):
+    if icon_id.startswith("_") or label in ("?", "text", "fragment", ""):
         continue
     p = os.path.join(SRC, icon_id + ".png")
     if os.path.exists(p):

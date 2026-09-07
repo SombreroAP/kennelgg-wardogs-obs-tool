@@ -157,13 +157,5 @@
  "explosion": {
   "class": "kill marker",
   "meaning": "explosive / vehicle destruction kill"
- },
- "barrel_long": {
-  "class": "fragment",
-  "meaning": "gun barrel caught alone by the harvester - not an icon"
- },
- "barrel_short": {
-  "class": "fragment",
-  "meaning": "gun barrel caught alone by the harvester - not an icon"
  }
 }
