@@ -3,7 +3,7 @@
 # game capture / capture-card source is screenshotted over obs-websocket and cropped to the
 # kill feed. Backend "screen" grabs a monitor instead (e.g. a fullscreen projector).
 capture:
-  backend: "obs"           # "obs" | "screen"
+  backend: "obs"           # "bridge" (frames from the Kennel WARDOGS OBS plugin, no obs-websocket) | "obs" | "screen"
   obs_source: "Game Capture"   # exact name of the OBS input carrying the game (capture card / NDI)
   monitor: 1               # screen backend only: mss monitor index. `python calibrate.py --list`
   fps: 3                   # feed rows stay up for seconds; 3 fps decides a row in ~3 s and leaves CPU headroom
@@ -16,6 +16,13 @@ capture:
     h: 0.16
   upscale: 2.0             # OCR is much better on 2x upscaled text
   debug_dump: false        # write roi.png / roi_proc.png every frame to ./debug
+
+# ---- Kennel WARDOGS OBS plugin bridge ---------------------------------------
+# With capture.backend "bridge" and obs.mode "bridge" the app needs no OBS password: the plugin
+# pushes frames and saves + names the replay clips itself (it also tags clips "downed" while the
+# POV swap is showing a squad mate). Install the plugin, then `pip install websocket-client`.
+bridge:
+  port: 47820
 
 # ---- Detection ----------------------------------------------------------------
 detection:

@@ -5,3 +5,4 @@ pytesseract>=0.3.10
 requests>=2.31
 pyyaml>=6.0
 obsws-python>=1.7
+websocket-client>=1.7

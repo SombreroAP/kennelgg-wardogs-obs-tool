@@ -146,3 +146,17 @@ Until those templates exist the vehicle rules simply never fire.
 - `rules[].min_dist` / `min_conf` – metres, and how many OCR reads must agree first.
 - `teammates` – squad names so `victim: teammate` rules (chopper team kill) can match.
 - `cooldown_s` – gap between clips; a double becoming a triple always re-fires.
+
+
+## Running with the Kennel.gg WARDOGS OBS plugin
+
+The plugin (`../kennel-wardogs-obs`) can be ClipHound's eyes and hands: set `capture.backend: bridge`
+and `obs.mode: bridge` in `config.yaml`, and ClipHound connects to `ws://127.0.0.1:47820`, receives
+the game frames from inside OBS (no obs-websocket, no password) and asks the plugin to save and name
+the replay clips. Clips fired while you are downed get a `downed` tag. The plugin's Clips tab can
+start `ClipHound.bat` when OBS starts. Twitch clips still come from this app.
+
+CPU: the OCR is the heaviest part of the pair. Tesseract runs per feed row on a crop of the frame
+(the feed is 24 % x 16 % of 1080p) at `capture.fps`; at 3 fps that is roughly 5-15 % of one core on a
+modern desktop, i.e. 1-2 % of an 8-core machine, and nothing between rows. Lower `fps` to 2 if you
+want less; rows stay on screen for seconds so detection still catches them.

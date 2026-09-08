@@ -15,7 +15,14 @@ DRY = "--dry-run" in sys.argv
 
 def main():
     cfg = yaml.safe_load(open("config.yaml", encoding="utf-8"))
-    if cfg["capture"].get("backend", "obs") == "obs":
+    bridge = None
+    if cfg["capture"].get("backend", "obs") == "bridge" or cfg["obs"].get("mode") == "bridge":
+        from bridge import Bridge
+        bridge = Bridge({**(cfg.get("bridge") or {}), "fps": cfg["capture"]["fps"]})
+    if cfg["capture"].get("backend", "obs") == "bridge":
+        from bridge import BridgeRoiCapture
+        cap = BridgeRoiCapture(cfg["capture"], bridge)
+    elif cfg["capture"].get("backend", "obs") == "obs":
         from capture_obs import ObsRoiCapture
         cap = ObsRoiCapture(cfg["capture"], cfg["obs"])
     else:
@@ -29,7 +36,10 @@ def main():
     if not DRY and cfg["twitch"]["enabled"]:
         from twitch import Twitch
         tw = Twitch(cfg["twitch"])
-    if not DRY and cfg["obs"]["enabled"]:
+    if not DRY and cfg["obs"]["enabled"] and cfg["obs"].get("mode") == "bridge":
+        from bridge import BridgeOBS
+        ob = BridgeOBS(cfg["obs"], bridge)
+    elif not DRY and cfg["obs"]["enabled"]:
         from obs import OBS
         ob = OBS(cfg["obs"])
 
