@@ -39,7 +39,9 @@ def main():
             threading.Timer(cfg["twitch"]["clip_delay_s"], lambda: _safe(tw.create_clip, trig.title, trig.tags)).start()
         if ob:
             ev = trig.events[-1] if trig.events else None
-            info = {"kind": trig.kind, "distance_m": ev.distance_m if ev else 0,
+            info = {"kind": trig.kind, "description": trig.describe(),
+                    "decision_lag_s": 10 / cfg["capture"]["fps"] + 0.5,   # VOTES reads + fade-in
+                    "distance_m": ev.distance_m if ev else 0,
                     "killer": ev.killer if ev else "", "victim": ev.victim if ev else "",
                     "icons": ev.icons if ev else [], "kills": len(trig.events)}
             threading.Timer(cfg["obs"]["replay_delay_s"], lambda: _safe(ob.trigger, trig.title, trig.tags, info)).start()

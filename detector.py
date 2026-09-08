@@ -37,6 +37,24 @@ class Trigger:
     events: list[FeedEvent]
     tags: list[str] = field(default_factory=list)
 
+    def describe(self) -> str:
+        """Human/AI-readable summary for filenames: what happened, distances, weapon, outcome.
+        e.g. 'Double kill - 68m 61m - rifle - 2 enemies' or 'Sniped from 315m - headshot - sniper - death'"""
+        parts = [self.title]
+        ds = [f"{e.distance_m}m" for e in self.events if e.distance_m]
+        if ds and not any(p.endswith("m") for p in parts[0].split()):
+            parts.append(" ".join(ds))
+        weapons = [i for e in self.events for i in e.icons if i not in ("skull", "explosion")]
+        if weapons:
+            parts.append(sorted(set(weapons))[0])
+        if any("skull" in e.icons for e in self.events) and "headshot" not in self.title.lower():
+            parts.append("headshot")
+        if any(e.victim_me for e in self.events):
+            parts.append("death")
+        elif len(self.events) > 1:
+            parts.append(f"{len(self.events)} kills")
+        return " - ".join(parts)
+
     @staticmethod
     def build(kind, title, events, extra=()):
         tags = {kind, *extra}

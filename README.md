@@ -101,14 +101,16 @@ Every trigger saves the replay buffer locally, so compilations can be cut from t
 files without touching Twitch. Set the buffer to 90-120 s in OBS so the lead-up is included.
 
 **Clip library for editing.** Set `obs.library` to a folder (e.g. `D:\ClipHound`) and every
-replay is moved to `<library>/<date>/<timestamp> <title> [tags].mkv` with a `.json` sidecar
+replay is moved to `<library>/<date>/` and renamed to say what is in it, e.g.
+`Replay 2026-09-08 20-14-33 - Double kill - 68m 61m - rifle - 2 kills [multikill rifle] @-7s.mkv`
+(`@-7s` = the moment is about 7 s before the end of the file). Each has a `.json` sidecar
 holding title, tags, kind, distance, killer, victim and icons. Two indexes are kept in the
 library root: `index.csv` (everything) and `resolve_metadata.csv`. In DaVinci Resolve, import
 the clips, then Media Pool > right-click > Metadata > Import and pick that CSV: titles become
 descriptions and tags become keywords, so smart bins like "headshot" or "multikill" fill
-themselves. The sidecars are what an AI editing pass should read: one file per clip, plain
-JSON, with the moment's type and the second it happened (the event is at the end of the
-replay minus `replay_delay_s`).
+themselves. An editing agent (e.g. a DaVinci Resolve MCP server) gets everything from the filename
+alone; the sidecar adds the structured version (kind, distance, killer, victim, icons,
+`moment_s_from_end`) and `index.csv` is the whole library in one table.
 
 ## Icon catalogue
 `tools/extract_icons.py vod/*.mp4` harvests every feed icon from video slices, averages the

@@ -26,13 +26,14 @@ def _update_library_index(lib: str, rec: dict):
         w = csv.writer(f)
         if new:
             w.writerow(["File Name", "Description", "Keywords", "Comments", "Scene", "Shot"])
-        w.writerow([os.path.basename(rec.get("file", "")), rec.get("title"), ",".join(rec.get("tags", [])),
+        w.writerow([os.path.basename(rec.get("file", "")), rec.get("description", rec.get("title")), ",".join(rec.get("tags", [])),
                     f"{rec.get('kind','')} {rec.get('distance_m','')}m killer={rec.get('killer','')} victim={rec.get('victim','')}".strip(),
                     rec.get("created", "")[:10], rec.get("kind", "")])
 
 
 def _safe_name(s: str) -> str:
-    return re.sub(r"[^A-Za-z0-9 _\-\[\]#]+", "", s).strip()
+    s = re.sub(r"[^A-Za-z0-9 _\-\[\]#@.]+", "", s)
+    return re.sub(r"\s+", " ", s).strip()[:180]        # Windows path budget
 
 
 class OBS:
@@ -59,6 +60,7 @@ class OBS:
             threading.Timer(self.cfg["reconnect_s"], self._connect).start()
 
     def trigger(self, title: str, tags: list[str] | None = None, info: dict | None = None):
+        """title: short clip title. info['description'] (if given) is the long filename summary."""
         self._info = info or {}
         with self._lock:
             if not self.cl:
@@ -98,14 +100,19 @@ class OBS:
         if lib:
             folder = os.path.join(lib, time.strftime("%Y-%m-%d"))
             os.makedirs(folder, exist_ok=True)
-        new = os.path.join(folder, _safe_name(f"{stem} {title} [{' '.join(tags)}]") + ext)
+        desc = self._info.get("description") or title
+        moment = self.cfg.get("replay_delay_s", 4.0) + self._info.get("decision_lag_s", 3.0)
+        # e.g. "Replay 2026-09-08 20-14-33 - Double kill - 68m 61m - rifle - 2 kills [multikill rifle] @-7s.mkv"
+        new = os.path.join(folder, _safe_name(f"{stem} - {desc} [{' '.join(tags)}] @-{moment:.0f}s") + ext)
         try:
             os.rename(path, new)
         except OSError as e:
             print(f"[obs] rename failed ({e}); keeping {path}")
             new = path
-        rec = {"file": new, "title": title, "tags": tags, "created": time.strftime("%Y-%m-%d %H:%M:%S"),
-               **{k: v for k, v in getattr(self, "_info", {}).items()}}
+        rec = {"file": new, "title": title, "description": desc, "tags": tags,
+               "created": time.strftime("%Y-%m-%d %H:%M:%S"),
+               "moment_s_from_end": round(moment, 1),      # the kill is about this far before the clip ends
+               **{k: v for k, v in getattr(self, "_info", {}).items() if k != "description"}}
         with open("replays.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
         with open(os.path.splitext(new)[0] + ".json", "w", encoding="utf-8") as f:
