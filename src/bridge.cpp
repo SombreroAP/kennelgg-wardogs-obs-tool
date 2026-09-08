@@ -4,8 +4,8 @@
 #include <QJsonArray>
 #include <QDataStream>
 #include <QtEndian>
-#include <plugin-support.h>
 #include <obs-module.h>
+#include <plugin-support.h>
 
 Bridge::Bridge(QObject *parent) : QObject(parent)
 {
