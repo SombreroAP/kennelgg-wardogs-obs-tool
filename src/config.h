@@ -30,6 +30,15 @@ struct Config {
 	std::string lookLabel = "POV";
 	int grainAmount = 40;
 
+	// companion app / bridge / clips
+	int bridgePort = 47820;
+	bool bridgeEnabled = true;
+	std::string appPath; // ClipHound (or any companion) to launch when OBS starts
+	bool launchApp = false;
+	std::string clipNameTemplate = "{date}_{time}_{tags}";
+	bool autoStartReplay = true;
+	bool clipOnDowned = false; // also clip when you get downed (the moment before is in the buffer)
+
 	// detection
 	bool autoDetect = true;
 	bool enabled = true;
@@ -42,9 +51,9 @@ struct Config {
 	double customTemplateWidthFrac = 0;                        // 0 = built-in damage-log template
 	double boxX = 0.80, boxY = 0.45, boxW = 0.15, boxH = 0.04; // capture box for a custom template
 
-	static const char *webSourceName() { return "POVBridge web"; }
-	static const char *overlaySourceName() { return "POVBridge look"; }
-	static const char *hideFilterName() { return "POVBridge hide"; }
+	static const char *webSourceName() { return "Kennel web"; }
+	static const char *overlaySourceName() { return "Kennel look"; }
+	static const char *hideFilterName() { return "Kennel hide"; }
 	static std::string sourceFor(const Friend &f) { return f.isWeb() ? webSourceName() : f.source; }
 	const Friend *active() const
 	{

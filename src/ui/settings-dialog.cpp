@@ -11,6 +11,8 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QMessageBox>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <obs-module.h>
 #include <plugin-support.h>
 
@@ -237,7 +239,7 @@ private:
 			link_->clear();
 		hint_->setText(
 			k == FriendKind::Twitch
-				? "POVBridge adds a browser source named \"POVBridge web\" playing this channel with its audio routed through OBS. They just need to be live; ask them to keep Twitch low-latency mode on. Their stream includes their mic."
+				? "Kennel adds a browser source named \"Kennel web\" playing this channel with its audio routed through OBS. They just need to be live; ask them to keep Twitch low-latency mode on. Their stream includes their mic."
 			: k == FriendKind::VdoNinja
 				? "WebRTC through vdo.ninja, usually under half a second, anywhere in the world. Send them the link: they open it in Chrome or Edge, pick their game window or screen and tick \"Share system audio\". No mic is sent."
 				: "Any source already in OBS: an NDI Source (DistroAV) for a friend on the LAN or over a VPN, a capture card, a second PC. Lowest latency. Its audio comes with it.");
@@ -273,13 +275,14 @@ static const char *kLiveScene = "(the scene that is live)";
 
 SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent), e_(engine)
 {
-	setWindowTitle("POVBridge Settings");
+	setWindowTitle("Kennel.gg WARDOGS OBS Tools");
 	resize(900, 720);
 	auto *v = new QVBoxLayout(this);
 	auto *tabs = new QTabWidget(this);
 	tabs->addTab(buildSwitchTab(), "Switch");
 	tabs->addTab(buildLookTab(), "Look");
 	tabs->addTab(buildDetectTab(), "Detect");
+	tabs->addTab(buildClipsTab(), "Clips");
 	tabs->addTab(buildAboutTab(), "Help");
 	v->addWidget(tabs, 1);
 	auto *bb = new QDialogButtonBox(QDialogButtonBox::Close, this);
@@ -332,7 +335,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 	connect(mkGame, &QPushButton::clicked, this, [this]() {
 		std::string e = e_->sw.createGameCapture(e_->cfg);
 		if (!e.empty()) {
-			QMessageBox::warning(this, "POVBridge", QString::fromStdString(e));
+			QMessageBox::warning(this, "Kennel WARDOGS", QString::fromStdString(e));
 			return;
 		}
 		e_->cfg.save();
@@ -450,7 +453,7 @@ QWidget *SettingsDialog::buildLookTab()
 	preview_ = new QPushButton("Preview look in OBS", g);
 	f->addRow(preview_);
 	f->addRow(muted(
-		"Drawn by a browser source named \"POVBridge look\" that POVBridge adds to your scene and shows on top of the friend while you are downed. Nothing touches the friend's feed itself, so it is the same for Twitch, VDO.Ninja and NDI.",
+		"Drawn by a browser source named \"Kennel look\" that the plugin adds to your scene and shows on top of the friend while you are downed. Nothing touches the friend's feed itself, so it is the same for Twitch, VDO.Ninja and NDI.",
 		g));
 	v->addWidget(g);
 	v->addStretch(1);
@@ -509,7 +512,7 @@ QWidget *SettingsDialog::buildDetectTab()
 			 : e_->customTemplate() ? "Custom template"
 						: "Built-in template");
 	v->addWidget(muted(
-		"WARDOGS shows the damage log (\"B  VIEW DAMAGE LOG\" and the body silhouette) the whole time you are downed, map open or not, and hides it when you are revived. POVBridge looks for that header anywhere on the right of your game source, at any HUD size, with a template cut from a real frame. Nothing to set up: get downed once and watch the bar go red (~0.9). Only if it never locks on: drag the dotted box tightly around the header while downed and press Capture.",
+		"WARDOGS shows the damage log (\"B  VIEW DAMAGE LOG\" and the body silhouette) the whole time you are downed, map open or not, and hides it when you are revived. the plugin looks for that header anywhere on the right of your game source, at any HUD size, with a template cut from a real frame. Nothing to set up: get downed once and watch the bar go red (~0.9). Only if it never locks on: drag the dotted box tightly around the header while downed and press Capture.",
 		w));
 
 	auto *g = new QGroupBox("Tuning", w);
@@ -567,7 +570,7 @@ QWidget *SettingsDialog::buildDetectTab()
 	rvRow->addWidget(reviveLbl_);
 	f->addRow("Revive match threshold", rvRow);
 	f->addRow(muted(
-		"Hotkeys live in OBS Settings → Hotkeys: \"POVBridge: show friend's POV / back to me\" and \"...capture damage-log template\". On a two-PC setup send them from the gaming PC with KeyBridge.",
+		"Hotkeys live in OBS Settings → Hotkeys: \"Kennel WARDOGS: show friend's POV / back to me\", \"...capture damage-log template\" and \"...save a clip now\". On a two-PC setup send them from the gaming PC with KeyBridge.",
 		g));
 	v->addWidget(g);
 
@@ -584,6 +587,93 @@ QWidget *SettingsDialog::buildDetectTab()
 	return w;
 }
 
+QWidget *SettingsDialog::buildClipsTab()
+{
+	auto *w = new QWidget(this);
+	auto *v = new QVBoxLayout(w);
+	auto *g1 = new QGroupBox("Replay clips", w);
+	auto *f1 = new QFormLayout(g1);
+	autoReplay_ = new QCheckBox("Start OBS's replay buffer automatically (clips need it running)", g1);
+	autoReplay_->setChecked(e_->cfg.autoStartReplay);
+	f1->addRow(autoReplay_);
+	nameTpl_ = new QLineEdit(QString::fromStdString(e_->cfg.clipNameTemplate), g1);
+	f1->addRow("File name", nameTpl_);
+	f1->addRow(muted(
+		"Placeholders: {date} {time} {title} {tags} {source}. The replay file OBS writes is renamed to this in the same folder; every clip is also logged to clips.csv.",
+		g1));
+	clipDowned_ =
+		new QCheckBox("Also save a clip whenever you get downed (the moment before is in the buffer)", g1);
+	clipDowned_->setChecked(e_->cfg.clipOnDowned);
+	f1->addRow(clipDowned_);
+	f1->addRow(muted(
+		"Hotkey \"Kennel WARDOGS: save a clip now\" and the dock's Clip now button save one by hand. Replay length is OBS's Settings → Output → Replay Buffer.",
+		g1));
+	v->addWidget(g1);
+
+	auto *g2 = new QGroupBox("Companion app (ClipHound)", w);
+	auto *f2 = new QFormLayout(g2);
+	auto *br = new QHBoxLayout();
+	bridgeOn_ = new QCheckBox("Bridge on, port", g2);
+	bridgeOn_->setChecked(e_->cfg.bridgeEnabled);
+	bridgePort_ = new QSpinBox(g2);
+	bridgePort_->setRange(1024, 65535);
+	bridgePort_->setValue(e_->cfg.bridgePort);
+	br->addWidget(bridgeOn_);
+	br->addWidget(bridgePort_);
+	br->addStretch(1);
+	f2->addRow(br);
+	auto *ap = new QHBoxLayout();
+	appPath_ = new QLineEdit(QString::fromStdString(e_->cfg.appPath), g2);
+	appPath_->setPlaceholderText("C:\\...\\ClipHound\\ClipHound.bat");
+	auto *browse = new QPushButton("Browse...", g2);
+	auto *launchNow = new QPushButton("Start now", g2);
+	ap->addWidget(appPath_, 1);
+	ap->addWidget(browse);
+	ap->addWidget(launchNow);
+	f2->addRow("App", ap);
+	launchApp_ = new QCheckBox("Start it when OBS starts", g2);
+	launchApp_->setChecked(e_->cfg.launchApp);
+	f2->addRow(launchApp_);
+	f2->addRow(muted(
+		"The app reads the kill feed (OCR) and asks the plugin for clips over ws://127.0.0.1:<port>. The plugin sends it native-resolution crops of the game source and POV events; the app sends clip requests with tags. Downed detection stays in the plugin.",
+		g2));
+	v->addWidget(g2);
+	connect(browse, &QPushButton::clicked, this, [this]() {
+		QString p = QFileDialog::getOpenFileName(this, "Companion app", appPath_->text(),
+							 "Programs (*.exe *.bat *.cmd);;All files (*)");
+		if (!p.isEmpty()) {
+			appPath_->setText(p);
+			saveAndApply();
+		}
+	});
+	connect(launchNow, &QPushButton::clicked, this, [this]() {
+		saveAndApply();
+		e_->launchApp();
+	});
+
+	auto *g3 = new QGroupBox("Recent clips", w);
+	auto *v3 = new QVBoxLayout(g3);
+	clipList_ = new QListWidget(g3);
+	v3->addWidget(clipList_);
+	v->addWidget(g3, 1);
+	auto fillClips = [this]() {
+		clipList_->clear();
+		auto &h = e_->clips.history();
+		for (auto it = h.rbegin(); it != h.rend(); ++it)
+			clipList_->addItem(it->when.toString("HH:mm:ss") + "  " + it->title + "  [" +
+					   it->tags.join(", ") + "]  " + QFileInfo(it->path).fileName());
+	};
+	fillClips();
+	connect(e_, &Engine::stateChanged, this, fillClips);
+
+	for (auto *c : {autoReplay_, clipDowned_, bridgeOn_, launchApp_})
+		connect(c, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(nameTpl_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
+	connect(appPath_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
+	connect(bridgePort_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
+	return w;
+}
+
 QWidget *SettingsDialog::buildAboutTab()
 {
 	auto *w = new QWidget(this);
@@ -592,20 +682,20 @@ QWidget *SettingsDialog::buildAboutTab()
 	l->setWordWrap(true);
 	l->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	l->setText(
-		"<h3>POVBridge</h3>"
+		"<h3>Kennel.gg WARDOGS OBS Tools</h3>"
 		"<p>Downed in WARDOGS? Your stream shows a squad mate's POV (video and game audio) until you are back up. Your mic is never touched.</p>"
 		"<ol>"
 		"<li><b>Switch tab:</b> pick your game source, add squad mates, tick the game-audio inputs to mute.</li>"
 		"<li><b>Get downed once</b> and watch the Detect tab: the bar goes red when the damage log is found.</li>"
 		"<li><b>Look tab:</b> name tag, camcorder frame, grain, vignette. Preview them in OBS.</li>"
-		"<li>The <b>POVBridge dock</b> (View → Docks) shows the state and has the manual buttons.</li>"
+		"<li>The <b>Kennel WARDOGS dock</b> (View → Docks) shows the state and has the manual buttons.</li>"
 		"</ol>"
 		"<p><b>Squad mate feeds.</b> Twitch: nothing for them to do, ~2 s behind with low-latency mode, includes their mic. "
 		"VDO.Ninja: they open one link in Chrome/Edge and share their game window with system audio, ~0.3 s, no mic. "
 		"NDI: OBS + DistroAV or NDI Screen Capture on the LAN, or over a VPN such as Tailscale. "
 		"Discord Go Live (~0.5-1 s, 720p without Nitro): they Go Live in the call, you pop their stream out into its own window, add a Window Capture of it "
 		"(Windows 10 method, keep it unminimised) plus an Application Audio Capture of Discord, and add the squad mate as an OBS source pointing at that capture.</p>"
-		"<p><b>Timing the switch back.</b> While your friend is on screen, POVBridge also watches their feed for the word REVIVING and the progress ring. "
+		"<p><b>Timing the switch back.</b> While your friend is on screen, the plugin also watches their feed for the word REVIVING and the progress ring. "
 		"When it sees it, the switch back fires the instant the damage log disappears from your own game, with no confirmation delay. "
 		"Your own feed is the trigger because it has no latency; the friend's feed only arms it.</p>"
 		"<p>Settings and templates: <code>" +
@@ -695,7 +785,7 @@ void SettingsDialog::editFriend(int row)
 	if (f.ownsSources()) {
 		std::string e = e_->sw.createFriendSources(e_->cfg, f);
 		if (!e.empty()) {
-			QMessageBox::warning(this, "POVBridge",
+			QMessageBox::warning(this, "Kennel WARDOGS",
 					     "Could not set up the sources: " + QString::fromStdString(e));
 			return;
 		}
@@ -742,6 +832,14 @@ void SettingsDialog::collect()
 	c.pollMs = pollMs_->value();
 	c.autoDetect = auto_->isChecked();
 	c.watchRevive = revive_->isChecked();
+	c.autoStartReplay = autoReplay_->isChecked();
+	c.clipOnDowned = clipDowned_->isChecked();
+	c.clipNameTemplate = nameTpl_->text().trimmed().isEmpty() ? "{date}_{time}_{tags}"
+								  : nameTpl_->text().trimmed().toStdString();
+	c.bridgeEnabled = bridgeOn_->isChecked();
+	c.bridgePort = bridgePort_->value();
+	c.appPath = appPath_->text().trimmed().toStdString();
+	c.launchApp = launchApp_->isChecked();
 }
 
 void SettingsDialog::saveAndApply()

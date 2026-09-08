@@ -17,9 +17,9 @@ public slots:
 
 private:
 	Engine *e_;
-	QLabel *state_, *last_;
+	QLabel *state_, *last_, *app_, *clip_;
 	QProgressBar *meter_;
 	QComboBox *active_;
-	QPushButton *show_, *back_, *pause_;
+	QPushButton *show_, *back_, *pause_, *clipNow_;
 	bool filling_ = false;
 };

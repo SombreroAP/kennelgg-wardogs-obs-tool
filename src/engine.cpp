@@ -2,6 +2,11 @@
 #include <cmath>
 #include <fstream>
 #include <thread>
+#include <QBuffer>
+#include <QJsonArray>
+#include <QProcess>
+#include <QFileInfo>
+#include <QDateTime>
 #include <obs-module.h>
 #include <plugin-support.h>
 
@@ -21,6 +26,49 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	lastReviveSeen_ = clock_::now() - std::chrono::hours(1);
 	downSince_ = lastReviveSeen_;
 	connect(&timer_, &QTimer::timeout, this, &Engine::tick);
+	connect(&frameTimer_, &QTimer::timeout, this, &Engine::frameTick);
+	connect(&bridge, &Bridge::message, this, &Engine::onBridgeMessage);
+	connect(&bridge, &Bridge::clientConnected, this, [this]() {
+		appStatus_ = "connected";
+		log("Companion app connected.");
+		QJsonObject o;
+		o["type"] = "config";
+		o["gameSource"] = QString::fromStdString(cfg.gameSource);
+		o["povState"] = applied_ ? "downed" : "up";
+		bridge.sendJson(o);
+		emit stateChanged();
+	});
+	connect(&bridge, &Bridge::clientDisconnected, this, [this]() {
+		appStatus_.clear();
+		frameTimer_.stop();
+		log("Companion app disconnected.");
+		emit stateChanged();
+	});
+	connect(&clips, &Clips::logged, this, &Engine::log);
+	connect(&clips, &Clips::saved, this, [this](const Clips::Entry &e) {
+		QJsonObject o;
+		o["type"] = "clip_saved";
+		o["path"] = e.path;
+		o["title"] = e.title;
+		o["tags"] = QJsonArray::fromStringList(e.tags);
+		bridge.sendJson(o);
+		emit stateChanged();
+	});
+}
+
+void Engine::launchApp()
+{
+	if (cfg.appPath.empty())
+		return;
+	QString p = QString::fromStdString(cfg.appPath);
+	if (!QFileInfo::exists(p)) {
+		log("Companion app not found: " + p);
+		return;
+	}
+	if (QProcess::startDetached(p, {}, QFileInfo(p).absolutePath()))
+		log("Started companion app: " + QFileInfo(p).fileName());
+	else
+		log("Could not start companion app: " + p);
 }
 
 Engine::~Engine()
@@ -74,6 +122,14 @@ void Engine::autoPickAudio()
 void Engine::start()
 {
 	autoPickAudio();
+	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
+	clips.autoStartReplay = cfg.autoStartReplay;
+	if (cfg.bridgeEnabled)
+		bridge.listen((quint16)cfg.bridgePort);
+	if (cfg.autoStartReplay)
+		clips.ensureReplayBuffer();
+	if (cfg.launchApp)
+		launchApp();
 	timer_.start(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
@@ -84,12 +140,20 @@ void Engine::stop()
 {
 	stopping_ = true;
 	timer_.stop();
+	frameTimer_.stop();
+	bridge.close();
 	for (int i = 0; i < 50 && busy_; i++)
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
 void Engine::reloadConfig()
 {
+	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
+	clips.autoStartReplay = cfg.autoStartReplay;
+	if (cfg.bridgeEnabled && (!bridge.listening() || bridge.port() != cfg.bridgePort))
+		bridge.listen((quint16)cfg.bridgePort);
+	else if (!cfg.bridgeEnabled && bridge.listening())
+		bridge.close();
 	detGame_.threshold = cfg.threshold;
 	detRevive_.threshold = cfg.reviveThreshold;
 	detGame_.unlock();
@@ -131,11 +195,117 @@ void Engine::log(const QString &msg)
 	emit logged(msg);
 }
 
+// ----- the companion app -----
+
+void Engine::onBridgeMessage(const QJsonObject &o)
+{
+	QString type = o.value("type").toString();
+	if (type == "subscribe") {
+		double fps = bridge.wantedFps();
+		if (fps > 0)
+			frameTimer_.start((int)(1000.0 / fps));
+		else
+			frameTimer_.stop();
+	} else if (type == "clip") {
+		QStringList tags;
+		for (auto v : o.value("tags").toArray())
+			tags << v.toString();
+		QString err = clips.request(o.value("title").toString(), tags, o.value("source").toString("app"));
+		QJsonObject r;
+		r["type"] = "clip_result";
+		r["ok"] = err.isEmpty();
+		r["error"] = err;
+		r["id"] = o.value("id");
+		bridge.sendJson(r);
+		if (!err.isEmpty())
+			log("Clip request: " + err);
+	} else if (type == "status") {
+		appStatus_ = o.value("text").toString();
+		emit stateChanged();
+	} else if (type == "pov") {
+		QString force = o.value("force").toString();
+		if (force == "downed")
+			applyNow(true, "companion app");
+		else if (force == "up")
+			applyNow(false, "companion app");
+	}
+}
+
+void Engine::sendPov(const QString &state)
+{
+	if (bridge.clients() == 0)
+		return;
+	QJsonObject o;
+	o["type"] = "pov";
+	o["state"] = state;
+	const Friend *f = cfg.active();
+	o["friend"] = f ? QString::fromStdString(f->name) : "";
+	bridge.sendJson(o);
+}
+
+/// Native-resolution crop of the game source for the companion app (the kill feed is ~9 px text at 1080p).
+void Engine::frameTick()
+{
+	if (frameBusy_ || stopping_ || cfg.gameSource.empty() || bridge.clients() == 0)
+		return;
+	frameBusy_ = true;
+	QRectF roi = bridge.wantedRoi();
+	int width = bridge.wantedWidth();
+	std::string name = cfg.gameSource;
+	std::thread([this, roi, width, name]() {
+		QByteArray jpeg;
+		int cw = 0, ch = 0;
+		obs_source_t *src = obs_get_source_by_name(name.c_str());
+		if (src) {
+			int native = (int)obs_source_get_width(src);
+			std::vector<uint8_t> bgra;
+			int w, h, ls;
+			if (native > 0 && capRoi_.grab(src, native, bgra, w, h, ls)) {
+				QImage img(bgra.data(), w, h, ls, QImage::Format_ARGB32);
+				QRect r((int)(roi.x() * w), (int)(roi.y() * h), (int)(roi.width() * w),
+					(int)(roi.height() * h));
+				r &= QRect(0, 0, w, h);
+				QImage crop = img.copy(r);
+				if (width > 0 && width < crop.width())
+					crop = crop.scaledToWidth(width, Qt::SmoothTransformation);
+				cw = crop.width();
+				ch = crop.height();
+				QBuffer buf(&jpeg);
+				buf.open(QIODevice::WriteOnly);
+				crop.save(&buf, "JPG", 88);
+			}
+			obs_source_release(src);
+		}
+		qint64 ts = QDateTime::currentMSecsSinceEpoch();
+		QMetaObject::invokeMethod(
+			this,
+			[this, jpeg, cw, ch, ts]() {
+				frameBusy_ = false;
+				if (!jpeg.isEmpty())
+					bridge.sendFrame(jpeg, cw, ch, ts);
+			},
+			Qt::QueuedConnection);
+	}).detach();
+}
+
+void Engine::clipNow(const QString &title, const QStringList &tags, const QString &source)
+{
+	QString err = clips.request(title, tags, source);
+	if (!err.isEmpty())
+		log("Clip: " + err);
+	emit stateChanged();
+}
+
 // ----- the poll -----
 
 void Engine::tick()
 {
 	if (busy_ || stopping_ || cfg.gameSource.empty())
+		return;
+	// The full-frame search is the expensive path and it runs exactly while you are alive (nothing to lock
+	// on to). Doing it on every third poll keeps it near 1-2 % of a core; once locked, every poll is cheap.
+	tickN_++;
+	if (!lastGame_.locked && !revivingRecent() && (tickN_ % 3) != 0)
 		return;
 	busy_ = true;
 	bool wantRevive = applied_ && cfg.watchRevive && cfg.active();
@@ -220,8 +390,10 @@ void Engine::onResult(Result r)
 		bool was = revivingRecent();
 		lastReviveSeen_ = clock_::now();
 		reviveProgress_ = r.progress;
-		if (!was)
+		if (!was) {
 			log("Friend is reviving you - switching back the instant the damage log goes.");
+			sendPov("reviving");
+		}
 	} else if (!revivingRecent())
 		reviveProgress_ = -1;
 	timer_.setInterval(revivingRecent() ? 100 : std::max(100, cfg.pollMs));
@@ -279,6 +451,9 @@ void Engine::applyNow(bool on, const QString &why)
 		downSince_ = clock_::now();
 	else
 		detRevive_.unlock();
+	sendPov(on ? "downed" : "up");
+	if (on && cfg.clipOnDowned)
+		clips.request("downed", {"downed"}, "pov");
 	QString msg = (on ? QString("Showing %1's POV").arg(QString::fromStdString(cfg.active()->name))
 			  : QString("Back to your POV")) +
 		      " - " + why + ".";
@@ -330,7 +505,7 @@ void Engine::captureTemplate()
 {
 	QImage img = lastFrame();
 	if (img.isNull()) {
-		log("No frame from the game source yet (open POVBridge Settings so frames are kept).");
+		log("No frame from the game source yet (open the settings window so frames are kept).");
 		return;
 	}
 	int x = (int)std::lround(cfg.boxX * img.width()), y = (int)std::lround(cfg.boxY * img.height());

@@ -295,7 +295,7 @@ jobs:
           # Build Installer 📦 (Inno Setup 6 is preinstalled on the windows-2022 runner)
           $Iscc = "${Env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if ( ! ( Test-Path $Iscc ) ) { choco install innosetup --no-progress -y; }
-          & $Iscc "/DVERSION=${{ steps.setup.outputs.pluginVersion }}" "/DSRC=${{ github.workspace }}\release\${{ needs.check-event.outputs.config }}\${{ steps.setup.outputs.pluginName }}" "/DOUTDIR=${{ github.workspace }}\release" installer\povbridge.iss
+          & $Iscc "/DVERSION=${{ steps.setup.outputs.pluginVersion }}" "/DSRC=${{ github.workspace }}\release\${{ needs.check-event.outputs.config }}\${{ steps.setup.outputs.pluginName }}" "/DOUTDIR=${{ github.workspace }}\release" installer\kennel-wardogs.iss
           Get-ChildItem "${{ github.workspace }}\release"
 
       - name: Upload Artifacts 📡

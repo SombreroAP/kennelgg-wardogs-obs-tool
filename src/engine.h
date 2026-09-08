@@ -7,7 +7,9 @@
 #include <QObject>
 #include <QImage>
 #include <QTimer>
+#include "bridge.h"
 #include "capture.h"
+#include "clips.h"
 #include "config.h"
 #include "detector.h"
 #include "switcher.h"
@@ -21,6 +23,12 @@ public:
 
 	Config cfg;
 	Switcher sw;
+	Bridge bridge;
+	Clips clips;
+	QString appStatus() const { return appStatus_; }
+	bool appConnected() const { return bridge.clients() > 0; }
+	void onReplaySaved() { clips.onReplaySaved(); }
+	void launchApp();
 
 	bool applied() const { return applied_; }
 	bool detected() const { return detected_; }
@@ -50,6 +58,8 @@ public slots:
 	void captureTemplate();
 	void useBuiltInTemplate();
 	void previewLook(bool on);
+	void clipNow(const QString &title = "manual", const QStringList &tags = {"manual"},
+		     const QString &source = "hotkey");
 	void log(const QString &msg);
 
 signals:
@@ -68,14 +78,18 @@ private:
 	};
 	void tick();
 	void onResult(Result r);
+	void frameTick();
+	void onBridgeMessage(const QJsonObject &o);
+	void sendPov(const QString &state);
 	void detect(const Match &m);
 
-	QTimer timer_;
-	std::atomic<bool> busy_{false}, stopping_{false};
-	Capture capGame_, capFriend_;
+	QTimer timer_, frameTimer_;
+	std::atomic<bool> busy_{false}, stopping_{false}, frameBusy_{false};
+	Capture capGame_, capFriend_, capRoi_;
+	QString appStatus_;
 	Detector detGame_, detRevive_;
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
-	int downRun_ = 0, upRun_ = 0;
+	int downRun_ = 0, upRun_ = 0, tickN_ = 0;
 	std::chrono::steady_clock::time_point downSince_, lastReviveSeen_;
 	Match lastGame_, lastRevive_;
 	double reviveProgress_ = -1;

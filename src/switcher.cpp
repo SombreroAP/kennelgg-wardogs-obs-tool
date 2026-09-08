@@ -98,7 +98,7 @@ std::vector<std::pair<std::string, std::string>> Switcher::inputs()
 std::vector<std::pair<std::string, std::string>> Switcher::listProperty(const char *kind, const char *prop)
 {
 	std::vector<std::pair<std::string, std::string>> out;
-	obs_source_t *tmp = obs_source_create_private(kind, "povbridge-probe", nullptr);
+	obs_source_t *tmp = obs_source_create_private(kind, "kennel-probe", nullptr);
 	if (!tmp)
 		return out;
 	obs_properties_t *props = obs_source_properties(tmp);
@@ -172,7 +172,7 @@ std::string Switcher::createInScene(const Config &cfg, const char *kind, const s
 
 std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 {
-	std::string base = "POVBridge · " + (f.name.empty() ? std::string("squad mate") : f.name);
+	std::string base = "Kennel · " + (f.name.empty() ? std::string("squad mate") : f.name);
 	if (f.kind == FriendKind::Discord) {
 		// their popped-out Go Live window, captured with the Windows 10 method so it survives being covered
 		obs_data_t *st = obs_data_create();

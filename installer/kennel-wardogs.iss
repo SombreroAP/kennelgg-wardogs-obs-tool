@@ -1,35 +1,35 @@
-; POVBridge for OBS - Windows installer (Inno Setup 6)
+; Kennel.gg WARDOGS OBS Tools - Windows installer (Inno Setup 6)
 ; Installs the portable-plugin layout into OBS's shared plugin folder, which OBS 30+ scans on start:
-;   C:\ProgramData\obs-studio\plugins\povbridge\bin\64bit\povbridge.dll  +  data\
+;   C:\ProgramData\obs-studio\plugins\kennel-wardogs\bin\64bit\kennel-wardogs.dll  +  data\
 
 #ifndef VERSION
   #define VERSION "0.0.0"
 #endif
 #ifndef SRC
-  #define SRC "..\release\RelWithDebInfo\povbridge"
+  #define SRC "..\release\RelWithDebInfo\kennel-wardogs"
 #endif
 #ifndef OUTDIR
   #define OUTDIR "..\release"
 #endif
 
 [Setup]
-AppId={{7C1E6B0A-4F5D-4C7B-9C0E-POVBRIDGE0001}
-AppName=POVBridge for OBS
+AppId={{7C1E6B0A-4F5D-4C7B-9C0E-KENNELWD0001}
+AppName=Kennel.gg WARDOGS OBS Tools
 AppVersion={#VERSION}
-AppVerName=POVBridge for OBS {#VERSION}
+AppVerName=Kennel.gg WARDOGS OBS Tools {#VERSION}
 AppPublisher=Sombrero / The Kennel
 AppPublisherURL=https://kennel.gg
-DefaultDirName={commonappdata}\obs-studio\plugins\povbridge
+DefaultDirName={commonappdata}\obs-studio\plugins\kennel-wardogs
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 OutputDir={#OUTDIR}
-OutputBaseFilename=povbridge-{#VERSION}-windows-x64-installer
+OutputBaseFilename=kennel-wardogs-{#VERSION}-windows-x64-installer
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
-UninstallDisplayName=POVBridge for OBS
+UninstallDisplayName=Kennel.gg WARDOGS OBS Tools
 WizardStyle=modern
 SetupLogging=yes
 
@@ -37,7 +37,7 @@ SetupLogging=yes
 Source: "{#SRC}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Messages]
-WelcomeLabel2=This installs POVBridge into OBS Studio's plugin folder.%n%nClose OBS before continuing. After installing, start OBS and open View > Docks > POVBridge.
+WelcomeLabel2=This installs Kennel.gg WARDOGS OBS Tools into OBS Studio's plugin folder.%n%nClose OBS before continuing. After installing, start OBS and open View > Docks > Kennel WARDOGS.
 
 [Code]
 function IsOBSRunning(): Boolean;

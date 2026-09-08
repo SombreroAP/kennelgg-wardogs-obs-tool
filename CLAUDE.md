@@ -1,10 +1,12 @@
-# povbridge-obs — session context
+# kennel-wardogs-obs — session context
 
-**OBS plugin (C++ / Qt, obs-plugintemplate) for Windows OBS.** While the streamer is downed in
-WARDOGS, OBS shows a squad mate's POV (Twitch stream first, VDO.Ninja WebRTC, or an NDI/OBS source)
-on top of the game with its audio; the mic is never touched. This is **purely an OBS plugin** —
-an earlier C# tray app was deleted on the user's instruction (7 Sep 2026); do not resurrect it.
-Focus is Windows OBS. Builds go to Google Drive `My Drive/POVBridge-OBS/`.
+**"Kennel.gg WARDOGS OBS Tools"** — one OBS plugin (C++ / Qt, obs-plugintemplate, module id
+`kennel-wardogs`) for Windows OBS, renamed from POVBridge on 8 Sep 2026. Two features: the **POV
+swap** (downed → show a squad mate's POV; mic untouched) and **clips** (replay-buffer save +
+rename, from hotkey/dock/downed/**ClipHound**). ClipHound (`../ClipHound`, Python) stays a separate
+app that does the kill-feed OCR and talks to the plugin over a local WebSocket bridge; the split is
+deliberate (no Tesseract inside OBS, downed detection stays native). An earlier C# tray app was
+deleted; do not resurrect it. Builds go to Google Drive `My Drive/Kennel WARDOGS OBS Tools/`.
 
 | File | What |
 |---|---|
@@ -36,6 +38,7 @@ Python/numpy on the user's three screenshots (`My Drive/screenshots/`), frames r
   lists; irrelevant for Windows. The Windows build must come from GitHub Actions
   (`.github/workflows/build-project.yaml`, unchanged from the template) — needs the repo pushed to
   GitHub (`SombreroAP/povbridge-obs`, private). **Ask before pushing.**
+- Engine throttles the full-frame search to every 3rd poll while unlocked (alive) — CPU question from the user.
 - Nothing has run inside OBS yet. First things to check on Windows: `obs_frontend_add_dock_by_id`
   (OBS 30+), browser source setting keys, `color_filter_v2` opacity range 0..1, Twitch embed
   `parent=twitch.tv` autoplaying with sound in CEF, `file:///...?query` for the overlay.

@@ -2,6 +2,7 @@
 #include "ui/settings-dialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QFileInfo>
 #include <obs-frontend-api.h>
 
 Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
@@ -49,6 +50,19 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	connect(pause_, &QPushButton::clicked, this, [this]() { e_->setEnabled(!e_->cfg.enabled); });
 	connect(settings, &QPushButton::clicked, this, &Dock::openSettings);
 
+	app_ = new QLabel(this);
+	clip_ = new QLabel(this);
+	for (auto *l : {app_, clip_}) {
+		l->setWordWrap(true);
+		l->setStyleSheet("color: palette(mid);");
+	}
+	auto *clipRow = new QHBoxLayout();
+	clipNow_ = new QPushButton("Clip now", this);
+	clipRow->addWidget(clipNow_);
+	clipRow->addWidget(clip_, 1);
+	v->addLayout(clipRow);
+	connect(clipNow_, &QPushButton::clicked, this, [this]() { e_->clipNow("manual", {"manual"}, "dock"); });
+	v->addWidget(app_);
 	last_ = new QLabel(this);
 	last_->setWordWrap(true);
 	last_->setStyleSheet("color: palette(mid);");
@@ -79,6 +93,13 @@ void Dock::refresh()
 	state_->setText(QString::fromStdString(e_->stateText()));
 	state_->setStyleSheet(e_->applied() ? "color: #ce6050;" : "");
 	pause_->setText(e_->cfg.enabled ? "Pause" : "Resume");
+	app_->setText(e_->appConnected()
+			      ? "ClipHound: " + (e_->appStatus().isEmpty() ? QString("connected") : e_->appStatus())
+		      : e_->cfg.bridgeEnabled
+			      ? QString("ClipHound: not connected (ws://127.0.0.1:%1)").arg(e_->cfg.bridgePort)
+			      : "ClipHound: bridge off");
+	QString lp = e_->clips.lastPath();
+	clip_->setText(lp.isEmpty() ? "no clips yet" : "last: " + QFileInfo(lp).fileName());
 	show_->setEnabled(!e_->applied());
 	back_->setEnabled(e_->applied());
 }

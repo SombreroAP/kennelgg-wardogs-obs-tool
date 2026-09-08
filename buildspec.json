@@ -33,11 +33,11 @@
     },
     "platformConfig": {
         "macos": {
-            "bundleId": "gg.kennel.povbridge"
+            "bundleId": "gg.kennel.wardogs"
         }
     },
-    "name": "povbridge",
-    "displayName": "POVBridge",
+    "name": "kennel-wardogs",
+    "displayName": "Kennel.gg WARDOGS OBS Tools",
     "version": "0.1.0",
     "author": "Sombrero / The Kennel",
     "website": "https://kennel.gg",

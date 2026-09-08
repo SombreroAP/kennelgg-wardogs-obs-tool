@@ -70,6 +70,11 @@ private:
 	QWidget *buildLookTab();
 	QWidget *buildDetectTab();
 	QWidget *buildAboutTab();
+	QWidget *buildClipsTab();
+	QCheckBox *bridgeOn_, *launchApp_, *autoReplay_, *clipDowned_;
+	QSpinBox *bridgePort_;
+	QLineEdit *appPath_, *nameTpl_;
+	QListWidget *clipList_;
 	void fillSources();
 	void fillFriends();
 	void editFriend(int row);
