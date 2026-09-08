@@ -1,5 +1,6 @@
 #include "ui/dock.h"
 #include "ui/settings-dialog.h"
+#include "ui/wizard.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileInfo>
@@ -44,8 +45,11 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	auto *btns2 = new QHBoxLayout();
 	pause_ = new QPushButton("Pause", this);
 	auto *settings = new QPushButton("Settings...", this);
+	auto *wiz = new QPushButton("Setup", this);
 	btns2->addWidget(pause_);
+	btns2->addWidget(wiz);
 	btns2->addWidget(settings);
+	connect(wiz, &QPushButton::clicked, this, &Dock::openWizard);
 	v->addLayout(btns2);
 	connect(pause_, &QPushButton::clicked, this, [this]() { e_->setEnabled(!e_->cfg.enabled); });
 	connect(settings, &QPushButton::clicked, this, &Dock::openSettings);
@@ -102,6 +106,13 @@ void Dock::refresh()
 	clip_->setText(lp.isEmpty() ? "no clips yet" : "last: " + QFileInfo(lp).fileName());
 	show_->setEnabled(!e_->applied());
 	back_->setEnabled(e_->applied());
+}
+
+void Dock::openWizard()
+{
+	auto *w = new SetupWizard(e_, (QWidget *)obs_frontend_get_main_window());
+	w->setAttribute(Qt::WA_DeleteOnClose);
+	w->show();
 }
 
 void Dock::openSettings()

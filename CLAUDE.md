@@ -51,5 +51,6 @@ Python/numpy on the user's three screenshots (`My Drive/screenshots/`), frames r
 
 | `src/lan.*` | UDP 47821 JSON beacon every 2 s + listener; peers keyed by host, pruned after 60 s |
 | `src/switcher.*` (`startNdiShare`) | DistroAV `ndi_output` created by us on mixer track 6 (`obs_output_set_mixer(out, 5)`), all `*input_capture` sources removed from track 6 → squad feed without the mic; `Engine::applyLan` wires beacon + share, auto-adds peers as `FriendKind::Ndi` with channel `"<host> (Kennel POV)"` |
+| `src/ui/wizard.*` | first-run `QWizard` (name → game source → squad → clips → done); opened on first load and from the dock's Setup button |
 | `app/` | ClipHound (Python). `app/bridge.py` = client of the plugin bridge; `app/cliphound.spec` + `app/build_exe.ps1` = PyInstaller bundle with Tesseract copied in (CI, Windows job) |
 | `installer/kennel-wardogs.iss` | Inno Setup: component `plugin` → ProgramData\obs-studio\plugins, component `app` → ProgramData\Kennel WARDOGS\ClipHound (users-modify), config.yaml kept on upgrade, Start-menu shortcuts, optional post-install setup run |

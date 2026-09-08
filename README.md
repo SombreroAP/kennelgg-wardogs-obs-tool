@@ -12,13 +12,28 @@ One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional co
   plugin creates and places the OBS sources for you.
 - **The look.** Optional name tag, camcorder frame, film grain and vignette over the friend's feed.
 
+## Quick start (testers)
+
+1. Close OBS. Run `kennel-wardogs-<version>-windows-x64-installer.exe`. Windows will warn that the
+   file is unsigned: *More info → Run anyway*. Keep **ClipHound** ticked if you want kill-feed clips;
+   tick **DistroAV** if you will play at a LAN with other people running this.
+2. Start OBS. A short **setup wizard** opens: your name, which source shows WARDOGS (or one click to
+   create a Game Capture), a squad mate (type a Twitch channel, or wait for LAN squad mates to appear),
+   clips. Finish.
+3. Play. **Get downed once**: the Kennel WARDOGS dock turns red and your stream shows the squad mate;
+   it comes back the instant you are revived.
+
+That is all. Settings live under Tools → Kennel.gg WARDOGS OBS Tools..., the dock under View → Docks.
+
 ## Install
 
 Close OBS, run `kennel-wardogs-<version>-windows-x64-installer.exe`, start OBS. The installer puts
 the plugin in `C:\ProgramData\obs-studio\plugins\kennel-wardogs` and, if you keep the ClipHound
 component ticked, the app in `C:\ProgramData\Kennel WARDOGS\ClipHound` (self-contained, Tesseract
 included, no Python install). The plugin finds it there and starts it with OBS. Start-menu
-shortcuts: **ClipHound** and **ClipHound setup** (your in-game name, Twitch login). Settings open by
+shortcuts: **ClipHound** and **ClipHound setup** (your in-game name, Twitch login). An optional
+**DistroAV** task downloads the official DistroAV installer (GPL-2, from its GitHub release) and runs
+it; DistroAV then asks you to fetch the NDI Runtime from Vizrt, which nobody may redistribute. Settings open by
 themselves on first run; later they are under **Tools → Kennel.gg WARDOGS OBS Tools...** and the
 **Kennel WARDOGS** dock is under View → Docks. The zip has the same files for a manual install
 (copy its `kennel-wardogs` folder into `C:\ProgramData\obs-studio\plugins\`).

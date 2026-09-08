@@ -102,7 +102,7 @@ static void onFrontendEvent(enum obs_frontend_event event, void *)
 			if (g_engine->needsSetup() && g_dock)
 				QTimer::singleShot(1500, g_dock, [] {
 					if (g_dock)
-						g_dock->openSettings();
+						g_dock->openWizard();
 				});
 		}
 	} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED) {

@@ -45,6 +45,9 @@ Name: "custom"; Description: "Custom"; Flags: iscustom
 Name: "plugin"; Description: "Kennel WARDOGS OBS plugin (POV swap, clips)"; Types: full plugin custom; Flags: fixed
 Name: "app"; Description: "ClipHound - kill-feed OCR clipping app (auto-started by the plugin)"; Types: full
 
+[Tasks]
+Name: "distroav"; Description: "Download and install DistroAV 6.2.1 (NDI for OBS, GPL-2) so squad mates on the same network can share feeds. DistroAV will ask you to fetch the NDI Runtime from Vizrt."; Flags: unchecked
+
 [Dirs]
 Name: "{commonappdata}\Kennel WARDOGS\ClipHound"; Permissions: users-modify; Components: app
 
@@ -64,6 +67,43 @@ Filename: "{commonappdata}\Kennel WARDOGS\ClipHound\ClipHound.exe"; Parameters: 
 WelcomeLabel2=This installs the Kennel.gg WARDOGS OBS plugin into OBS Studio's plugin folder and, optionally, the ClipHound clipping app (C:\ProgramData\Kennel WARDOGS\ClipHound), which the plugin starts with OBS.%n%nClose OBS before continuing. After installing, start OBS and open View > Docks > Kennel WARDOGS.
 
 [Code]
+var
+  DlPage: TDownloadWizardPage;
+
+function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
+begin
+  Result := True;
+end;
+
+procedure InitializeWizard;
+begin
+  DlPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), @OnDownloadProgress);
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := True;
+  if (CurPageID = wpReady) and WizardIsTaskSelected('distroav') then
+  begin
+    DlPage.Clear;
+    DlPage.Add('https://github.com/DistroAV/DistroAV/releases/download/6.2.1/distroav-6.2.1-windows-x64-Installer.exe', 'distroav-installer.exe', '');
+    DlPage.Show;
+    try
+      try
+        DlPage.Download;
+        if not Exec(ExpandConstant('{tmp}\distroav-installer.exe'), '', '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
+          MsgBox('DistroAV installer could not be started. Get it from https://distroav.org later.', mbInformation, MB_OK);
+      except
+        MsgBox('DistroAV download failed: ' + GetExceptionMessage + #13#10 + 'Get it from https://distroav.org later.', mbInformation, MB_OK);
+      end;
+    finally
+      DlPage.Hide;
+    end;
+  end;
+end;
+
 function IsOBSRunning(): Boolean;
 var
   ResultCode: Integer;

@@ -24,6 +24,33 @@ def main():
     cfg = yaml.safe_load(open(CFG, encoding="utf-8"))
     check_only = "--check" in sys.argv
     print("=== ClipHound setup ===\n")
+    bridge_mode = cfg["capture"].get("backend") == "bridge"
+    if bridge_mode:
+        # frames and clips come from the Kennel WARDOGS OBS plugin: only the questions that still matter
+        print("Running with the Kennel WARDOGS OBS plugin (frames and clips come from OBS itself).")
+        if not check_only:
+            cfg["detection"]["player_name"] = ask("Your in-game name as it appears in the kill feed", cfg["detection"].get("player_name"))
+            cfg["obs"]["library"] = ask("Clip library folder for an index of clips (blank = none)", cfg["obs"].get("library"))
+            tw = ask("Enable Twitch clips now? y/n", "y" if cfg["twitch"].get("enabled") else "n").lower().startswith("y")
+            cfg["twitch"]["enabled"] = tw
+            if tw:
+                print("Twitch app from https://dev.twitch.tv/console/apps (logged in as the clipping account),")
+                print("redirect URL http://localhost:3000. Then run:  ClipHound --token")
+                cfg["twitch"]["client_id"] = ask("Twitch client id", cfg["twitch"].get("client_id"))
+                cfg["twitch"]["client_secret"] = ask("Twitch client secret", cfg["twitch"].get("client_secret"))
+        _save(cfg)
+        try:
+            from bridge import Bridge, BridgeRoiCapture
+            import cv2
+            b = Bridge(cfg.get("bridge") or {})
+            print("Waiting for a frame from the plugin (OBS must be open with the plugin)...")
+            cap = BridgeRoiCapture(cfg["capture"], b)
+            roi = cap.grab()
+            cv2.imwrite("roi.png", roi)
+            print(f"Feed region saved to roi.png ({roi.shape[1]}x{roi.shape[0]} px) - the kill-feed strip must sit inside it.")
+        except Exception as e:
+            print(f"Feed check skipped: {e}")
+        return
 
     if not check_only:
         print("OBS > Tools > WebSocket Server Settings: enable the server, port 4455, set a password.")

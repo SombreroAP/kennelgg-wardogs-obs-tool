@@ -18,6 +18,9 @@ if getattr(sys, "frozen", False):
         import shutil
         if not os.path.exists("config.yaml") and os.path.exists("config.default.yaml"):
             shutil.copy("config.default.yaml", "config.yaml")
+        if "--token" in sys.argv:
+            import get_token  # noqa: F401  (runs the Twitch login flow on import)
+            raise SystemExit(0)
         if "--setup" in sys.argv:
             import setup as _setup
             sys.argv.remove("--setup")

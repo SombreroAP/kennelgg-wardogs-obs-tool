@@ -83,7 +83,7 @@ detection:
 
 # ---- Twitch --------------------------------------------------------------------
 twitch:
-  enabled: true
+  enabled: false           # setup turns this on once you have a Twitch app (client id/secret)
   client_id: ""            # from https://dev.twitch.tv/console/apps (register it while logged in as InfoKennel)
   client_secret: ""
   # Channel the clips are taken FROM (the stream being clipped):
