@@ -14,7 +14,11 @@ One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional co
 
 ## Install
 
-Close OBS, run `kennel-wardogs-<version>-windows-x64-installer.exe`, start OBS. Settings open by
+Close OBS, run `kennel-wardogs-<version>-windows-x64-installer.exe`, start OBS. The installer puts
+the plugin in `C:\ProgramData\obs-studio\plugins\kennel-wardogs` and, if you keep the ClipHound
+component ticked, the app in `C:\ProgramData\Kennel WARDOGS\ClipHound` (self-contained, Tesseract
+included, no Python install). The plugin finds it there and starts it with OBS. Start-menu
+shortcuts: **ClipHound** and **ClipHound setup** (your in-game name, Twitch login). Settings open by
 themselves on first run; later they are under **Tools → Kennel.gg WARDOGS OBS Tools...** and the
 **Kennel WARDOGS** dock is under View → Docks. The zip has the same files for a manual install
 (copy its `kennel-wardogs` folder into `C:\ProgramData\obs-studio\plugins\`).
@@ -51,7 +55,7 @@ The plugin saves OBS's replay buffer and renames the file with `{date} {time} {t
 - **clip on downed** (Clips tab);
 - **ClipHound** over the local bridge.
 
-ClipHound (Python, in `../ClipHound`) OCRs the kill feed. It connects to the plugin at
+ClipHound (Python, in `app/`, built into `ClipHound.exe` by CI) OCRs the kill feed. It connects to the plugin at
 `ws://127.0.0.1:47820`, subscribes to native-resolution crops of the game source, and sends
 `{"type":"clip","title":...,"tags":[...]}` on a notable row. The plugin replies with the saved
 path and also sends POV events (`downed`, `reviving`, `up`) so those can be tagged. The app can
@@ -81,4 +85,6 @@ heavier part; see its README for the numbers and the knobs (frame rate, only OCR
 ## Build
 
 Official [obs-plugintemplate](https://github.com/obsproject/obs-plugintemplate). GitHub Actions
-builds `kennel-wardogs-<version>-windows-x64.zip` and the Inno Setup installer on every push.
+builds the plugin, then `app/build_exe.ps1` (PyInstaller + choco Tesseract) and the Inno Setup
+installer with both components, on every push: `kennel-wardogs-<version>-windows-x64.zip`
+(plugin only) and `kennel-wardogs-<version>-windows-x64-installer.exe` (plugin + app).

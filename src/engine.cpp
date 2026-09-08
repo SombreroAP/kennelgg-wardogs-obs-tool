@@ -122,6 +122,16 @@ void Engine::autoPickAudio()
 void Engine::start()
 {
 	autoPickAudio();
+	if (cfg.appPath.empty()) {
+		// the installer puts ClipHound here; adopt it once so the app starts with OBS
+		QString def = "C:/ProgramData/Kennel WARDOGS/ClipHound/ClipHound.exe";
+		if (QFileInfo::exists(def)) {
+			cfg.appPath = def.toStdString();
+			cfg.launchApp = true;
+			cfg.save();
+			log("Found ClipHound from the installer; it will start with OBS (Settings → Clips).");
+		}
+	}
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
 	clips.autoStartReplay = cfg.autoStartReplay;
 	if (cfg.bridgeEnabled)
