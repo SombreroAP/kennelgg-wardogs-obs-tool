@@ -277,6 +277,10 @@ jobs:
           "pluginName=${ProductName}" >> $env:GITHUB_OUTPUT
           "pluginVersion=${ProductVersion}" >> $env:GITHUB_OUTPUT
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Build Plugin 🧱
         uses: ./.github/actions/build-plugin
         with:
@@ -289,6 +293,15 @@ jobs:
           target: x64
           config: ${{ needs.check-event.outputs.config }}
           package: ${{ fromJSON(needs.check-event.outputs.package) }}
+
+      - name: Build ClipHound app 🐶
+        run: |
+          # Build ClipHound app 🐶 (PyInstaller bundle + bundled Tesseract)
+          choco install tesseract --no-progress -y
+          python --version
+          pwsh app/build_exe.ps1
+          New-Item -ItemType Directory -Force "${{ github.workspace }}\release\app" | Out-Null
+          Copy-Item -Recurse -Force app/dist/ClipHound "${{ github.workspace }}\release\app\ClipHound"
 
       - name: Build Installer 📦
         run: |

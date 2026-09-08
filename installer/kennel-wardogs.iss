@@ -11,6 +11,9 @@
 #ifndef OUTDIR
   #define OUTDIR "..\release"
 #endif
+#ifndef APPSRC
+  #define APPSRC "..\release\app\ClipHound"
+#endif
 
 [Setup]
 AppId={{7C1E6B0A-4F5D-4C7B-9C0E-KENNELWD0001}
@@ -33,11 +36,32 @@ UninstallDisplayName=Kennel.gg WARDOGS OBS Tools
 WizardStyle=modern
 SetupLogging=yes
 
+[Types]
+Name: "full"; Description: "OBS plugin + ClipHound app (recommended)"
+Name: "plugin"; Description: "OBS plugin only"
+Name: "custom"; Description: "Custom"; Flags: iscustom
+
+[Components]
+Name: "plugin"; Description: "Kennel WARDOGS OBS plugin (POV swap, clips)"; Types: full plugin custom; Flags: fixed
+Name: "app"; Description: "ClipHound - kill-feed OCR clipping app (auto-started by the plugin)"; Types: full
+
+[Dirs]
+Name: "{commonappdata}\Kennel WARDOGS\ClipHound"; Permissions: users-modify; Components: app
+
 [Files]
-Source: "{#SRC}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SRC}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: plugin
+Source: "{#APPSRC}\*"; DestDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; Excludes: "config.yaml"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
+Source: "{#APPSRC}\config.default.yaml"; DestDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; DestName: "config.yaml"; Flags: onlyifdoesntexist uninsneveruninstall; Components: app
+
+[Icons]
+Name: "{commonprograms}\Kennel WARDOGS\ClipHound"; Filename: "{commonappdata}\Kennel WARDOGS\ClipHound\ClipHound.exe"; WorkingDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; Components: app
+Name: "{commonprograms}\Kennel WARDOGS\ClipHound setup"; Filename: "{commonappdata}\Kennel WARDOGS\ClipHound\ClipHound.exe"; Parameters: "--setup"; WorkingDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; Components: app
+
+[Run]
+Filename: "{commonappdata}\Kennel WARDOGS\ClipHound\ClipHound.exe"; Parameters: "--setup"; WorkingDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; Description: "Run ClipHound setup now (your in-game name, Twitch login)"; Flags: postinstall nowait skipifsilent unchecked; Components: app
 
 [Messages]
-WelcomeLabel2=This installs Kennel.gg WARDOGS OBS Tools into OBS Studio's plugin folder.%n%nClose OBS before continuing. After installing, start OBS and open View > Docks > Kennel WARDOGS.
+WelcomeLabel2=This installs the Kennel.gg WARDOGS OBS plugin into OBS Studio's plugin folder and, optionally, the ClipHound clipping app (C:\ProgramData\Kennel WARDOGS\ClipHound), which the plugin starts with OBS.%n%nClose OBS before continuing. After installing, start OBS and open View > Docks > Kennel WARDOGS.
 
 [Code]
 function IsOBSRunning(): Boolean;

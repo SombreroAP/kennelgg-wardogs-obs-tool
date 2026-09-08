@@ -1,6 +1,28 @@
 """ClipHound: OCR the WARDOGS kill feed -> Twitch clip + tagged OBS replay."""
 import os
 import sys
+
+# Frozen (installer) build: work from the exe's folder so config.yaml, debug/ and the library
+# paths resolve, and use the bundled Tesseract.
+if getattr(sys, "frozen", False):
+    os.chdir(os.path.dirname(sys.executable))
+    _tess = os.path.join(os.path.dirname(sys.executable), "tesseract", "tesseract.exe")
+    if os.path.exists(_tess):
+        os.environ["TESSDATA_PREFIX"] = os.path.join(os.path.dirname(_tess), "tessdata")
+        try:
+            import pytesseract
+            pytesseract.pytesseract.tesseract_cmd = _tess
+        except ImportError:
+            pass
+    if "--setup" in sys.argv or not os.path.exists("config.yaml"):
+        import shutil
+        if not os.path.exists("config.yaml") and os.path.exists("config.default.yaml"):
+            shutil.copy("config.default.yaml", "config.yaml")
+        if "--setup" in sys.argv:
+            import setup as _setup
+            sys.argv.remove("--setup")
+            _setup.main()
+            raise SystemExit(0)
 import threading
 import time
 
