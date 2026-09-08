@@ -225,6 +225,73 @@ std::string Switcher::createGameCapture(Config &cfg)
 	return e;
 }
 
+bool Switcher::outputKindAvailable(const char *kind)
+{
+	const char *id;
+	for (size_t i = 0; obs_enum_output_types(i, &id); i++)
+		if (strcmp(id, kind) == 0)
+			return true;
+	return false;
+}
+
+std::string Switcher::startNdiShare(const std::string &ndiName)
+{
+	if (!outputKindAvailable("ndi_output"))
+		return "DistroAV (obs-ndi) is not installed, so the game feed cannot be shared over NDI";
+	const uint32_t track6 = 1u << 5;
+	// microphones off track 6: squad mates should hear the game, not the streamer
+	obs_enum_sources(
+		[](void *, obs_source_t *src) {
+			const char *id = obs_source_get_id(src);
+			if (id && strstr(id, "input_capture")) {
+				uint32_t m = obs_source_get_audio_mixers(src);
+				if (m & (1u << 5))
+					obs_source_set_audio_mixers(src, m & ~(1u << 5));
+			}
+			return true;
+		},
+		nullptr);
+	if (ndiOut_) {
+		obs_data_t *cur = obs_output_get_settings(ndiOut_);
+		std::string curName = obs_data_get_string(cur, "ndi_name");
+		obs_data_release(cur);
+		if (curName == ndiName && obs_output_active(ndiOut_))
+			return "";
+		stopNdiShare();
+	}
+	obs_data_t *st = obs_data_create();
+	obs_data_set_string(st, "ndi_name", ndiName.c_str());
+	obs_data_set_bool(st, "uses_video", true);
+	obs_data_set_bool(st, "uses_audio", true);
+	ndiOut_ = obs_output_create("ndi_output", "Kennel NDI share", st, nullptr);
+	obs_data_release(st);
+	if (!ndiOut_)
+		return "could not create the NDI output";
+	obs_output_set_media(ndiOut_, obs_get_video(), obs_get_audio());
+	obs_output_set_mixer(ndiOut_, 5);
+	if (!obs_output_start(ndiOut_)) {
+		const char *e = obs_output_get_last_error(ndiOut_);
+		std::string err = e ? e : "NDI output would not start";
+		obs_output_release(ndiOut_);
+		ndiOut_ = nullptr;
+		return err;
+	}
+	(void)track6;
+	if (log)
+		log("Sharing your feed over NDI as \"" + ndiName + "\" (game audio only, track 6).");
+	return "";
+}
+
+void Switcher::stopNdiShare()
+{
+	if (!ndiOut_)
+		return;
+	if (obs_output_active(ndiOut_))
+		obs_output_stop(ndiOut_);
+	obs_output_release(ndiOut_);
+	ndiOut_ = nullptr;
+}
+
 obs_source_t *Switcher::sceneSource(const Config &cfg)
 {
 	if (!cfg.sceneName.empty()) {

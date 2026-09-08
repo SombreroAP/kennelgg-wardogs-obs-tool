@@ -45,6 +45,43 @@ Engine::Engine(QObject *parent) : QObject(parent)
 		emit stateChanged();
 	});
 	connect(&clips, &Clips::logged, this, &Engine::log);
+	connect(&lan, &Lan::peersChanged, this, [this]() {
+		if (cfg.autoAddPeers) {
+			bool added = false;
+			for (auto &kv : lan.peers()) {
+				const Lan::Peer &p = kv.second;
+				if (p.ndi.isEmpty())
+					continue;
+				std::string full = Switcher::ndiFullName(p.host.toStdString(), p.ndi.toStdString());
+				bool known = false;
+				for (auto &f : cfg.friends)
+					if (f.kind == FriendKind::Ndi && f.channel == full)
+						known = true;
+				if (known)
+					continue;
+				Friend f;
+				f.name = p.name.isEmpty() ? p.host.toStdString() : p.name.toStdString();
+				f.kind = FriendKind::Ndi;
+				f.channel = full;
+				std::string e = sw.createFriendSources(cfg, f);
+				if (!e.empty()) {
+					log("Squad mate on the LAN (" + p.name +
+					    ") found, but: " + QString::fromStdString(e));
+					continue;
+				}
+				cfg.friends.push_back(f);
+				added = true;
+				log("Squad mate on the LAN added: " + QString::fromStdString(f.name) + " (NDI " +
+				    p.ndi + ").");
+			}
+			if (added) {
+				cfg.save();
+				if (cfg.keepWarm && !applied_)
+					sw.armWarm(cfg);
+			}
+		}
+		emit stateChanged();
+	});
 	connect(&clips, &Clips::saved, this, [this](const Clips::Entry &e) {
 		QJsonObject o;
 		o["type"] = "clip_saved";
@@ -54,6 +91,27 @@ Engine::Engine(QObject *parent) : QObject(parent)
 		bridge.sendJson(o);
 		emit stateChanged();
 	});
+}
+
+QString Engine::playerName() const
+{
+	return cfg.playerName.empty() ? Lan::hostName() : QString::fromStdString(cfg.playerName);
+}
+
+void Engine::applyLan()
+{
+	lan.setSelf(playerName(), Lan::hostName(), cfg.ndiShare ? ndiShareName() : "", PLUGIN_VERSION);
+	if (cfg.lanEnabled) {
+		if (!lan.running())
+			lan.start((quint16)cfg.lanPort);
+	} else
+		lan.stop();
+	if (cfg.ndiShare) {
+		std::string e = sw.startNdiShare(ndiShareName().toStdString());
+		if (!e.empty())
+			log("NDI share: " + QString::fromStdString(e));
+	} else
+		sw.stopNdiShare();
 }
 
 void Engine::launchApp()
@@ -140,6 +198,7 @@ void Engine::start()
 		clips.ensureReplayBuffer();
 	if (cfg.launchApp)
 		launchApp();
+	applyLan();
 	timer_.start(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
@@ -152,6 +211,8 @@ void Engine::stop()
 	timer_.stop();
 	frameTimer_.stop();
 	bridge.close();
+	lan.stop();
+	sw.stopNdiShare();
 	for (int i = 0; i < 50 && busy_; i++)
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
@@ -164,6 +225,7 @@ void Engine::reloadConfig()
 		bridge.listen((quint16)cfg.bridgePort);
 	else if (!cfg.bridgeEnabled && bridge.listening())
 		bridge.close();
+	applyLan();
 	detGame_.threshold = cfg.threshold;
 	detRevive_.threshold = cfg.reviveThreshold;
 	detGame_.unlock();

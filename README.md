@@ -33,6 +33,14 @@ themselves on first run; later they are under **Tools → Kennel.gg WARDOGS OBS 
    ClipHound, its path so OBS starts it.
 4. **Look** tab, optional.
 
+## Squad on the LAN (automatic)
+
+At a LAN party nothing needs typing. Every PC running this plugin announces itself on the network
+(UDP 47821) and, with **DistroAV** installed, publishes its game feed over NDI as `<PC name> (Kennel
+POV)` on audio track 6, with every microphone taken off that track so squad mates hear the game,
+not you. Squad mates found this way are added to your list by themselves as NDI feeds, and you to
+theirs. Set **Your name** on the Switch tab; untick the options there to opt out.
+
 ## Squad-mate feeds
 
 | | Latency | Friend's setup |

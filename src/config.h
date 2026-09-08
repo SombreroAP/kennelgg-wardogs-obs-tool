@@ -30,6 +30,13 @@ struct Config {
 	std::string lookLabel = "POV";
 	int grainAmount = 40;
 
+	// squad on the LAN
+	std::string playerName; // shown to squad mates; defaults to the PC name
+	bool lanEnabled = true; // announce myself and listen for squad mates (UDP 47821)
+	int lanPort = 47821;
+	bool ndiShare = true;     // publish my game feed over NDI (DistroAV) for squad mates, without my mic
+	bool autoAddPeers = true; // squad mates found on the LAN are added to the list by themselves
+
 	// companion app / bridge / clips
 	int bridgePort = 47820;
 	bool bridgeEnabled = true;

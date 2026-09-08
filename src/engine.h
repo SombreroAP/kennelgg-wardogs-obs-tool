@@ -10,6 +10,7 @@
 #include "bridge.h"
 #include "capture.h"
 #include "clips.h"
+#include "lan.h"
 #include "config.h"
 #include "detector.h"
 #include "switcher.h"
@@ -25,6 +26,10 @@ public:
 	Switcher sw;
 	Bridge bridge;
 	Clips clips;
+	Lan lan;
+	QString ndiShareName() const { return "Kennel POV"; }
+	QString playerName() const;
+	void applyLan(); // (re)start discovery + NDI share from cfg
 	QString appStatus() const { return appStatus_; }
 	bool appConnected() const { return bridge.clients() > 0; }
 	void onReplaySaved() { clips.onReplaySaved(); }

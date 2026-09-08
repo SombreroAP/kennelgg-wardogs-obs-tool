@@ -394,6 +394,51 @@ QWidget *SettingsDialog::buildSwitchTab()
 		}
 	});
 
+	auto *gl = new QGroupBox("Squad on this network", w);
+	auto *fl = new QFormLayout(gl);
+	playerName_ = new QLineEdit(QString::fromStdString(e_->cfg.playerName), gl);
+	playerName_->setPlaceholderText(Lan::hostName());
+	fl->addRow("Your name", playerName_);
+	auto *lr = new QHBoxLayout();
+	lanOn_ = new QCheckBox("Find squad mates on the LAN", gl);
+	ndiShare_ = new QCheckBox("Share my game feed over NDI (no mic)", gl);
+	autoAdd_ = new QCheckBox("Add them automatically", gl);
+	for (auto *c : {lanOn_, ndiShare_, autoAdd_})
+		lr->addWidget(c);
+	lr->addStretch(1);
+	fl->addRow(lr);
+	peers_ = new QListWidget(gl);
+	peers_->setMaximumHeight(90);
+	fl->addRow("Seen", peers_);
+	lanStatus_ = muted("", gl);
+	fl->addRow(lanStatus_);
+	v->addWidget(gl);
+	lanOn_->setChecked(e_->cfg.lanEnabled);
+	ndiShare_->setChecked(e_->cfg.ndiShare);
+	autoAdd_->setChecked(e_->cfg.autoAddPeers);
+	for (auto *c : {lanOn_, ndiShare_, autoAdd_})
+		connect(c, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(playerName_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
+	auto fillPeers = [this]() {
+		peers_->clear();
+		for (auto &kv : e_->lan.peers())
+			peers_->addItem(
+				kv.second.name + "  ·  " + kv.second.host +
+				(kv.second.ndi.isEmpty() ? "  (not sharing NDI)" : "  ·  NDI " + kv.second.ndi));
+		if (peers_->count() == 0)
+			peers_->addItem(
+				e_->cfg.lanEnabled
+					? "(no squad mates found yet - they need this plugin running in OBS on the same network)"
+					: "(off)");
+		bool ndi = Switcher::kindAvailable("ndi_source") && Switcher::outputKindAvailable("ndi_output");
+		lanStatus_->setText(
+			ndi ? "Everyone on the LAN with this plugin and DistroAV sees each other; their feed appears in the list above and as a squad mate, no typing. Your own feed is sent on audio track 6 with microphones removed from it."
+			    : "DistroAV (obs-ndi) is not installed, so NDI sharing is off. Install it from distroav.org on every PC that should share or receive a feed.");
+		fillFriends();
+	};
+	fillPeers();
+	connect(&e_->lan, &Lan::peersChanged, this, fillPeers);
+
 	auto *g3 = new QGroupBox("Game audio to mute while downed", w);
 	auto *h3 = new QHBoxLayout(g3);
 	mute_ = new QListWidget(g3);
@@ -816,6 +861,10 @@ void SettingsDialog::collect()
 		if (mute_->item(i)->checkState() == Qt::Checked)
 			c.muteWhileDowned.push_back(mute_->item(i)->data(Qt::UserRole).toString().toStdString());
 	c.bringToFront = bringFront_->isChecked();
+	c.playerName = playerName_->text().trimmed().toStdString();
+	c.lanEnabled = lanOn_->isChecked();
+	c.ndiShare = ndiShare_->isChecked();
+	c.autoAddPeers = autoAdd_->isChecked();
 	c.keepWarm = keepWarm_->isChecked();
 	c.lookName = lookName_->isChecked();
 	c.lookPlate = lookPlate_->isChecked();

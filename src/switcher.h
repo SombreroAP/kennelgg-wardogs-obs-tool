@@ -30,6 +30,20 @@ public:
 	/// Sources a squad mate needs, created and placed. Fills f.source / f.audioSource.
 	std::string createFriendSources(const Config &cfg, Friend &f);
 	std::string createGameCapture(Config &cfg);
+	/// Publish the program feed over NDI (DistroAV's output type) on mixer track 6, with every microphone
+	/// input taken off that track so squad mates get game audio only. Returns "" or an error.
+	std::string startNdiShare(const std::string &ndiName);
+	void stopNdiShare();
+	static bool outputKindAvailable(const char *kind);
+	static std::string ndiFullName(const std::string &host, const std::string &ndiName)
+	{
+		return host + " (" + ndiName + ")";
+	}
+
+private:
+	obs_output_t *ndiOut_ = nullptr;
+
+public:
 	static std::vector<std::pair<std::string, std::string>> inputs(); // name, id
 	static std::string webUrl(const Friend &f);
 	static std::string vdoPushUrl(const std::string &id);

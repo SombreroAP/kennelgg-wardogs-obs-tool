@@ -95,6 +95,11 @@ void Config::load()
 	DEFS(clipNameTemplate);
 	DEFB(autoStartReplay);
 	DEFB(clipOnDowned);
+	DEFS(playerName);
+	DEFB(lanEnabled);
+	DEFI(lanPort);
+	DEFB(ndiShare);
+	DEFB(autoAddPeers);
 	DEFD(reviveThreshold);
 	DEFD(customTemplateWidthFrac);
 	DEFD(boxX);
@@ -129,6 +134,11 @@ void Config::load()
 	GETS(clipNameTemplate);
 	GETB(autoStartReplay);
 	GETB(clipOnDowned);
+	GETS(playerName);
+	GETB(lanEnabled);
+	GETI(lanPort);
+	GETB(ndiShare);
+	GETB(autoAddPeers);
 	GETD(reviveThreshold);
 	GETD(customTemplateWidthFrac);
 	GETD(boxX);
@@ -194,6 +204,11 @@ void Config::save() const
 	SETS(clipNameTemplate);
 	SETB(autoStartReplay);
 	SETB(clipOnDowned);
+	SETS(playerName);
+	SETB(lanEnabled);
+	SETI(lanPort);
+	SETB(ndiShare);
+	SETB(autoAddPeers);
 	SETD(reviveThreshold);
 	SETD(customTemplateWidthFrac);
 	SETD(boxX);

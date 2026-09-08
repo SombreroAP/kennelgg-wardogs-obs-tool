@@ -45,6 +45,7 @@ target_sources(
     src/engine.cpp
     src/bridge.cpp
     src/clips.cpp
+    src/lan.cpp
     src/ui/dock.cpp
     src/ui/settings-dialog.cpp
 )

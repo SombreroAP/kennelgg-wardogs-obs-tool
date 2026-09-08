@@ -71,6 +71,10 @@ private:
 	QWidget *buildDetectTab();
 	QWidget *buildAboutTab();
 	QWidget *buildClipsTab();
+	QLineEdit *playerName_;
+	QCheckBox *lanOn_, *ndiShare_, *autoAdd_;
+	QListWidget *peers_;
+	QLabel *lanStatus_;
 	QCheckBox *bridgeOn_, *launchApp_, *autoReplay_, *clipDowned_;
 	QSpinBox *bridgePort_;
 	QLineEdit *appPath_, *nameTpl_;
