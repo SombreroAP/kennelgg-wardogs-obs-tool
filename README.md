@@ -19,10 +19,28 @@ going. The moment you are revived it switches back.
 | **Twitch stream** | ~2 s with low-latency mode | nothing, they just stream (their mic is in it) |
 | **VDO.Ninja** (WebRTC) | ~0.3 s | opens one link in Chrome/Edge, shares the game window with system audio, no mic |
 | **OBS source** (NDI) | ~1 frame | OBS + DistroAV or NDI Screen Capture on the LAN, or over a VPN such as Tailscale |
+| **Discord Go Live** (as an OBS source) | ~0.5-1 s | they press Go Live in a call; you capture the popped-out stream window (recipe below) |
 
 Twitch and VDO.Ninja play through one browser source named `POVBridge web` that the plugin creates
 in your scene, sized to the canvas, audio routed through OBS so it swaps with the video. Keep
 several squad mates on the list and pick who is active from the dock.
+
+### Discord Go Live as a feed
+
+For a squad mate who is not streaming. Discord's Go Live is WebRTC, so it lands in the same
+latency band as VDO.Ninja. Quality is the limit, not delay: 720p30 without Nitro, 1080p60 with.
+
+1. Squad mate: in the voice call, **Go Live** on the game.
+2. You: in the Discord desktop app, open their stream and **pop it out** into its own window.
+   Keep that window open and not minimised (behind other windows is fine).
+3. OBS: add a **Window Capture** of that Discord window, capture method **Windows 10 (1903 and up)**,
+   and an **Application Audio Capture** of Discord (that is their game audio, without their mic
+   unless they have it on).
+4. POVBridge: add the squad mate as **OBS source** and pick that Window Capture; tick your own
+   Desktop Audio in the mute list as usual.
+
+To measure the delay on the day: have them share a screen with a millisecond stopwatch and compare
+it with a local one in the OBS preview.
 
 ## Setup
 
