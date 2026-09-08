@@ -48,3 +48,6 @@ Python/numpy on the user's three screenshots (`My Drive/screenshots/`), frames r
 
 - Ask before pushing to GitHub or posting anywhere. User is on a phone: deliver builds via Drive.
 - No emoji-laden prose; short messages, lead with what changed.
+
+| `app/` | ClipHound (Python). `app/bridge.py` = client of the plugin bridge; `app/cliphound.spec` + `app/build_exe.ps1` = PyInstaller bundle with Tesseract copied in (CI, Windows job) |
+| `installer/kennel-wardogs.iss` | Inno Setup: component `plugin` → ProgramData\obs-studio\plugins, component `app` → ProgramData\Kennel WARDOGS\ClipHound (users-modify), config.yaml kept on upgrade, Start-menu shortcuts, optional post-install setup run |
