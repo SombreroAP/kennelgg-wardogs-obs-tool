@@ -45,6 +45,11 @@ it with a local one in the OBS preview.
 
 1. Close OBS, run `povbridge-<version>-windows-x64-installer.exe`, start OBS. (The zip is the same
    files for manual installs: copy its `povbridge` folder into `C:\ProgramData\obs-studio\plugins\`.)
+2. Settings opens by itself on first run. **Switch** tab: pick the source that shows WARDOGS, or
+   press **Create Game Capture**. **Add...** squad mates; every kind's OBS sources are created and
+   placed in your scene for you (Twitch and VDO.Ninja share one browser source, Discord gets a
+   Window Capture plus Application Audio Capture, NDI gets an NDI Source). Desktop Audio is ticked
+   in the mute list automatically; the mic is labelled - leave it unticked.
 3. **Detect** tab: nothing to set up. Get downed once and watch the bar go red (~0.9). If it never
    locks on, drag the dotted box tightly around "B VIEW DAMAGE LOG" while downed and press Capture.
 4. **Look** tab (optional): name tag, camcorder frame, film grain, vignette. Preview in OBS.
