@@ -8,6 +8,29 @@ import time
 import obsws_python as obs
 
 
+def _update_library_index(lib: str, rec: dict):
+    """index.csv (everything) and resolve_metadata.csv (DaVinci Resolve import format:
+    File Name, Description, Keywords, Comments) in the library root."""
+    import csv
+    idx = os.path.join(lib, "index.csv")
+    new = not os.path.exists(idx)
+    with open(idx, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if new:
+            w.writerow(["created", "file", "title", "tags", "kind", "distance_m", "killer", "victim", "icons"])
+        w.writerow([rec.get("created"), rec.get("file"), rec.get("title"), " ".join(rec.get("tags", [])),
+                    rec.get("kind"), rec.get("distance_m"), rec.get("killer"), rec.get("victim"), " ".join(rec.get("icons", []))])
+    rm = os.path.join(lib, "resolve_metadata.csv")
+    new = not os.path.exists(rm)
+    with open(rm, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if new:
+            w.writerow(["File Name", "Description", "Keywords", "Comments", "Scene", "Shot"])
+        w.writerow([os.path.basename(rec.get("file", "")), rec.get("title"), ",".join(rec.get("tags", [])),
+                    f"{rec.get('kind','')} {rec.get('distance_m','')}m killer={rec.get('killer','')} victim={rec.get('victim','')}".strip(),
+                    rec.get("created", "")[:10], rec.get("kind", "")])
+
+
 def _safe_name(s: str) -> str:
     return re.sub(r"[^A-Za-z0-9 _\-\[\]#]+", "", s).strip()
 
@@ -35,7 +58,8 @@ class OBS:
                   f"retrying every {self.cfg['reconnect_s']}s")
             threading.Timer(self.cfg["reconnect_s"], self._connect).start()
 
-    def trigger(self, title: str, tags: list[str] | None = None):
+    def trigger(self, title: str, tags: list[str] | None = None, info: dict | None = None):
+        self._info = info or {}
         with self._lock:
             if not self.cl:
                 print(f"[obs] not connected, backtrack for '{title}' lost")
@@ -70,15 +94,24 @@ class OBS:
             return
         folder, fname = os.path.split(path)
         stem, ext = os.path.splitext(fname)
+        lib = self.cfg.get("library") or ""
+        if lib:
+            folder = os.path.join(lib, time.strftime("%Y-%m-%d"))
+            os.makedirs(folder, exist_ok=True)
         new = os.path.join(folder, _safe_name(f"{stem} {title} [{' '.join(tags)}]") + ext)
         try:
             os.rename(path, new)
         except OSError as e:
             print(f"[obs] rename failed ({e}); keeping {path}")
             new = path
+        rec = {"file": new, "title": title, "tags": tags, "created": time.strftime("%Y-%m-%d %H:%M:%S"),
+               **{k: v for k, v in getattr(self, "_info", {}).items()}}
         with open("replays.jsonl", "a", encoding="utf-8") as f:
-            f.write(json.dumps({"file": new, "title": title, "tags": tags,
-                                "created": time.strftime("%Y-%m-%d %H:%M:%S")}, ensure_ascii=False) + "\n")
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        with open(os.path.splitext(new)[0] + ".json", "w", encoding="utf-8") as f:
+            json.dump(rec, f, ensure_ascii=False, indent=1)          # sidecar next to the clip
+        if lib:
+            _update_library_index(lib, rec)
         print(f"[obs] replay -> {new}")
 
     def _stop(self):

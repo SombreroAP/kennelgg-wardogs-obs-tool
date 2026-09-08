@@ -38,7 +38,11 @@ def main():
         if tw:
             threading.Timer(cfg["twitch"]["clip_delay_s"], lambda: _safe(tw.create_clip, trig.title, trig.tags)).start()
         if ob:
-            threading.Timer(cfg["obs"]["replay_delay_s"], lambda: _safe(ob.trigger, trig.title, trig.tags)).start()
+            ev = trig.events[-1] if trig.events else None
+            info = {"kind": trig.kind, "distance_m": ev.distance_m if ev else 0,
+                    "killer": ev.killer if ev else "", "victim": ev.victim if ev else "",
+                    "icons": ev.icons if ev else [], "kills": len(trig.events)}
+            threading.Timer(cfg["obs"]["replay_delay_s"], lambda: _safe(ob.trigger, trig.title, trig.tags, info)).start()
 
     period = 1.0 / cfg["capture"]["fps"]
     if cfg["capture"].get("debug_dump"):

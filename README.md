@@ -100,6 +100,16 @@ python clips.py --tags            # tag counts
 Every trigger saves the replay buffer locally, so compilations can be cut from the renamed
 files without touching Twitch. Set the buffer to 90-120 s in OBS so the lead-up is included.
 
+**Clip library for editing.** Set `obs.library` to a folder (e.g. `D:\ClipHound`) and every
+replay is moved to `<library>/<date>/<timestamp> <title> [tags].mkv` with a `.json` sidecar
+holding title, tags, kind, distance, killer, victim and icons. Two indexes are kept in the
+library root: `index.csv` (everything) and `resolve_metadata.csv`. In DaVinci Resolve, import
+the clips, then Media Pool > right-click > Metadata > Import and pick that CSV: titles become
+descriptions and tags become keywords, so smart bins like "headshot" or "multikill" fill
+themselves. The sidecars are what an AI editing pass should read: one file per clip, plain
+JSON, with the moment's type and the second it happened (the event is at the end of the
+replay minus `replay_delay_s`).
+
 ## Icon catalogue
 `tools/extract_icons.py vod/*.mp4` harvests every feed icon from video slices, averages the
 sightings of each distinct shape into a clean mask and writes `icons/unlabelled/` plus a

@@ -6,7 +6,7 @@ capture:
   backend: "obs"           # "obs" | "screen"
   obs_source: "Game Capture"   # exact name of the OBS input carrying the game (capture card / NDI)
   monitor: 1               # screen backend only: mss monitor index. `python calibrate.py --list`
-  fps: 4                   # kill feed lines stay on screen for several seconds; 4 fps is plenty
+  fps: 3                   # feed rows stay up for seconds; 3 fps decides a row in ~3 s and leaves CPU headroom
   # Kill-feed region as FRACTIONS of the source frame (0..1). Measured from the two
   # screenshots: feed text sits at ~47-51% down the frame, ~2-20% across.
   roi:
@@ -103,3 +103,8 @@ obs:
   mode: "replay"
   record_seconds: 30
   replay_delay_s: 4.0      # let the moment finish before saving the buffer
+  # Clip library: replays are moved into <library>/<YYYY-MM-DD>/ with a .json sidecar each
+  # (title, tags, event details) plus library/index.csv and library/resolve_metadata.csv
+  # (DaVinci Resolve: Media Pool > right-click > Metadata > Import). Leave empty to keep
+  # OBS's own recording folder.
+  library: ""
