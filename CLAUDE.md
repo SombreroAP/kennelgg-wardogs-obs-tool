@@ -15,7 +15,7 @@ Sombrero; sibling apps live next door (HotkeyBridge, InputOverlayBridge, povbrid
 | `detector.py` | row tracking across frames, votes, dedupe, rule engine (`config.yaml` rules), multi-kill |
 | `twitch.py` / `obs.py` | Helix create clip (title logged, API can't set titles); replay save + rename |
 | `vod_test.py`, `calibrate.py` | offline test on a video slice; ROI / colour / source checks |
-| `install.bat`, `setup.bat`, `ClipHound.bat` | Windows install (winget Python + Tesseract, venv), setup helpers, run |
+| `install.bat`, `setup.bat` / `setup.py`, `ClipHound.bat` | Windows install (winget Python + Tesseract, venv), interactive setup wizard (pick the OBS input that shows gameplay: capture card or Game Capture), run |
 | `tools/extract_icons.py`, `tools/build_catalogue.py`, `icons/` | harvest feed icons from VOD slices -> labels.json -> reusable icon catalogue |
 | `templates/` | white-on-black icon masks at 4x: rifle, boltgun, sniper, heli, explosion, tank, artillery (x2), car, mortar, hammer, rpg, c4, skull, name_me |
 

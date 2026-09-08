@@ -19,11 +19,13 @@ Manual route: install Python 3.11+ with "Add to PATH" ticked and
 Install Tesseract: Windows → https://github.com/UB-Mannheim/tesseract/wiki (add to PATH),
 macOS → `brew install tesseract`.
 
-### 1. OBS websocket + source name
-OBS → Tools → WebSocket Server Settings → Enable, set a password, port 4455 (localhost, no
-firewall rule needed). Put the password in `config.yaml`. Then
-`python calibrate.py --sources` lists your OBS inputs; copy the exact name of the game
-capture / capture-card input into `capture.obs_source`.
+### 1. Setup wizard
+OBS → Tools → WebSocket Server Settings → Enable, set a password, port 4455. Then run
+`setup.bat` (or `python setup.py`). It connects to OBS, lists every video input and asks which
+one shows the gameplay: on a two-PC setup that is the **capture card** or NDI input, on one PC
+the Game Capture. It also asks your in-game name, the clip library folder and (optionally)
+the Twitch app id/secret, writes `config.yaml`, saves `roi.png` and reports whether the replay
+buffer is running. `python setup.py --check` re-tests without asking questions.
 
 ### 2. Calibrate the region
 With the game showing in OBS run `python calibrate.py`. Open `roi.png` – the kill-feed lines
