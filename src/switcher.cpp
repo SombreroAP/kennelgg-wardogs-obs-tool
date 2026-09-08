@@ -4,6 +4,7 @@
 #include <plugin-support.h>
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 
 static std::string urlEncode(const std::string &s)
 {
@@ -92,6 +93,136 @@ std::vector<std::pair<std::string, std::string>> Switcher::inputs()
 		&out);
 	std::sort(out.begin(), out.end(), [](auto &a, auto &b) { return lower(a.first) < lower(b.first); });
 	return out;
+}
+
+std::vector<std::pair<std::string, std::string>> Switcher::listProperty(const char *kind, const char *prop)
+{
+	std::vector<std::pair<std::string, std::string>> out;
+	obs_source_t *tmp = obs_source_create_private(kind, "povbridge-probe", nullptr);
+	if (!tmp)
+		return out;
+	obs_properties_t *props = obs_source_properties(tmp);
+	obs_property_t *p = props ? obs_properties_get(props, prop) : nullptr;
+	if (p && obs_property_get_type(p) == OBS_PROPERTY_LIST) {
+		size_t n = obs_property_list_item_count(p);
+		for (size_t i = 0; i < n; i++) {
+			const char *name = obs_property_list_item_name(p, i),
+				   *val = obs_property_list_item_string(p, i);
+			if (name && val && *val)
+				out.emplace_back(name, val);
+		}
+	}
+	if (props)
+		obs_properties_destroy(props);
+	obs_source_release(tmp);
+	return out;
+}
+
+bool Switcher::kindAvailable(const char *kind)
+{
+	const char *id;
+	for (size_t i = 0; obs_enum_input_types(i, &id); i++)
+		if (strcmp(id, kind) == 0)
+			return true;
+	return false;
+}
+
+std::string Switcher::createInScene(const Config &cfg, const char *kind, const std::string &name, obs_data_t *settings,
+				    bool fullCanvas, bool visible, bool toBottom)
+{
+	if (!kindAvailable(kind))
+		return std::string("source type '") + kind + "' is not available in this OBS";
+	obs_source_t *ss = sceneSource(cfg);
+	if (!ss)
+		return "no scene";
+	obs_scene_t *scene = obs_scene_from_source(ss);
+	obs_source_t *src = obs_get_source_by_name(name.c_str());
+	if (src) {
+		if (settings)
+			obs_source_update(src, settings);
+	} else {
+		src = obs_source_create(kind, name.c_str(), settings, nullptr);
+		if (!src) {
+			obs_source_release(ss);
+			return "could not create '" + name + "'";
+		}
+		if (log)
+			log("Added '" + name + "' to OBS.");
+	}
+	obs_sceneitem_t *item = obs_scene_find_source(scene, name.c_str());
+	if (!item)
+		item = obs_scene_add(scene, src);
+	if (item) {
+		obs_sceneitem_set_visible(item, visible);
+		if (fullCanvas) {
+			struct obs_video_info ovi;
+			obs_get_video_info(&ovi);
+			struct vec2 pos = {0, 0}, bounds = {(float)ovi.base_width, (float)ovi.base_height};
+			obs_sceneitem_set_pos(item, &pos);
+			obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_INNER);
+			obs_sceneitem_set_bounds(item, &bounds);
+		}
+		if (toBottom)
+			obs_sceneitem_set_order(item, OBS_ORDER_MOVE_BOTTOM);
+	}
+	obs_source_release(src);
+	obs_source_release(ss);
+	return item ? "" : "could not add '" + name + "' to the scene";
+}
+
+std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
+{
+	std::string base = "POVBridge · " + (f.name.empty() ? std::string("squad mate") : f.name);
+	if (f.kind == FriendKind::Discord) {
+		// their popped-out Go Live window, captured with the Windows 10 method so it survives being covered
+		obs_data_t *st = obs_data_create();
+		obs_data_set_string(st, "window", f.channel.c_str());
+		obs_data_set_int(st, "method", 2);
+		obs_data_set_int(st, "priority", 1);
+		obs_data_set_bool(st, "cursor", false);
+		obs_data_set_bool(st, "client_area", true);
+		std::string e = createInScene(cfg, "window_capture", base, st, true, false);
+		obs_data_release(st);
+		if (!e.empty())
+			return e;
+		f.source = base;
+		// Discord's audio (their game sound), matched by executable so it follows any Discord window
+		obs_data_t *au = obs_data_create();
+		obs_data_set_string(au, "window", f.channel.c_str());
+		obs_data_set_int(au, "priority", 2);
+		e = createInScene(cfg, "wasapi_process_output_capture", base + " audio", au, false, false);
+		obs_data_release(au);
+		if (!e.empty())
+			return e;
+		f.audioSource = base + " audio";
+		return "";
+	}
+	if (f.kind == FriendKind::Ndi) {
+		if (!kindAvailable("ndi_source"))
+			return "the NDI source type is missing: install DistroAV (obs-ndi) first";
+		obs_data_t *st = obs_data_create();
+		obs_data_set_string(st, "ndi_source_name", f.channel.c_str());
+		obs_data_set_int(st, "ndi_bw_mode", 0);
+		std::string e = createInScene(cfg, "ndi_source", base, st, true, false);
+		obs_data_release(st);
+		if (!e.empty())
+			return e;
+		f.source = base;
+		return "";
+	}
+	return "";
+}
+
+std::string Switcher::createGameCapture(Config &cfg)
+{
+	obs_data_t *st = obs_data_create();
+	obs_data_set_string(st, "capture_mode", "any_fullscreen");
+	obs_data_set_bool(st, "capture_audio", false);
+	std::string e = createInScene(cfg, "game_capture", "Game", st, true, true, true);
+	obs_data_release(st);
+	if (e.empty())
+		cfg.gameSource = "Game";
+	return e;
 }
 
 obs_source_t *Switcher::sceneSource(const Config &cfg)
@@ -222,6 +353,16 @@ void Switcher::armWarm(const Config &cfg)
 		obs_sceneitem_set_visible(item, true);
 	} else if (log)
 		log("Warm feed: '" + name + "' is not in the scene.");
+	if (!f->audioSource.empty()) {
+		obs_source_t *a = obs_get_source_by_name(f->audioSource.c_str());
+		obs_sceneitem_t *ai = obs_scene_find_source(scene, f->audioSource.c_str());
+		if (a && ai) {
+			obs_source_set_muted(a, true);
+			obs_sceneitem_set_visible(ai, true);
+		}
+		if (a)
+			obs_source_release(a);
+	}
 	if (src)
 		obs_source_release(src);
 	obs_source_release(ss);
@@ -285,6 +426,21 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 		}
 		if (src)
 			obs_source_release(src);
+	}
+
+	// 1b. a companion audio source (Discord): follows the same show/hide, mute-based in warm mode
+	if (!f->audioSource.empty()) {
+		obs_source_t *a = obs_get_source_by_name(f->audioSource.c_str());
+		obs_sceneitem_t *ai = obs_scene_find_source(scene, f->audioSource.c_str());
+		if (a && ai) {
+			if (cfg.keepWarm) {
+				obs_sceneitem_set_visible(ai, true);
+				obs_source_set_muted(a, !on);
+			} else
+				obs_sceneitem_set_visible(ai, on);
+		}
+		if (a)
+			obs_source_release(a);
 	}
 
 	// 2. the look overlay, above the friend

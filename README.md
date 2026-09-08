@@ -18,7 +18,8 @@ going. The moment you are revived it switches back.
 |---|---|---|
 | **Twitch stream** | ~2 s with low-latency mode | nothing, they just stream (their mic is in it) |
 | **VDO.Ninja** (WebRTC) | ~0.3 s | opens one link in Chrome/Edge, shares the game window with system audio, no mic |
-| **OBS source** (NDI) | ~1 frame | OBS + DistroAV or NDI Screen Capture on the LAN, or over a VPN such as Tailscale |
+| **NDI** | ~1 frame | OBS + DistroAV or NDI Screen Capture on the LAN, or over a VPN such as Tailscale; pick their NDI source and the OBS source is created for you |
+| **OBS source** | depends | anything you already have in OBS (capture card, second PC) |
 | **Discord Go Live** (as an OBS source) | ~0.5-1 s | they press Go Live in a call; you capture the popped-out stream window (recipe below) |
 
 Twitch and VDO.Ninja play through one browser source named `POVBridge web` that the plugin creates
@@ -33,11 +34,9 @@ latency band as VDO.Ninja. Quality is the limit, not delay: 720p30 without Nitro
 1. Squad mate: in the voice call, **Go Live** on the game.
 2. You: in the Discord desktop app, open their stream and **pop it out** into its own window.
    Keep that window open and not minimised (behind other windows is fine).
-3. OBS: add a **Window Capture** of that Discord window, capture method **Windows 10 (1903 and up)**,
-   and an **Application Audio Capture** of Discord (that is their game audio, without their mic
-   unless they have it on).
-4. POVBridge: add the squad mate as **OBS source** and pick that Window Capture; tick your own
-   Desktop Audio in the mute list as usual.
+3. POVBridge: **Add...** → *Discord Go Live*, pick that window, Save. POVBridge creates the
+   Window Capture (Windows 10 method) and an Application Audio Capture of Discord in your scene,
+   hidden until you are downed.
 
 To measure the delay on the day: have them share a screen with a millisecond stopwatch and compare
 it with a local one in the OBS preview.
@@ -46,9 +45,6 @@ it with a local one in the OBS preview.
 
 1. Close OBS, run `povbridge-<version>-windows-x64-installer.exe`, start OBS. (The zip is the same
    files for manual installs: copy its `povbridge` folder into `C:\ProgramData\obs-studio\plugins\`.)
-2. **Tools → POVBridge Settings → Switch**: pick your game source and the scene; **Add...** squad
-   mates; tick the game-audio inputs to mute (Desktop Audio, or the game / capture-card source if
-   that carries the audio). The mic is labelled - leave it unticked.
 3. **Detect** tab: nothing to set up. Get downed once and watch the bar go red (~0.9). If it never
    locks on, drag the dotted box tightly around "B VIEW DAMAGE LOG" while downed and press Capture.
 4. **Look** tab (optional): name tag, camcorder frame, film grain, vignette. Preview in OBS.

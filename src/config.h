@@ -2,14 +2,16 @@
 #include <string>
 #include <vector>
 
-enum class FriendKind { Twitch = 0, VdoNinja = 1, ObsSource = 2 };
+enum class FriendKind { Twitch = 0, VdoNinja = 1, ObsSource = 2, Discord = 3, Ndi = 4 };
 
 struct Friend {
 	std::string name;
 	FriendKind kind = FriendKind::Twitch;
-	std::string source;  // OBS source name (ObsSource)
-	std::string channel; // Twitch login or VDO.Ninja stream id
-	bool isWeb() const { return kind != FriendKind::ObsSource; }
+	std::string source;      // OBS source name (ObsSource / Discord / Ndi: the video source)
+	std::string audioSource; // Discord: the Application Audio Capture created for them
+	std::string channel;     // Twitch login, VDO.Ninja stream id, Discord window, or NDI source name
+	bool isWeb() const { return kind == FriendKind::Twitch || kind == FriendKind::VdoNinja; }
+	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }
 };
 
 struct Config {
@@ -19,6 +21,7 @@ struct Config {
 	std::vector<Friend> friends;
 	int activeFriend = 0;
 	std::vector<std::string> muteWhileDowned;
+	bool audioAutoPicked = false; // desktop audio was ticked automatically once
 	bool bringToFront = true;
 	bool keepWarm = true;
 

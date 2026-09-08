@@ -20,6 +20,16 @@ public:
 	std::string updateLook(const Config &cfg, bool on);
 
 	static std::vector<std::string> sceneNames();
+	/// Choices a source kind offers for one of its list properties (e.g. window_capture "window").
+	static std::vector<std::pair<std::string, std::string>> listProperty(const char *kind,
+									     const char *prop); // name, value
+	static bool kindAvailable(const char *kind);
+	/// Create an input of this kind (or reuse one with the name), put it in the scene, optionally full-canvas. Returns "" or an error.
+	std::string createInScene(const Config &cfg, const char *kind, const std::string &name, obs_data_t *settings,
+				  bool fullCanvas, bool visible, bool toBottom = false);
+	/// Sources a squad mate needs, created and placed. Fills f.source / f.audioSource.
+	std::string createFriendSources(const Config &cfg, Friend &f);
+	std::string createGameCapture(Config &cfg);
 	static std::vector<std::pair<std::string, std::string>> inputs(); // name, id
 	static std::string webUrl(const Friend &f);
 	static std::string vdoPushUrl(const std::string &id);

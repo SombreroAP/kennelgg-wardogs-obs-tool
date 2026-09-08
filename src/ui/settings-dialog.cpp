@@ -139,6 +139,14 @@ public:
 		channel_ = new QLineEdit(QString::fromStdString(result.channel), this);
 		chanLbl_ = new QLabel("Twitch channel", this);
 		form->addRow(chanLbl_, channel_);
+		pick_ = new QComboBox(this);
+		pickLbl_ = new QLabel("Discord window", this);
+		auto *pickRow = new QHBoxLayout();
+		pickRow->addWidget(pick_, 1);
+		auto *rescan = new QPushButton("Rescan", this);
+		pickRow->addWidget(rescan);
+		form->addRow(pickLbl_, pickRow);
+		connect(rescan, &QPushButton::clicked, this, [this]() { fillPick(); });
 		source_ = new QComboBox(this);
 		source_->setEditable(true);
 		for (auto &s : sources)
@@ -172,14 +180,51 @@ public:
 
 private:
 	QLineEdit *name_, *channel_, *link_;
-	QComboBox *kind_, *source_;
-	QLabel *chanLbl_, *hint_;
+	QComboBox *kind_, *source_, *pick_;
+	QLabel *chanLbl_, *hint_, *pickLbl_;
 	FriendKind kind() const { return (FriendKind)kind_->currentIndex(); }
+	void fillPick()
+	{
+		pick_->clear();
+		FriendKind k = kind();
+		if (k == FriendKind::Discord) {
+			auto all = Switcher::listProperty("window_capture", "window");
+			int firstDiscord = -1;
+			for (auto &w : all) {
+				bool discord = w.second.find("Discord.exe") != std::string::npos ||
+					       w.second.find("discord") != std::string::npos;
+				if (discord && firstDiscord < 0)
+					firstDiscord = pick_->count();
+				pick_->addItem(QString::fromStdString(w.first), QString::fromStdString(w.second));
+			}
+			if (firstDiscord >= 0)
+				pick_->setCurrentIndex(firstDiscord);
+		} else if (k == FriendKind::Ndi) {
+			for (auto &n : Switcher::listProperty("ndi_source", "ndi_source_name"))
+				pick_->addItem(QString::fromStdString(n.first), QString::fromStdString(n.second));
+			if (pick_->count() == 0)
+				pick_->addItem(Switcher::kindAvailable("ndi_source")
+						       ? "(no NDI sources on the network yet)"
+						       : "(DistroAV is not installed)",
+					       "");
+		}
+		if (!result.channel.empty()) {
+			int i = pick_->findData(QString::fromStdString(result.channel));
+			if (i >= 0)
+				pick_->setCurrentIndex(i);
+		}
+	}
 	void refresh()
 	{
 		FriendKind k = kind();
-		channel_->setEnabled(k != FriendKind::ObsSource);
+		bool web = k == FriendKind::Twitch || k == FriendKind::VdoNinja,
+		     owns = k == FriendKind::Discord || k == FriendKind::Ndi;
+		channel_->setEnabled(web);
 		source_->setEnabled(k == FriendKind::ObsSource);
+		pick_->setEnabled(owns);
+		pickLbl_->setText(k == FriendKind::Ndi ? "NDI source" : "Discord window");
+		if (owns)
+			fillPick();
 		chanLbl_->setText(k == FriendKind::VdoNinja ? "Stream ID" : "Twitch channel");
 		channel_->setPlaceholderText(k == FriendKind::VdoNinja ? "any word you both agree on, e.g. pup-pov"
 								       : "channel name, e.g. sombrero");
@@ -279,9 +324,21 @@ QWidget *SettingsDialog::buildSwitchTab()
 	game_ = new QComboBox(g1);
 	scene_ = new QComboBox(g1);
 	auto *refresh = new QPushButton("Refresh", g1);
+	auto *mkGame = new QPushButton("Create Game Capture", g1);
 	auto *gr = new QHBoxLayout();
 	gr->addWidget(game_, 1);
 	gr->addWidget(refresh);
+	gr->addWidget(mkGame);
+	connect(mkGame, &QPushButton::clicked, this, [this]() {
+		std::string e = e_->sw.createGameCapture(e_->cfg);
+		if (!e.empty()) {
+			QMessageBox::warning(this, "POVBridge", QString::fromStdString(e));
+			return;
+		}
+		e_->cfg.save();
+		fillSources();
+		e_->reloadConfig();
+	});
 	f1->addRow("Your game source", gr);
 	f1->addRow("Scene", scene_);
 	f1->addRow(muted(
@@ -620,7 +677,9 @@ void SettingsDialog::fillFriends()
 								    : "OBS source";
 		friends_->setItem(r, 0, new QTableWidgetItem(name));
 		friends_->setItem(r, 1, new QTableWidgetItem(kind));
-		friends_->setItem(r, 2, new QTableWidgetItem(QString::fromStdString(f.isWeb() ? f.channel : f.source)));
+		friends_->setItem(r, 2,
+				  new QTableWidgetItem(QString::fromStdString(
+					  f.kind == FriendKind::ObsSource || f.ownsSources() ? f.source : f.channel)));
 	}
 }
 
@@ -632,10 +691,19 @@ void SettingsDialog::editFriend(int row)
 	FriendDialog dlg(existing, Switcher::inputs(), this);
 	if (dlg.exec() != QDialog::Accepted)
 		return;
+	Friend f = dlg.result;
+	if (f.ownsSources()) {
+		std::string e = e_->sw.createFriendSources(e_->cfg, f);
+		if (!e.empty()) {
+			QMessageBox::warning(this, "POVBridge",
+					     "Could not set up the sources: " + QString::fromStdString(e));
+			return;
+		}
+	}
 	if (existing)
-		*existing = dlg.result;
+		*existing = f;
 	else {
-		e_->cfg.friends.push_back(dlg.result);
+		e_->cfg.friends.push_back(f);
 		row = (int)e_->cfg.friends.size() - 1;
 		if (e_->cfg.friends.size() == 1)
 			e_->cfg.activeFriend = 0;

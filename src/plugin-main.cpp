@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include <obs-frontend-api.h>
 #include <plugin-support.h>
 #include <QMainWindow>
+#include <QTimer>
 #include "engine.h"
 #include "ui/dock.h"
 #include "ui/settings-dialog.h"
@@ -75,8 +76,14 @@ static void saveHotkeys()
 static void onFrontendEvent(enum obs_frontend_event event, void *)
 {
 	if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
-		if (g_engine)
+		if (g_engine) {
 			g_engine->start();
+			if (g_engine->needsSetup() && g_dock)
+				QTimer::singleShot(1500, g_dock, [] {
+					if (g_dock)
+						g_dock->openSettings();
+				});
+		}
 	} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED) {
 		if (g_engine)
 			g_engine->reloadConfig();

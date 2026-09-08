@@ -133,6 +133,7 @@ void Config::load()
 			f.name = obs_data_get_string(it, "name");
 			f.kind = (FriendKind)obs_data_get_int(it, "kind");
 			f.source = obs_data_get_string(it, "source");
+			f.audioSource = obs_data_get_string(it, "audioSource");
 			f.channel = obs_data_get_string(it, "channel");
 			friends.push_back(f);
 			obs_data_release(it);
@@ -185,6 +186,7 @@ void Config::save() const
 		obs_data_set_string(it, "name", f.name.c_str());
 		obs_data_set_int(it, "kind", (int)f.kind);
 		obs_data_set_string(it, "source", f.source.c_str());
+		obs_data_set_string(it, "audioSource", f.audioSource.c_str());
 		obs_data_set_string(it, "channel", f.channel.c_str());
 		obs_data_array_push_back(arr, it);
 		obs_data_release(it);

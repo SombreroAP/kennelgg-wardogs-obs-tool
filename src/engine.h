@@ -38,6 +38,9 @@ public:
 	void stop();
 	void reloadConfig(); // after the settings dialog saved
 	void loadTemplates();
+	bool needsSetup() const { return cfg.gameSource.empty() || cfg.friends.empty(); }
+	/// Tick every desktop-audio input once, when nothing was chosen yet.
+	void autoPickAudio();
 
 public slots:
 	void applyNow(bool on, const QString &why);

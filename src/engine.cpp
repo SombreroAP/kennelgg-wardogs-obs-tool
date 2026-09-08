@@ -58,8 +58,22 @@ void Engine::loadTemplates()
 	bfree(r);
 }
 
+void Engine::autoPickAudio()
+{
+	if (cfg.audioAutoPicked || !cfg.muteWhileDowned.empty())
+		return;
+	for (auto &i : Switcher::inputs())
+		if (i.second == "wasapi_output_capture")
+			cfg.muteWhileDowned.push_back(i.first);
+	cfg.audioAutoPicked = true;
+	if (!cfg.muteWhileDowned.empty())
+		log("Ticked your desktop audio to mute while downed (change it in Settings → Switch).");
+	cfg.save();
+}
+
 void Engine::start()
 {
+	autoPickAudio();
 	timer_.start(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
