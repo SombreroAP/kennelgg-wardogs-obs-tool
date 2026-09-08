@@ -1,0 +1,161 @@
+{
+ "_source": "Cross-referenced with wardogswiki.com (38 weapons) and wardogs.zone (vehicles, equipment), 7 Sep 2026. 'confirmed' = seen on a row whose weapon is known; 'candidates' = game items that fit the silhouette.",
+ "galil": {
+  "class": "assault rifle",
+  "confirmed": "Galil (Sombrero's HUD shows GALIL 5.56 on the 24:06 kills)",
+  "candidates": [
+   "Galil",
+   "AK74"
+  ]
+ },
+ "rifle_carbine": {
+  "class": "assault rifle",
+  "candidates": [
+   "M4",
+   "Bushmaster M17S",
+   "A-91",
+   "FAL"
+  ]
+ },
+ "rifle_bullpup": {
+  "class": "assault rifle (bullpup)",
+  "candidates": [
+   "T-21",
+   "KH-2002"
+  ]
+ },
+ "rifle_bolt": {
+  "class": "sniper rifle",
+  "candidates": [
+   "Mosin Nagant",
+   "SV98",
+   "MK22",
+   "AMR 50"
+  ]
+ },
+ "rifle_hunting": {
+  "class": "sniper / marksman",
+  "candidates": [
+   "Scout Rifle TD",
+   "SKS",
+   "Mosin Nagant"
+  ]
+ },
+ "dmr_scoped": {
+  "class": "marksman rifle",
+  "candidates": [
+   "SVD",
+   "BMR-308",
+   "SKS"
+  ]
+ },
+ "shotgun": {
+  "class": "shotgun",
+  "candidates": [
+   "M500",
+   "MP43"
+  ]
+ },
+ "lmg": {
+  "class": "LMG",
+  "candidates": [
+   "M249 SAW",
+   "PKM"
+  ]
+ },
+ "pistol": {
+  "class": "sidearm",
+  "candidates": [
+   "M1911",
+   "GGX 17",
+   "GGX 18",
+   "Deagle",
+   "Judge"
+  ]
+ },
+ "rpg7": {
+  "class": "launcher",
+  "candidates": [
+   "RPG-7",
+   "MAAWS",
+   "AT4"
+  ]
+ },
+ "c4_charge": {
+  "class": "explosive",
+  "confirmed": "C4 Charge (1:40:35 second stream)"
+ },
+ "grenade": {
+  "class": "throwable",
+  "candidates": [
+   "M67 Frag Grenade",
+   "HE Grenade"
+  ]
+ },
+ "mortar_shell": {
+  "class": "indirect fire",
+  "confirmed": "Mortar (20:47 first stream)"
+ },
+ "hammer": {
+  "class": "melee",
+  "confirmed": "Hammer (30:52 first stream)",
+  "candidates": [
+   "Small/Medium/Large Hammer",
+   "Halligan Bar"
+  ]
+ },
+ "helicopter": {
+  "class": "air rotary",
+  "candidates": [
+   "AH-6M",
+   "AH-6R",
+   "MH-6",
+   "Havoc",
+   "Z20 Lakota"
+  ],
+  "note": "5 silhouette variants - probably several helicopter types"
+ },
+ "humvee": {
+  "class": "land wheeled",
+  "candidates": [
+   "Humvee",
+   "Bobcat",
+   "Dune Buggy"
+  ]
+ },
+ "kodiak_pickup": {
+  "class": "land wheeled",
+  "confirmed": "pickup self-kill at 42:39 first stream",
+  "candidates": [
+   "Kodiak [Pickup]",
+   "Kodiak",
+   "Ural"
+  ]
+ },
+ "l2a6": {
+  "class": "land tracked",
+  "candidates": [
+   "L2A6",
+   "Flakpanzer Gepard"
+  ]
+ },
+ "sph2_howitzer": {
+  "class": "land tracked / artillery",
+  "candidates": [
+   "SPH-2",
+   "M113 APC SV"
+  ]
+ },
+ "headshot": {
+  "class": "kill marker",
+  "meaning": "headshot (skull with lightning bolt)"
+ },
+ "skull_small": {
+  "class": "kill marker",
+  "meaning": "unknown - small plain skull on some rows"
+ },
+ "explosion": {
+  "class": "kill marker",
+  "meaning": "explosive / vehicle destruction kill"
+ }
+}

@@ -1,0 +1,9 @@
+.venv/
+vod/
+debug/
+clips.jsonl
+replays.jsonl
+__pycache__/
+config.yaml.bak
+roi.png
+roi_proc.png

@@ -1,0 +1,117 @@
+# ---- Screen capture ---------------------------------------------------------
+# The clipper runs on the STREAMING PC. Frames come from OBS itself (backend "obs"): the
+# game capture / capture-card source is screenshotted over obs-websocket and cropped to the
+# kill feed. Backend "screen" grabs a monitor instead (e.g. a fullscreen projector).
+capture:
+  backend: "obs"           # "bridge" (frames from the Kennel WARDOGS OBS plugin, no obs-websocket) | "obs" | "screen"
+  obs_source: "Game Capture"   # exact name of the OBS input carrying the game (capture card / NDI)
+  monitor: 1               # screen backend only: mss monitor index. `python calibrate.py --list`
+  fps: 3                   # feed rows stay up for seconds; 3 fps decides a row in ~3 s and leaves CPU headroom
+  # Kill-feed region as FRACTIONS of the source frame (0..1). Measured from the two
+  # screenshots: feed text sits at ~47-51% down the frame, ~2-20% across.
+  roi:
+    x: 0.00
+    y: 0.42
+    w: 0.24
+    h: 0.16
+  upscale: 2.0             # OCR is much better on 2x upscaled text
+  debug_dump: false        # write roi.png / roi_proc.png every frame to ./debug
+
+# ---- Kennel WARDOGS OBS plugin bridge ---------------------------------------
+# With capture.backend "bridge" and obs.mode "bridge" the app needs no OBS password: the plugin
+# pushes frames and saves + names the replay clips itself (it also tags clips "downed" while the
+# POV swap is showing a squad mate). Install the plugin, then `pip install websocket-client`.
+bridge:
+  port: 47820
+
+# ---- Detection ----------------------------------------------------------------
+detection:
+  player_name: "Sombrero"  # your in-game name as it appears in the feed (fuzzy matched)
+  my_team: "auto"          # red | blue | green | auto (read from the team emblem bottom-right of the HUD)
+  multikill_window_s: 6.0  # your kills within this many seconds of each other = one multi-kill
+  multikill_min: 2
+  cooldown_s: 20.0         # minimum gap between clip triggers (multi-kill upgrades bypass it)
+
+  # Rules are checked top to bottom per feed row; the first hit makes a clip with that title.
+  # killer / victim: me | squad | team | friendly | enemy | other | any  (from name colour:
+  #   orange = squad, your team colour = team, the other two colours = enemy). min_dist in metres.
+  # icon: name of a template in templates/ (prefix match) - see README "Icons".
+  # min_conf: OCR reads that must agree on the distance before a min_dist rule fires (default 3).
+  # Title placeholders: {dist} {killer} {victim}
+  rules:
+    # chopper crashes: the row carries a helicopter icon plus an explosion icon, no distance
+    - {kind: heli_self,    killer: me,       victim: me,       icon: heli, title: "Crashed my chopper",   tags: [heli, crash, death]}
+    - {kind: heli_crash,   killer: me,                         icon: heli, title: "Chopper crash",        tags: [heli, crash]}
+    - {kind: heli_victim,  killer: friendly, victim: me,       icon: heli, title: "Team mate crashed a chopper on me", tags: [heli, crash, death]}
+    - {kind: heli_death,   victim: me,                         icon: heli, title: "Killed by a chopper",  tags: [heli, death]}
+    - {kind: rpg_kill,     killer: me,                         icon: rpg,  title: "RPG kill",             tags: [rpg, explosive]}
+    - {kind: c4_kill,      killer: me,                         icon: c4,   title: "C4 kill",              tags: [c4, explosive]}
+    - {kind: rpg_death,    victim: me,                         icon: rpg,  title: "Killed by an RPG",     tags: [rpg, death]}
+    - {kind: c4_death,     victim: me,                         icon: c4,   title: "Blown up by C4",       tags: [c4, death]}
+    - {kind: teamkill,     killer: me,       victim: friendly,             title: "Team kill",            tags: [teamkill]}
+    - {kind: tank_kill,    killer: me,                         icon: tank, title: "Tank kill",            tags: [tank]}
+    - {kind: car_kill,     killer: me,                         icon: car,  title: "Car kill",             tags: [car]}
+    - {kind: tank_death,   victim: me,                         icon: tank, title: "Killed by a tank",     tags: [tank, death]}
+    - {kind: arty_kill,    killer: me,                         icon: artillery, title: "Artillery kill",  tags: [artillery]}
+    - {kind: arty_death,   victim: me,                         icon: artillery, title: "Killed by artillery", tags: [artillery, death]}
+    - {kind: car_death,    victim: me,                         icon: car,  title: "Run over",             tags: [car, death]}
+    - {kind: grenade_kill, killer: me,                         icon: grenade, title: "Grenade kill",       tags: [grenade, explosive]}
+    - {kind: grenade_death, victim: me,                        icon: grenade, title: "Killed by a grenade", tags: [grenade, death]}
+    - {kind: mortar_kill,  killer: me,                         icon: mortar, title: "Mortar kill",         tags: [mortar, explosive]}
+    - {kind: mortar_death, victim: me,                         icon: mortar, title: "Killed by a mortar",  tags: [mortar, death]}
+    - {kind: melee_kill,   killer: me,                         icon: hammer, title: "Hammer kill",         tags: [melee, hammer]}
+    - {kind: melee_death,  victim: me,                         icon: hammer, title: "Hammered",            tags: [melee, hammer, death]}
+    - {kind: longrange,    killer: me,       victim: other,  min_dist: 120, title: "Long range shot {dist}m", tags: [longrange]}
+    - {kind: sniped,       killer: other,    victim: me,     min_dist: 120, title: "Sniped from {dist}m", tags: [longrange, death]}
+    - {kind: headshot,     killer: me,       victim: other,  icon: skull,   title: "Headshot {dist}m",    tags: [headshot]}
+  # Tags are what you search on later (`python clips.py headshot`). Every trigger also gets
+  # its icons (skull, tank, heli, car, rifle...) and its kind as tags automatically, so a
+  # 120 m headshot that fires the longrange rule is still found under "headshot".
+
+  # Name colour bands, OpenCV hue 0..179: [hue_lo, hue_hi, min_saturation]. Check them with
+  # `python calibrate.py --colors` on frames that show squad / team / enemy names.
+  colors:
+    red:    [168, 9, 70]
+    orange: [10, 30, 70]
+    green:  [45, 85, 50]
+    blue:   [86, 130, 45]
+
+  # Where to read your team colour when my_team: auto (fractions of the frame):
+  # the team emblem bottom-right of the HUD (primary), then the minimap pointers (fallback)
+  team_icon_roi: {x: 0.955, y: 0.925, w: 0.04, h: 0.05}
+  minimap_roi:   {x: 0.01,  y: 0.77,  w: 0.14, h: 0.20}
+
+# ---- Twitch --------------------------------------------------------------------
+twitch:
+  enabled: true
+  client_id: ""            # from https://dev.twitch.tv/console/apps (register it while logged in as InfoKennel)
+  client_secret: ""
+  # Channel the clips are taken FROM (the stream being clipped):
+  broadcaster_login: "sombrero"
+  broadcaster_id: "20997251"   # twitch.tv/sombrero; leave blank to look it up from the login
+  # Account that CREATES the clips: log in as InfoKennel in get_token.py. Clips show as
+  # "clipped by InfoKennel" on the sombrero channel. Needs scope clips:edit.
+  clipper_login: "infokennel"
+  access_token: ""
+  refresh_token: ""
+  clip_delay_s: 3.0        # wait so the kill is inside the clip (Twitch clips the *previous* ~30s)
+  has_delay: false
+
+# ---- OBS -----------------------------------------------------------------------
+# OBS runs on this same streaming PC, so localhost. (Also used by capture backend "obs".)
+obs:
+  enabled: true
+  host: "127.0.0.1"
+  port: 4455
+  password: ""
+  reconnect_s: 10            # retry the LAN connection this often if OBS is down
+  # "replay" = SaveReplayBuffer (the backtrack); OBS Replay Buffer must be started.
+  # "record" = start a normal recording for record_seconds then stop.
+  mode: "replay"         # "bridge" = let the Kennel WARDOGS OBS plugin save + name the replay (see bridge: below)
+  record_seconds: 30
+  replay_delay_s: 4.0      # let the moment finish before saving the buffer
+  # Clip library: replays are moved into <library>/<YYYY-MM-DD>/ with a .json sidecar each
+  # (title, tags, event details) plus library/index.csv and library/resolve_metadata.csv
+  # (DaVinci Resolve: Media Pool > right-click > Metadata > Import). Leave empty to keep
+  # OBS's own recording folder.
+  library: ""
