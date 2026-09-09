@@ -683,6 +683,24 @@ QWidget *SettingsDialog::buildClipsTab()
 	hotkeyList_ = new QListWidget(gh);
 	hotkeyList_->setMaximumHeight(140);
 	vh->addWidget(hotkeyList_);
+	auto *bfRow = new QHBoxLayout();
+	backtrackFolder_ = new QLineEdit(QString::fromStdString(e_->cfg.backtrackFolder), gh);
+	backtrackFolder_->setPlaceholderText(
+		"Backtrack's output folder (found automatically from its sources when blank)");
+	auto *bfBrowse = new QPushButton("Browse...", gh);
+	bfRow->addWidget(new QLabel("Name their files too:", gh));
+	bfRow->addWidget(backtrackFolder_, 1);
+	bfRow->addWidget(bfBrowse);
+	vh->addLayout(bfRow);
+	connect(bfBrowse, &QPushButton::clicked, this, [this]() {
+		QString d =
+			QFileDialog::getExistingDirectory(this, "Backtrack output folder", backtrackFolder_->text());
+		if (!d.isEmpty()) {
+			backtrackFolder_->setText(d);
+			saveAndApply();
+		}
+	});
+	connect(backtrackFolder_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
 	vh->addWidget(muted(
 		"Tick the hotkeys OBS should press for you on every clip: with Aitum Backtrack that is its \"Save\" hotkey for the source you want (Backtrack names its own files, so the file-name template above does not apply to those). Untick the replay buffer above to clip with Backtrack alone.",
 		gh));
@@ -779,6 +797,20 @@ QWidget *SettingsDialog::buildAppTab()
 	f->addRow(muted(
 		"Where the clip files themselves go is the Clips tab's clip folder. The library is an optional index of what happened in each clip.",
 		g));
+	appEveryKill_ = new QCheckBox(
+		"Clip every kill I get (otherwise only notable ones: 120 m+, headshots, vehicles, explosives, multi-kills)",
+		g);
+	appEveryKill_->setChecked(e_->cfg.appEveryKill);
+	f->addRow(appEveryKill_);
+	appMulti_ = new QDoubleSpinBox(g);
+	appMulti_->setRange(2, 120);
+	appMulti_->setDecimals(0);
+	appMulti_->setSuffix(" s");
+	appMulti_->setValue(e_->cfg.appMultikillWindow > 0 ? e_->cfg.appMultikillWindow : 30);
+	f->addRow("Multi-kill window", appMulti_);
+	f->addRow(muted(
+		"Kills within this many seconds of each other count as one multi-kill (double, triple...). Default 30 s.",
+		g));
 	v->addWidget(g);
 
 	auto *gt = new QGroupBox("Twitch clips", w);
@@ -810,8 +842,12 @@ QWidget *SettingsDialog::buildAppTab()
 		c.appLibrary = appLibrary_->text().trimmed().toStdString();
 		c.appBroadcaster = appBroadcaster_->text().trimmed().toLower().remove('@').toStdString();
 		c.appTwitchEnabled = appTwitch_->isChecked();
+		c.appEveryKill = appEveryKill_->isChecked();
+		c.appMultikillWindow = appMulti_->value();
 		e_->pushAppConfig();
 	};
+	connect(appEveryKill_, &QCheckBox::toggled, this, [push](bool) { push(); });
+	connect(appMulti_, &QDoubleSpinBox::editingFinished, this, push);
 	connect(appName_, &QLineEdit::editingFinished, this, push);
 	connect(appLibrary_, &QLineEdit::editingFinished, this, push);
 	connect(appBroadcaster_, &QLineEdit::editingFinished, this, push);
@@ -832,6 +868,12 @@ QWidget *SettingsDialog::buildAppTab()
 		appTwitch_->blockSignals(true);
 		appTwitch_->setChecked(e_->cfg.appTwitchEnabled);
 		appTwitch_->blockSignals(false);
+		appEveryKill_->blockSignals(true);
+		appEveryKill_->setChecked(e_->cfg.appEveryKill);
+		appEveryKill_->blockSignals(false);
+		appMulti_->blockSignals(true);
+		appMulti_->setValue(e_->cfg.appMultikillWindow > 0 ? e_->cfg.appMultikillWindow : 30);
+		appMulti_->blockSignals(false);
 	});
 	connect(e_, &Engine::twitchStatusChanged, this, [this]() { refreshAppTab(); });
 	connect(e_, &Engine::stateChanged, this, [this]() { refreshAppTab(); });
@@ -1151,6 +1193,7 @@ void SettingsDialog::collect()
 	c.watchRevive = revive_->isChecked();
 	c.autoStartReplay = autoReplay_->isChecked();
 	c.clipUseReplay = useReplay_ ? useReplay_->isChecked() : true;
+	c.backtrackFolder = backtrackFolder_ ? backtrackFolder_->text().trimmed().toStdString() : c.backtrackFolder;
 	if (hotkeyList_) {
 		// keep ticked hotkeys that are filtered out of view
 		for (int i = 0; i < hotkeyList_->count(); i++) {

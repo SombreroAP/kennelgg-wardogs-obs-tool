@@ -130,7 +130,7 @@ def main():
         # settings changed from the OBS plugin: name, library, Twitch, clip rules
         det.me = c["detection"].get("player_name", det.me)
         det.cfg["clip_every_kill"] = bool(c["detection"].get("clip_every_kill"))
-        det.cfg["multikill_window_s"] = float(c["detection"].get("multikill_window_s", 12))
+        det.cfg["multikill_window_s"] = float(c["detection"].get("multikill_window_s", 30))
         try:
             if not DRY and c["twitch"].get("enabled") and c["twitch"].get("access_token"):
                 from twitch import Twitch

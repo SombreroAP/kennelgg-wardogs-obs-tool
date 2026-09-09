@@ -4,6 +4,8 @@
 #include <QStringList>
 #include <QDateTime>
 #include <deque>
+#include <QSet>
+#include <QTimer>
 
 /// Replay-buffer clipping: save the buffer on demand, rename the file with tags, keep a log.
 class Clips : public QObject {
@@ -22,6 +24,9 @@ public:
 	bool autoStartReplay = true; // start the replay buffer when OBS loads / when a clip is asked for
 	bool useReplay = true;       // save OBS's replay buffer
 	QStringList hotkeys;         // OBS hotkeys to fire as well (Aitum Backtrack saves, anything else)
+	QStringList
+		watchFolders; // folders other tools (Aitum Backtrack) write clips into; new files after a trigger are renamed
+	static QStringList discoverBacktrackFolders();
 	static QList<QPair<QString, QString>> allHotkeys(); // (name, description)
 	static bool fireHotkey(const QString &name);
 	int minGapMs = 4000; // ignore clip requests closer than this
@@ -47,6 +52,17 @@ private:
 	std::deque<Pending> pending_;
 	std::deque<Entry> history_;
 	QDateTime lastRequest_;
+	struct Watch {
+		QDateTime since;
+		QString title;
+		QStringList tags;
+		QSet<QString> seen;
+	};
+	std::deque<Watch> watches_;
+	QTimer watchTimer_;
+	void pollWatches();
+	QString nameFor(const QDateTime &when, const QString &title, const QStringList &tags,
+			const QString &source) const;
 	QString logFile() const;
 	static QString safe(QString s);
 };

@@ -132,7 +132,10 @@ void Dock::refresh()
 	if (events_->count() == 0)
 		events_->addItem("events from the kill feed and the POV swap appear here");
 	QString lp = e_->clips.lastPath();
-	clip_->setText(lp.isEmpty() ? "no clips yet" : "last: " + QFileInfo(lp).fileName());
+	QString rb = (e_->cfg.clipUseReplay && !obs_frontend_replay_buffer_active())
+			     ? "REPLAY BUFFER OFF (OBS Settings → Output)  ·  "
+			     : "";
+	clip_->setText(rb + (lp.isEmpty() ? "no clips yet" : "last: " + QFileInfo(lp).fileName()));
 	show_->setEnabled(!e_->applied());
 	back_->setEnabled(e_->applied());
 }

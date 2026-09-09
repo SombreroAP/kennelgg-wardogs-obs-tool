@@ -29,7 +29,7 @@ detection:
   player_name: "Sombrero"  # your in-game name as it appears in the feed (fuzzy matched)
   my_team: "auto"          # red | blue | green | auto (read from the team emblem bottom-right of the HUD)
   clip_every_kill: false   # true = clip every kill you get, not only the notable ones (set from the OBS plugin)
-  multikill_window_s: 12.0 # your kills within this many seconds of each other = one multi-kill
+  multikill_window_s: 30.0 # your kills within this many seconds of each other = one multi-kill
   multikill_min: 2
   cooldown_s: 20.0         # minimum gap between clip triggers (multi-kill upgrades bypass it)
 

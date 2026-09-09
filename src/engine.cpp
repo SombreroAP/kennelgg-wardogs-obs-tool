@@ -228,6 +228,8 @@ void Engine::start()
 	}
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
 	clips.folder = QString::fromStdString(cfg.clipFolder);
+	clips.watchFolders = cfg.backtrackFolder.empty() ? QStringList()
+							 : QStringList{QString::fromStdString(cfg.backtrackFolder)};
 	clips.autoStartReplay = cfg.autoStartReplay && cfg.clipUseReplay;
 	clips.useReplay = cfg.clipUseReplay;
 	clips.hotkeys.clear();
@@ -330,6 +332,8 @@ void Engine::reloadConfig()
 {
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
 	clips.folder = QString::fromStdString(cfg.clipFolder);
+	clips.watchFolders = cfg.backtrackFolder.empty() ? QStringList()
+							 : QStringList{QString::fromStdString(cfg.backtrackFolder)};
 	clips.autoStartReplay = cfg.autoStartReplay && cfg.clipUseReplay;
 	clips.useReplay = cfg.clipUseReplay;
 	clips.hotkeys.clear();
@@ -427,7 +431,7 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 			cfg.appBroadcaster = v.value("broadcaster").toString().toStdString();
 			cfg.appTwitchEnabled = v.value("twitch_enabled").toBool();
 			cfg.appEveryKill = v.value("clip_every_kill").toBool();
-			cfg.appMultikillWindow = v.value("multikill_window").toDouble(12);
+			cfg.appMultikillWindow = v.value("multikill_window").toDouble(30);
 			cfg.save();
 			emit appConfigReceived();
 		}

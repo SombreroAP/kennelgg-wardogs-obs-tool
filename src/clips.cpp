@@ -10,7 +10,89 @@
 #include <obs-frontend-api.h>
 #include <plugin-support.h>
 
-Clips::Clips(QObject *parent) : QObject(parent) {}
+Clips::Clips(QObject *parent) : QObject(parent)
+{
+	connect(&watchTimer_, &QTimer::timeout, this, &Clips::pollWatches);
+}
+
+QStringList Clips::discoverBacktrackFolders()
+{
+	QStringList out;
+	obs_enum_sources(
+		[](void *data, obs_source_t *src) {
+			auto *o = (QStringList *)data;
+			const char *id = obs_source_get_id(src);
+			if (!id || !strstr(id, "backtrack"))
+				return true;
+			obs_data_t *st = obs_source_get_settings(src);
+			for (const char *key : {"path", "directory", "folder", "output_path", "save_path"}) {
+				const char *v = obs_data_get_string(st, key);
+				if (v && *v && !o->contains(QString::fromUtf8(v)))
+					o->append(QString::fromUtf8(v));
+			}
+			obs_data_release(st);
+			return true;
+		},
+		&out);
+	return out;
+}
+
+QString Clips::nameFor(const QDateTime &when, const QString &title, const QStringList &tags,
+		       const QString &source) const
+{
+	QString name = nameTemplate;
+	name.replace("{date}", when.toString("yyyy-MM-dd"));
+	name.replace("{time}", when.toString("HH-mm-ss"));
+	name.replace("{title}", safe(title));
+	name.replace("{tags}", safe(tags.join("_")));
+	name.replace("{source}", safe(source));
+	name = safe(name);
+	while (name.contains("__"))
+		name.replace("__", "_");
+	return name;
+}
+
+void Clips::pollWatches()
+{
+	QStringList folders = watchFolders + discoverBacktrackFolders();
+	folders.removeDuplicates();
+	QDateTime now = QDateTime::currentDateTime();
+	for (auto it = watches_.begin(); it != watches_.end();) {
+		Watch &w = *it;
+		bool done = false;
+		for (const QString &folder : folders) {
+			QDir d(folder);
+			if (!d.exists())
+				continue;
+			for (const QFileInfo &fi :
+			     d.entryInfoList({"*.mkv", "*.mp4", "*.mov", "*.flv", "*.ts"}, QDir::Files, QDir::Time)) {
+				if (fi.lastModified() < w.since.addSecs(-2) || w.seen.contains(fi.absoluteFilePath()))
+					continue;
+				if (fi.lastModified().msecsTo(now) < 2000)
+					continue; // still being written
+				w.seen.insert(fi.absoluteFilePath());
+				QString name = nameFor(w.since, w.title, w.tags, "backtrack");
+				QString target = d.filePath(name + "." + fi.suffix());
+				int n = 2;
+				while (QFile::exists(target))
+					target = d.filePath(name + QString("_%1.").arg(n++) + fi.suffix());
+				if (QFile::rename(fi.absoluteFilePath(), target)) {
+					Entry e{w.since, w.title, w.tags, target};
+					history_.push_back(e);
+					emit logged("Backtrack clip named: " + QFileInfo(target).fileName());
+					emit saved(e);
+					done = true;
+				}
+			}
+		}
+		if (done || w.since.secsTo(now) > 25)
+			it = watches_.erase(it);
+		else
+			++it;
+	}
+	if (watches_.empty())
+		watchTimer_.stop();
+}
 
 QString Clips::safe(QString s)
 {
@@ -89,6 +171,21 @@ QString Clips::request(const QString &title, const QStringList &tags, const QStr
 	for (const QString &hk : hotkeys)
 		if (!fireHotkey(hk))
 			missed << hk;
+	if (!hotkeys.isEmpty() && missed.size() < hotkeys.size()) {
+		// something else (Backtrack) is writing a file: give it our name when it appears
+		Watch w;
+		w.since = now;
+		w.title = title;
+		w.tags = tags;
+		QStringList folders = watchFolders + discoverBacktrackFolders();
+		for (const QString &folder : folders)
+			for (const QFileInfo &fi :
+			     QDir(folder).entryInfoList({"*.mkv", "*.mp4", "*.mov", "*.flv", "*.ts"}, QDir::Files))
+				w.seen.insert(fi.absoluteFilePath());
+		watches_.push_back(w);
+		if (!watchTimer_.isActive())
+			watchTimer_.start(1000);
+	}
 	if (!missed.isEmpty())
 		emit logged("Clip hotkeys not found in OBS (plugin missing?): " + missed.join(", "));
 	else if (!hotkeys.isEmpty())
@@ -127,15 +224,7 @@ void Clips::onReplaySaved()
 		p.title = "manual";
 	}
 	QFileInfo fi(path);
-	QString name = nameTemplate;
-	name.replace("{date}", p.when.toString("yyyy-MM-dd"));
-	name.replace("{time}", p.when.toString("HH-mm-ss"));
-	name.replace("{title}", safe(p.title));
-	name.replace("{tags}", safe(p.tags.join("_")));
-	name.replace("{source}", safe(p.source));
-	name = safe(name);
-	while (name.contains("__"))
-		name.replace("__", "_");
+	QString name = nameFor(p.when, p.title, p.tags, p.source);
 	QDir outDir = fi.dir();
 	if (!folder.isEmpty()) {
 		QDir want(folder);

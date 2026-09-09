@@ -105,6 +105,7 @@ void Config::load()
 	DEFB(autoStartReplay);
 	DEFB(clipOnDowned);
 	DEFB(clipUseReplay);
+	DEFS(backtrackFolder);
 	DEFS(playerName);
 	DEFB(lanEnabled);
 	DEFI(lanPort);
@@ -154,6 +155,7 @@ void Config::load()
 	GETB(autoStartReplay);
 	GETB(clipOnDowned);
 	GETB(clipUseReplay);
+	GETS(backtrackFolder);
 	GETS(playerName);
 	GETB(lanEnabled);
 	GETI(lanPort);
@@ -235,6 +237,7 @@ void Config::save() const
 	SETB(autoStartReplay);
 	SETB(clipOnDowned);
 	SETB(clipUseReplay);
+	SETS(backtrackFolder);
 	SETS(playerName);
 	SETB(lanEnabled);
 	SETI(lanPort);

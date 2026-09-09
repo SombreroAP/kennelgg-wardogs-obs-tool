@@ -48,7 +48,7 @@ struct Config {
 	std::string appPlayerName, appLibrary, appBroadcaster;
 	bool appTwitchEnabled = false;
 	bool appEveryKill = false;
-	double appMultikillWindow = 12;
+	double appMultikillWindow = 30;
 	bool appConfigDirty =
 		false; // edited while the app was not connected; push on connect // tell ClipHound to quit when OBS closes (and end it if we started it)
 	std::string clipNameTemplate = "{date}_{time}_{tags}";
@@ -56,6 +56,7 @@ struct Config {
 	bool clipOnDowned = false;            // also clip when you get downed (the moment before is in the buffer)
 	bool clipUseReplay = true;            // save OBS's own replay buffer on a clip
 	std::vector<std::string> clipHotkeys; // OBS hotkey names fired on every clip (e.g. Aitum Backtrack "save")
+	std::string backtrackFolder; // where Aitum Backtrack writes; new files there after a trigger get our name
 
 	// detection
 	bool autoDetect = true;

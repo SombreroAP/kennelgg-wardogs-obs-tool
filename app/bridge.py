@@ -70,7 +70,7 @@ class Bridge:
             "twitch_enabled": bool((c.get("twitch") or {}).get("enabled")),
             "fps": (c.get("capture") or {}).get("fps", 3),
             "clip_every_kill": bool(c["detection"].get("clip_every_kill")),
-            "multikill_window": float(c["detection"].get("multikill_window_s", 12)),
+            "multikill_window": float(c["detection"].get("multikill_window_s", 30)),
         }})
         from twitch_device import status
         self.send(status(c))

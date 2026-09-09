@@ -97,6 +97,7 @@ private:
 	QCheckBox *useReplay_ = nullptr;
 	QCheckBox *closeApp_ = nullptr;
 	QListWidget *hotkeyList_ = nullptr;
+	QLineEdit *backtrackFolder_ = nullptr;
 	QLineEdit *hotkeyFilter_ = nullptr;
 	void fillHotkeys();
 	void fillSources();
