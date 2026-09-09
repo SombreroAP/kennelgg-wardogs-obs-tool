@@ -596,12 +596,15 @@ void Engine::tick()
 	// on to). Doing it on every third poll keeps it near 1-2 % of a core; once locked, every poll is cheap.
 	tickN_++;
 	bool quick = !lastGame_.locked && !revivingRecent() && (tickN_ % 6) != 0;
+	// the friend-feed "REVIVING" search is the expensive one: full search every 5th poll, cheap remembered-spot check otherwise,
+	// so the damage-log poll (what switches you back) keeps its 100 ms cadence while the friend is on screen
+	bool reviveFull = (tickN_ % 5) == 0;
 	busy_ = true;
 	bool wantRevive = applied_ && cfg.watchRevive && cfg.active();
 	std::string gameName = cfg.gameSource, friendName = wantRevive ? Config::sourceFor(*cfg.active()) : "";
 	bool preview = previewWanted_;
 
-	std::thread([this, gameName, friendName, wantRevive, preview, quick]() {
+	std::thread([this, gameName, friendName, wantRevive, preview, quick, reviveFull]() {
 		Result r;
 		obs_source_t *src = obs_get_source_by_name(gameName.c_str());
 		if (src) {
@@ -620,14 +623,14 @@ void Engine::tick()
 			}
 			obs_source_release(src);
 		}
-		if (wantRevive) {
+		if (wantRevive && (reviveFull || detRevive_.remembers())) {
 			obs_source_t *fs = obs_get_source_by_name(friendName.c_str());
 			if (fs) {
 				std::vector<uint8_t> bgra;
 				int w, h, ls;
 				if (capFriend_.grab(fs, Detector::FrameWidth, bgra, w, h, ls)) {
 					Frame f = Detector::fromBGRA(bgra.data(), w, h, ls);
-					r.revive = detRevive_.compare(f);
+					r.revive = detRevive_.compare(f, !reviveFull);
 					if (r.revive.score >= detRevive_.threshold) {
 						// the progress ring sits at a fixed offset below the word (measured on a real frame)
 						float tw = r.revive.w * w;

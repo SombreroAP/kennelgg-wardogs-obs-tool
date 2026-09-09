@@ -2,8 +2,11 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.2.18
+- Switching back is as fast as switching away. The cause was the "REVIVING" search on the friend's feed running in full on every poll while the friend was on screen, stretching each poll; it now runs in full every 5th poll with a cheap check in between. Confirmation is 2 polls each way and the minimum time on the friend is 0.5 s.
+
 ## 0.2.17
-- Switching back after a revive is as fast as switching away: the plugin reacts to the damage log starting to fade (score falling away from its steady level) instead of waiting for it to cross the threshold, confirms in 2 polls, and the minimum time on the friend is 0.5 s. Existing configs are migrated.
+- Switch-back also reacts to the score falling away from its steady level; 2 polls, 0.5 s floor. Existing configs migrated.
 
 ## 0.2.16
 - Squad-mate dialog shows only the fields for the chosen kind (Twitch channel, VDO.Ninja stream ID + quality + link, OBS source, Discord window, NDI source).
