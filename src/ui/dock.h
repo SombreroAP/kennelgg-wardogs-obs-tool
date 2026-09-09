@@ -15,6 +15,7 @@ public slots:
 	void refresh();
 	void openSettings();
 	void openWizard();
+	void openLogs();
 
 private:
 	Engine *e_;

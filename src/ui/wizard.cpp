@@ -10,7 +10,11 @@ static QLabel *note(const QString &t, QWidget *p)
 {
 	auto *l = new QLabel(t, p);
 	l->setWordWrap(true);
-	l->setStyleSheet("color: palette(mid);");
+	{
+		QFont f = l->font();
+		f.setPointSizeF(f.pointSizeF() - 0.5);
+		l->setFont(f);
+	}
 	return l;
 }
 
@@ -19,7 +23,9 @@ SetupWizard::SetupWizard(Engine *engine, QWidget *parent) : QWizard(parent), e_(
 	setWindowTitle("Kennel.gg WARDOGS OBS Tools - setup");
 	setWizardStyle(QWizard::ModernStyle);
 	setOption(QWizard::NoBackButtonOnStartPage, true);
-	resize(700, 520);
+	setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowMinMaxButtonsHint);
+	setMinimumSize(560, 420);
+	resize(720, 540);
 	addPage(pageWelcome());
 	addPage(pageGame());
 	addPage(pageSquad());

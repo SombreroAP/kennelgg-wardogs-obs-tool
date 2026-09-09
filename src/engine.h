@@ -46,6 +46,7 @@ public:
 	QImage lastFrame() const;
 	void wantPreview(bool on) { previewWanted_ = on; }
 	std::string stateText() const;
+	QStringList recentLog() const { return logLines_; }
 
 	void start();
 	void stop();
@@ -101,4 +102,5 @@ private:
 	mutable std::mutex frameMx_;
 	QImage lastFrame_;
 	std::string lastWatchError_;
+	QStringList logLines_;
 };

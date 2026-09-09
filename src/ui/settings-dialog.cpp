@@ -165,7 +165,7 @@ public:
 		form->addRow("Friend's link", linkRow);
 		hint_ = new QLabel(this);
 		hint_->setWordWrap(true);
-		hint_->setStyleSheet("color: palette(mid);");
+
 		form->addRow(hint_);
 		auto *bb = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
 		form->addRow(bb);
@@ -276,6 +276,9 @@ static const char *kLiveScene = "(the scene that is live)";
 SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent), e_(engine)
 {
 	setWindowTitle("Kennel.gg WARDOGS OBS Tools");
+	setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowMinMaxButtonsHint);
+	setSizeGripEnabled(true);
+	setMinimumSize(640, 480);
 	resize(900, 720);
 	auto *v = new QVBoxLayout(this);
 	auto *tabs = new QTabWidget(this);
@@ -314,7 +317,11 @@ static QLabel *muted(const QString &t, QWidget *p)
 {
 	auto *l = new QLabel(t, p);
 	l->setWordWrap(true);
-	l->setStyleSheet("color: palette(mid);");
+	{
+		QFont f = l->font();
+		f.setPointSizeF(f.pointSizeF() - 0.5);
+		l->setFont(f);
+	}
 	return l;
 }
 

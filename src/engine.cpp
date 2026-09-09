@@ -272,6 +272,9 @@ std::string Engine::stateText() const
 void Engine::log(const QString &msg)
 {
 	obs_log(LOG_INFO, "%s", msg.toUtf8().constData());
+	logLines_ << QDateTime::currentDateTime().toString("HH:mm:ss.zzz") + "  " + msg;
+	while (logLines_.size() > 500)
+		logLines_.removeFirst();
 	emit logged(msg);
 }
 

@@ -4,8 +4,45 @@ import sys
 
 # Frozen (installer) build: work from the exe's folder so config.yaml, debug/ and the library
 # paths resolve, and use the bundled Tesseract.
+class _Tee:
+    """stdout/stderr to the console and to cliphound.log with timestamps (the plugin's Logs button reads it)."""
+    def __init__(self, stream, path):
+        self.stream, self.f, self.at_line_start = stream, open(path, "a", encoding="utf-8", buffering=1), True
+    def write(self, s):
+        try:
+            self.stream.write(s)
+        except Exception:
+            pass
+        try:
+            import time as _t
+            for part in s.splitlines(True):
+                if self.at_line_start and part.strip():
+                    self.f.write(_t.strftime("%H:%M:%S ") + part)
+                else:
+                    self.f.write(part)
+                self.at_line_start = part.endswith("\n")
+        except Exception:
+            pass
+    def flush(self):
+        try:
+            self.stream.flush(); self.f.flush()
+        except Exception:
+            pass
+    def __getattr__(self, n):
+        return getattr(self.stream, n)
+
+
 if getattr(sys, "frozen", False):
     os.chdir(os.path.dirname(sys.executable))
+    try:
+        _lp = "cliphound.log"
+        if os.path.exists(_lp) and os.path.getsize(_lp) > 2_000_000:
+            os.replace(_lp, "cliphound.log.old")
+        sys.stdout = _Tee(sys.stdout, _lp)
+        sys.stderr = _Tee(sys.stderr, _lp)
+        print(f"=== ClipHound started {__import__('time').strftime('%Y-%m-%d %H:%M:%S')} ===")
+    except Exception as _e:
+        print(f"[log] could not open cliphound.log: {_e}")
     _tess = os.path.join(os.path.dirname(sys.executable), "tesseract", "tesseract.exe")
     if os.path.exists(_tess):
         os.environ["TESSDATA_PREFIX"] = os.path.join(os.path.dirname(_tess), "tessdata")
