@@ -661,7 +661,7 @@ bool Engine::feedUsable(const Friend &f) const
 {
 	if (f.isWeb())
 		return !f.channel.empty();
-	std::string n = Config::sourceFor(f);
+	std::string n = cfg.sourceFor(f);
 	if (n.empty())
 		return false;
 	obs_source_t *src = obs_get_source_by_name(n.c_str());
@@ -767,9 +767,11 @@ void Engine::pickClosest(const QString &why, bool decisive)
 		if (clock_::now() - lastPick_ < std::chrono::seconds(std::clamp(cfg.nearCooldownS, 1, 10)))
 			return; // one swap per cooldown, so the picture cannot flap
 	}
-	switchTo(
-		idx,
-		QString("%1 is closest (%2 m, %3)").arg(QString::fromStdString(cfg.friends[idx].name)).arg(d).arg(why));
+	QString nm = QString::fromStdString(cfg.friends[idx].name);
+	QString ign = QString::fromStdString(cfg.friends[idx].nearName());
+	if (ign.compare(nm, Qt::CaseInsensitive) != 0)
+		nm += " (in game " + ign + ")";
+	switchTo(idx, QString("%1 is closest at %2 m - %3 - read [%4]").arg(nm).arg(d).arg(why, nearbyText()));
 }
 
 /// setActive() without the "you chose this" wording: used by the closest-squad-mate picker.
@@ -872,7 +874,7 @@ void Engine::tick()
 	bool reviveFull = (tickN_ % 5) == 0;
 	busy_ = true;
 	bool wantRevive = applied_ && cfg.watchRevive && cfg.active();
-	std::string gameName = cfg.gameSource, friendName = wantRevive ? Config::sourceFor(*cfg.active()) : "";
+	std::string gameName = cfg.gameSource, friendName = wantRevive ? cfg.sourceFor(*cfg.active()) : "";
 	bool preview = previewWanted_;
 
 	std::thread([this, gameName, friendName, wantRevive, preview, quick, reviveFull]() {

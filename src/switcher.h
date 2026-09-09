@@ -16,6 +16,7 @@ public:
 	std::vector<std::string> apply(const Config &cfg, bool on);
 	/// Warm mode: friend source present in the scene, transparent and muted.
 	void armWarm(const Config &cfg);
+	void armOne(const Config &cfg, const Friend &f);
 	/// Look overlay on/off (also used for preview).
 	std::string updateLook(const Config &cfg, bool on);
 

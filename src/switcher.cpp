@@ -435,16 +435,33 @@ std::string Switcher::updateLook(const Config &cfg, bool on)
 
 void Switcher::armWarm(const Config &cfg)
 {
-	const Friend *f = cfg.active();
-	if (!f)
+	if (cfg.preloadFeeds) {
+		// every squad mate's feed loaded and playing behind the scenes, so a swap is instant
+		for (const auto &f : cfg.friends)
+			armOne(cfg, f);
+		// the shared browser source is not used in this mode; make sure it is not left showing
+		hideEverywhere(Config::webSourceName());
 		return;
-	std::string name = Config::sourceFor(*f);
+	}
+	const Friend *f = cfg.active();
+	if (f)
+		armOne(cfg, *f);
+	// per-squad-mate sources from a previous preloading session must not sit on top of the scene
+	for (const auto &other : cfg.friends)
+		if (other.isWeb())
+			hideEverywhere(std::string(Config::webSourceName()) + " - " + other.name);
+}
+
+/// One feed in warm mode: in the scene, playing, fully transparent and muted.
+void Switcher::armOne(const Config &cfg, const Friend &f)
+{
+	std::string name = cfg.sourceFor(f);
 	obs_source_t *ss = sceneSource(cfg);
 	if (!ss)
 		return;
 	obs_scene_t *scene = obs_scene_from_source(ss);
-	if (f->isWeb())
-		ensureBrowserSource(scene, name.c_str(), webUrl(*f), true);
+	if (f.isWeb())
+		ensureBrowserSource(scene, name.c_str(), webUrl(f), true);
 	obs_source_t *src = obs_get_source_by_name(name.c_str());
 	obs_sceneitem_t *item = obs_scene_find_source(scene, name.c_str());
 	if (src && item) {
@@ -458,9 +475,9 @@ void Switcher::armWarm(const Config &cfg)
 		obs_sceneitem_set_visible(item, true);
 	} else if (log)
 		log("Warm feed: '" + name + "' is not in the scene.");
-	if (!f->audioSource.empty()) {
-		obs_source_t *a = obs_get_source_by_name(f->audioSource.c_str());
-		obs_sceneitem_t *ai = obs_scene_find_source(scene, f->audioSource.c_str());
+	if (!f.audioSource.empty()) {
+		obs_source_t *a = obs_get_source_by_name(f.audioSource.c_str());
+		obs_sceneitem_t *ai = obs_scene_find_source(scene, f.audioSource.c_str());
 		if (a && ai) {
 			obs_source_set_muted(a, true);
 			obs_sceneitem_set_visible(ai, true);
@@ -487,7 +504,7 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 		return errors;
 	}
 	obs_scene_t *scene = obs_scene_from_source(ss);
-	std::string name = Config::sourceFor(*f);
+	std::string name = cfg.sourceFor(*f);
 
 	// 1. the friend's video and its audio
 	{
@@ -510,7 +527,7 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 				if (on) {
 					if (hf)
 						obs_source_set_enabled(hf, false);
-					obs_source_set_muted(src, false);
+					obs_source_set_muted(src, !cfg.friendAudio);
 					obs_sceneitem_set_visible(item, true);
 				} else {
 					obs_source_set_muted(src, true);
@@ -526,6 +543,7 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 					obs_source_set_enabled(hf, false);
 					obs_source_release(hf);
 				}
+				obs_source_set_muted(src, !(on && cfg.friendAudio));
 				obs_sceneitem_set_visible(item, on);
 				if (!on)
 					hideEverywhere(name);
@@ -542,7 +560,7 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 		if (a && ai) {
 			if (cfg.keepWarm) {
 				obs_sceneitem_set_visible(ai, true);
-				obs_source_set_muted(a, !on);
+				obs_source_set_muted(a, !(on && cfg.friendAudio));
 			} else
 				obs_sceneitem_set_visible(ai, on);
 		}

@@ -73,6 +73,9 @@ void Config::load()
 	DEFI(activeFriend);
 	DEFB(bringToFront);
 	DEFB(keepWarm);
+	DEFB(preloadFeeds);
+	DEFB(friendAudio);
+	DEFB(audioDefaults2);
 	DEFI(vdoBitrateKbps);
 	DEFB(lookName);
 	DEFB(lookPlate);
@@ -144,6 +147,9 @@ void Config::load()
 	GETI(activeFriend);
 	GETB(bringToFront);
 	GETB(keepWarm);
+	GETB(preloadFeeds);
+	GETB(friendAudio);
+	GETB(audioDefaults2);
 	GETI(vdoBitrateKbps);
 	GETB(lookName);
 	GETB(lookPlate);
@@ -249,6 +255,13 @@ void Config::load()
 		upFrames = 1; // instant return
 	if (minDownMs == 2000 || minDownMs == 500)
 		minDownMs = 0;
+	// your own game audio is no longer muted by default: the squad mate's feed comes in silent
+	// and you turn its sound on if you want it (Settings -> Switch)
+	if (!audioDefaults2) {
+		audioDefaults2 = true;
+		muteWhileDowned.clear();
+		audioAutoPicked = true;
+	}
 	if (clipNameTemplate == "{date}_{time}_{tags}")
 		clipNameTemplate = "{title}_{tags}_{date}_{time}"; // what happened first, then when
 	obs_data_release(d);
@@ -265,6 +278,9 @@ void Config::save() const
 	SETI(activeFriend);
 	SETB(bringToFront);
 	SETB(keepWarm);
+	SETB(preloadFeeds);
+	SETB(friendAudio);
+	SETB(audioDefaults2);
 	SETI(vdoBitrateKbps);
 	SETB(lookName);
 	SETB(lookPlate);

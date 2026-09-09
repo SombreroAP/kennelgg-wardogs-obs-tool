@@ -153,6 +153,21 @@ def _chip(gray_row: np.ndarray):
     return best
 
 
+def _looks_like_chip(bw: np.ndarray) -> bool:
+    """A real distance chip is a light box with a little dark text in it. Anything else the
+    erosion found (a bright wall, a muzzle flash) is not, and reading it wastes a tesseract run."""
+    if bw is None or bw.size == 0:
+        return False
+    dark = float((bw < 128).mean())
+    return 0.03 <= dark <= 0.55
+
+
+def _ocr_row(inv_row: np.ndarray) -> str:
+    """Whole row, chip and all, as one line. Only used when the distance came out of nothing else."""
+    img = cv2.copyMakeBorder(inv_row, 12, 12, 18, 18, cv2.BORDER_CONSTANT, value=255)
+    return pytesseract.image_to_string(img, config="--psm 7 --oem 3").strip()
+
+
 def _sig(crop: np.ndarray) -> np.ndarray:
     """Cheap fingerprint of a name crop, so an unchanged name is not read again next frame."""
     return cv2.resize(crop, (128, 16), interpolation=cv2.INTER_AREA) < 128
@@ -197,23 +212,27 @@ def read(roi_bgr: np.ndarray, names: list[str], cache: dict | None = None,
     up = cv2.resize(roi_bgr, None, fx=SCALE, fy=SCALE, interpolation=cv2.INTER_CUBIC)
     gray = cv2.cvtColor(up, cv2.COLOR_BGR2GRAY)
     mask, spans = _rows_of(gray)
-    nameCrops, chipCrops = [], []
+    nameCrops, chipCrops, rowCrops = [], [], []
     notes["rows"] = len(spans)
     for y0, y1 in spans:
         g, m = gray[y0:y1], mask[y0:y1]
         box = _chip(g)
+        bw = None
         if box:
             cx, cy, cw, ch = box
             crop = g[max(0, cy - 2):cy + ch + 2, max(0, cx - 3):cx + cw + 3]
             crop = cv2.resize(crop, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
             _, bw = cv2.threshold(crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            chipCrops.append(bw)
-            # the name is whatever sits left of the chip
-            nameCrops.append(cv2.bitwise_not(m[:, :max(8, cx - 2)]))
+            if not _looks_like_chip(bw):
+                bw, box = None, None       # a bright blob, not the chip: fall back to the row
+        chipCrops.append(bw)
+        if box:
+            nameCrops.append(cv2.bitwise_not(m[:, :max(8, box[0] - 2)]))  # the name is left of it
+            rowCrops.append(cv2.bitwise_not(m))
         else:
-            # no chip found: read the whole row, so the metres are in the text we get back
-            chipCrops.append(None)
+            # no chip: the name crop is the whole row, so the metres are in the text we get back
             nameCrops.append(cv2.bitwise_not(m))
+            rowCrops.append(None)
     notes["chips"] = sum(c is not None for c in chipCrops)
     if not nameCrops:
         return [], notes
@@ -257,11 +276,14 @@ def read(roi_bgr: np.ndarray, names: list[str], cache: dict | None = None,
         match = next((n for n in names if n and _matches(text, n)), "")
         if not match:
             continue
-        dist = _metres(dtext)
+        dist = _metres(dtext, tail=True)               # the chip can only read as digits and m
         if dist is None and chipCrops[i] is not None:  # the stacked read missed it: try it alone
-            dist = _metres(_ocr_one(chipCrops[i]))
+            dist = _metres(_ocr_one(chipCrops[i]), tail=True)
         if dist is None:
-            dist = _metres(text, tail=True)            # no chip: the metres are in the row text
+            dist = _metres(text, tail=True)            # the metres may be in the row text
+        if dist is None and rowCrops[i] is not None:
+            # last resort: read the whole row, chip and all, and take the number off the end
+            dist = _metres(_ocr_row(rowCrops[i]), tail=True)
         unknown = dist is None
         if unknown:
             dist = 998                                 # nearby but unreadable: still better than nothing
@@ -286,6 +308,26 @@ class Watcher:
         self.misses = 0
         self.diag_at = 0.0
         self.cache: dict = {}
+        self.known: dict = {}         # squad mate -> (last distance that was read, when)
+
+    HOLD_S = 12.0                 # how long a distance stays usable after the last time it was read
+
+    def _hold(self, found: list, now: float) -> list:
+        """Keep the last distance we actually read for a squad mate. One frame in several the
+        little chip cannot be read, and a squad mate who is nearby with an unknown distance is
+        worse than useless for picking the closest one - so use what they were last time."""
+        for e in found:
+            k = e["match"].lower()
+            if e.get("unknown"):
+                prev = self.known.get(k)
+                if prev and now - prev[1] <= self.HOLD_S:
+                    e["dist"], e["unknown"], e["held"] = prev[0], False, True
+            else:
+                self.known[k] = (e["dist"], now)
+        for k in [k for k, v in self.known.items() if now - v[1] > 120]:
+            self.known.pop(k, None)
+        found.sort(key=lambda e: e["dist"])
+        return found
 
     def maybe_read(self, frame, now: float, force: bool = False):
         c = self.b.nearby_cfg
@@ -310,6 +352,7 @@ class Watcher:
                 self.warned = True
                 print(f"[nearby] cannot read the panel: {e}")
             return
+        found = self._hold(found, now)
         if found:
             self.misses = 0
         else:
@@ -324,7 +367,8 @@ class Watcher:
                       f"read {notes['texts']} {notes['dists']}, looking for {list(c['names'])}")
         if force or found != self.sent or now - self.sent_at > 5:
             if found != self.sent:
-                print("[nearby] " + (", ".join(f"{e['match']} {e['dist']}m" for e in found) or "nobody"))
+                print("[nearby] " + (", ".join(f"{e['match']} {e['dist']}m" + (" (held)" if e.get("held") else "")
+                                               for e in found) or "nobody"))
             self.sent, self.sent_at = found, now
             self.b.send({"type": "nearby", "list": found})
         if force:

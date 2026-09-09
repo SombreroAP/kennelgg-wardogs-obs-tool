@@ -28,7 +28,10 @@ struct Config {
 	bool audioAutoPicked = false; // desktop audio was ticked automatically once
 	bool bringToFront = true;
 	bool keepWarm = true;
-	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
+	bool preloadFeeds = false;   // every squad mate's feed loaded and playing, hidden and silent
+	bool friendAudio = false;    // play the squad mate's own game audio while showing them
+	bool audioDefaults2 = false; // one-time move to "nothing of yours is muted by default"
+	int vdoBitrateKbps = 12000;  // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
 
 	// look overlay
 	bool lookName = true, lookPlate = true, lookCam = false, lookGrain = false, lookVignette = false;
@@ -93,9 +96,15 @@ struct Config {
 	double boxX = 0.80, boxY = 0.45, boxW = 0.15, boxH = 0.04; // capture box for a custom template
 
 	static const char *webSourceName() { return "Kennel web"; }
+	/// Browser source a web feed lives in. With preloading each squad mate gets their own, so
+	/// every stream is already playing when the swap happens; otherwise they share one.
+	std::string webSourceFor(const Friend &f) const
+	{
+		return preloadFeeds ? std::string(webSourceName()) + " - " + f.name : webSourceName();
+	}
 	static const char *overlaySourceName() { return "Kennel look"; }
 	static const char *hideFilterName() { return "Kennel hide"; }
-	static std::string sourceFor(const Friend &f) { return f.isWeb() ? webSourceName() : f.source; }
+	std::string sourceFor(const Friend &f) const { return f.isWeb() ? webSourceFor(f) : f.source; }
 	const Friend *active() const
 	{
 		return activeFriend >= 0 && activeFriend < (int)friends.size() ? &friends[activeFriend] : nullptr;

@@ -59,6 +59,7 @@ private:
 	QTableWidget *friends_;
 	QListWidget *mute_ = nullptr;
 	QCheckBox *keepWarm_, *bringFront_;
+	QCheckBox *preload_ = nullptr, *friendAudio_ = nullptr;
 	// look
 	QCheckBox *lookName_ = nullptr, *lookPlate_ = nullptr, *lookCam_ = nullptr, *lookGrain_ = nullptr,
 		  *lookVig_ = nullptr;

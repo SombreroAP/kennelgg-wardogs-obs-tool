@@ -2,8 +2,9 @@
 
 One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional companion app:
 
-- **POV swap.** Downed? Your stream shows a squad mate's POV (video and game audio) until you are
-  back up. Your mic is never touched. Detection reads the damage log on your own screen; the
+- **POV swap.** Downed? Your stream shows a squad mate's POV until you are back up. Their feed is
+  silent by default, so you keep hearing your own game; one tick box plays theirs instead. Your mic
+  is never touched. Detection reads the damage log on your own screen; the
   friend's feed is watched for "REVIVING" so the switch back is instant.
 - **Clips.** Save OBS's replay buffer on demand and name the file with tags: from a hotkey, the
   dock, automatically when you get downed, or from **ClipHound**, the companion app that OCRs the
@@ -13,6 +14,8 @@ One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional co
 - **The closest one.** With more than one feed, the game's NEARBY list decides which POV comes up:
   the squad mate who is actually next to you, not the one you picked before the match.
 - **The look.** Optional name tag, camcorder frame, film grain and vignette over the friend's feed.
+- **No black screen.** Feeds are kept warm, and optionally every squad mate's feed is preloaded and
+  playing behind the scenes so a Twitch stream is not starting up at the moment you go down.
 
 ## Quick start (testers)
 

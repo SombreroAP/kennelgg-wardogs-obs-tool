@@ -635,16 +635,25 @@ QWidget *SettingsDialog::buildSwitchTab()
 	fillPeers();
 	connect(&e_->lan, &Lan::peersChanged, this, fillPeers);
 
-	auto *g3 = new QGroupBox("Game audio to mute while downed", w);
-	auto *h3 = new QHBoxLayout(g3);
+	auto *g3 = new QGroupBox("Sound while a squad mate is on screen", w);
+	auto *v3 = new QVBoxLayout(g3);
+	friendAudio_ = new QCheckBox("Play the squad mate's game sound (their feed is silent otherwise)", g3);
+	friendAudio_->setChecked(e_->cfg.friendAudio);
+	v3->addWidget(friendAudio_);
+	v3->addWidget(muted(
+		"Off by default: you go on hearing your own game while your stream shows their POV. Turn it on to hear theirs instead, and tick your own audio below so the two do not play at once.",
+		g3));
+	auto *h3 = new QHBoxLayout();
 	mute_ = new QListWidget(g3);
 	h3->addWidget(mute_, 1);
 	h3->addWidget(
-		muted("Tick what carries your game's sound: usually Desktop Audio, or the game / capture-card source if that captures audio. Do NOT tick your microphone - it keeps going while you watch your friend. Ticked inputs are muted when the friend appears and put back exactly as they were when you are revived.",
+		muted("Tick anything of YOURS to mute while a squad mate is on screen - usually Desktop Audio, or the game / capture-card source if that carries the sound. Nothing is ticked by default. Do NOT tick your microphone; it keeps going either way. Ticked inputs are put back exactly as they were when you are revived.",
 		      g3),
 		1);
+	v3->addLayout(h3, 1);
 	v->addWidget(g3, 1);
 	connect(mute_, &QListWidget::itemChanged, this, [this](QListWidgetItem *) { saveAndApply(); });
+	connect(friendAudio_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 
 	auto *g4 = new QGroupBox("Extras", w);
 	auto *v4 = new QVBoxLayout(g4);
@@ -652,7 +661,13 @@ QWidget *SettingsDialog::buildSwitchTab()
 	keepWarm_ = new QCheckBox(
 		"Keep the friend feed warm: leave the source on but invisible and muted, so NDI / the player never reconnects (instant switch)",
 		g4);
+	preload_ = new QCheckBox(
+		"Keep every squad mate's feed loaded and playing, hidden and silent, so there is no black screen while it starts (uses their bandwidth for each one)",
+		g4);
+	preload_->setChecked(e_->cfg.preloadFeeds);
 	v4->addWidget(bringFront_);
+	v4->addWidget(preload_);
+	connect(preload_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	v4->addWidget(keepWarm_);
 	v->addWidget(g4);
 	connect(bringFront_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
@@ -1570,6 +1585,8 @@ void SettingsDialog::collect()
 	c.ndiShare = ndiShare_->isChecked();
 	c.autoAddPeers = autoAdd_->isChecked();
 	c.keepWarm = keepWarm_->isChecked();
+	c.preloadFeeds = preload_ ? preload_->isChecked() : c.preloadFeeds;
+	c.friendAudio = friendAudio_ ? friendAudio_->isChecked() : c.friendAudio;
 	c.lookName = lookName_->isChecked();
 	c.lookPlate = lookPlate_->isChecked();
 	c.lookCam = lookCam_->isChecked();

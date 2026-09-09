@@ -2,6 +2,13 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.3.4
+- **A distance that cannot be read no longer throws the squad mate away.** The last distance actually read for them is used for up to 12 s, so one bad frame in a burst does not turn them into a question mark and does not change who is closest.
+- **Fewer unreadable distances.** The little chip is now accepted when it reads as a bare number (the reader only ever gets digits and an m there), a bright blob that is not a chip is rejected instead of being read as one, and the whole row is read as a last resort when the chip gives nothing.
+- **Squad-mate feeds can be preloaded** (Switch tab → Extras, off by default): every squad mate's feed sits in the scene loaded, playing, invisible and silent, so a Twitch feed is not starting up when the swap happens. Each preloaded feed uses its own bandwidth, which is why it is off unless you ask for it.
+- **Your own game sound is no longer muted by default.** The squad mate's feed comes in silent instead, so you keep hearing your own game while your stream shows their POV. "Play the squad mate's game sound" turns theirs on, and the list next to it is where you tick anything of yours to mute. Existing setups had your desktop audio ticked automatically by an older version; that is cleared once on upgrade.
+- The log names the squad mate, their in-game name and the whole reading it chose from, so a wrong pick is obvious.
+
 ## 0.3.3
 - **Wait between swaps** slider (Switch tab, "Show whoever is closest"): how long the feed stays on one squad mate before it may swap to a closer one while you are down. 1 to 10 seconds, 4 by default. Low values follow whoever is nearest as they run to you, high values pick one and leave it. The swap the moment you go down never waits, whatever this is set to.
 
