@@ -142,8 +142,8 @@ public:
 		form->addRow("Name", name_);
 		kind_ = new QComboBox(this);
 		kind_->addItems({"Twitch stream (~2 s, nothing for them to set up)",
-				 "VDO.Ninja / WebRTC (~0.3 s, they open one link)",
-				 "OBS source (NDI on the LAN or over a VPN)"});
+				 "VDO.Ninja / WebRTC (~0.3 s, they open one link)", "OBS source I already have",
+				 "Discord Go Live (~0.5-1 s, they Go Live in the call)", "NDI on the LAN (DistroAV)"});
 		form->addRow("Comes in as", kind_);
 		channel_ = new QLineEdit(QString::fromStdString(result.channel), this);
 		chanLbl_ = new QLabel("Twitch channel", this);
@@ -200,14 +200,22 @@ private:
 			auto all = Switcher::listProperty("window_capture", "window");
 			int firstDiscord = -1;
 			for (auto &w : all) {
-				bool discord = w.second.find("Discord.exe") != std::string::npos ||
-					       w.second.find("discord") != std::string::npos;
+				QString v = QString::fromStdString(w.second), n = QString::fromStdString(w.first);
+				bool discord = v.contains("discord", Qt::CaseInsensitive) ||
+					       n.contains("discord", Qt::CaseInsensitive);
 				if (discord && firstDiscord < 0)
 					firstDiscord = pick_->count();
-				pick_->addItem(QString::fromStdString(w.first), QString::fromStdString(w.second));
+				pick_->addItem((discord ? "Discord: " : "") + n, v);
 			}
 			if (firstDiscord >= 0)
 				pick_->setCurrentIndex(firstDiscord);
+			else if (pick_->count() == 0)
+				pick_->addItem("(no windows listed - is OBS's Window Capture available?)", "");
+			else
+				pick_->insertItem(
+					0, "(no Discord window found - pop their stream out in Discord, then Rescan)",
+					""),
+					pick_->setCurrentIndex(0);
 		} else if (k == FriendKind::Ndi) {
 			for (auto &n : Switcher::listProperty("ndi_source", "ndi_source_name"))
 				pick_->addItem(QString::fromStdString(n.first), QString::fromStdString(n.second));
