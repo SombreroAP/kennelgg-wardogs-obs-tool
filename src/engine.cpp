@@ -650,6 +650,8 @@ QString Engine::nearbyStatus() const
 {
 	if (!cfg.nearEnabled)
 		return "off";
+	if (bridge.clients() == 0)
+		return "ClipHound is NOT running - Closest cannot work until it is (dock → Start ClipHound)";
 	if (!detected_ && !applied_)
 		return "N/A while you are up";
 	if (!nearbyAt_.isValid())

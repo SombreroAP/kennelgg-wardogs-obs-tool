@@ -537,7 +537,8 @@ QWidget *SettingsDialog::buildSwitchTab()
 
 	auto *gc = new QGroupBox("Show whoever is closest", w);
 	auto *fc = new QFormLayout(gc);
-	nearOn_ = new QCheckBox("When you go down, show the squad mate the game says is nearest", gc);
+	nearOn_ = new QCheckBox(
+		"When you go down, show the squad mate the game says is nearest (needs ClipHound running)", gc);
 	nearOn_->setChecked(e_->cfg.nearEnabled);
 	fc->addRow(nearOn_);
 	nearFollow_ = new QCheckBox("Keep following the nearest one while you are down", gc);
@@ -584,7 +585,23 @@ QWidget *SettingsDialog::buildSwitchTab()
 		"The moment you go down, ClipHound reads the NEARBY list in the bottom-right corner of your game and tells the plugin who is how far away, so the POV you cut to is the squad mate who can actually revive you. Nothing is read while you are up, so it costs nothing between fights. While this is on, the squad mate box in the dock follows the closest one by itself; untick it (here or in the dock) to choose the squad mate yourself. It needs ClipHound running, the blue NEARBY box set on the Detect tab, and each squad mate's in-game name filled in (Edit... → In-game name). Without a reading, the squad mate picked in the dock is used as before.",
 		gc));
 	v->addWidget(gc);
-	connect(nearOn_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(nearOn_, &QCheckBox::toggled, this, [this](bool on) {
+		if (on && !e_->appConnected()) {
+			auto r = QMessageBox::question(
+				this, "Kennel WARDOGS",
+				"Closest needs ClipHound running: it reads the NEARBY list in the corner of your game. It is not running now.\n\nStart it?",
+				QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::Yes);
+			if (r == QMessageBox::Cancel) {
+				nearOn_->blockSignals(true);
+				nearOn_->setChecked(false);
+				nearOn_->blockSignals(false);
+				return;
+			}
+			if (r == QMessageBox::Yes)
+				e_->launchApp();
+		}
+		saveAndApply();
+	});
 	connect(nearFollow_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(e_, &Engine::stateChanged, this, [this]() {
 		if (nearLbl_)

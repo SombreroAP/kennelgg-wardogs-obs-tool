@@ -5,6 +5,7 @@
 #include <QHBoxLayout>
 #include <QDialog>
 #include <QMenu>
+#include <QMessageBox>
 #include <QScreen>
 #include <QGuiApplication>
 #include <QPlainTextEdit>
@@ -80,6 +81,27 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	connect(closest_, &QCheckBox::toggled, this, [this](bool on) {
 		if (filling_ || on == e_->cfg.nearEnabled)
 			return;
+		if (on && !e_->appConnected()) {
+			// the NEARBY list is read by ClipHound: without it this tick box does nothing
+			QMessageBox m((QWidget *)obs_frontend_get_main_window());
+			m.setWindowTitle("Kennel WARDOGS");
+			m.setIcon(QMessageBox::Information);
+			m.setText("Closest needs ClipHound running.");
+			m.setInformativeText(
+				"ClipHound reads the NEARBY list in the corner of your game and tells the plugin who is nearest. It is not running, so nothing would be read.\n\nStart it now? (It also starts with OBS when \"Start ClipHound with OBS\" is ticked under Settings → Clips.)");
+			auto *start = m.addButton("Start ClipHound", QMessageBox::AcceptRole);
+			m.addButton("Turn Closest on anyway", QMessageBox::ActionRole);
+			auto *cancel = m.addButton(QMessageBox::Cancel);
+			m.exec();
+			if (m.clickedButton() == cancel) {
+				closest_->blockSignals(true);
+				closest_->setChecked(false);
+				closest_->blockSignals(false);
+				return;
+			}
+			if (m.clickedButton() == start)
+				e_->launchApp();
+		}
 		e_->cfg.nearEnabled = on;
 		e_->cfg.save();
 		e_->reloadConfig(); // same as ticking it in Settings: pushes the names and areas to ClipHound
@@ -230,6 +252,7 @@ void Dock::refresh()
 	if (near_) {
 		near_->setVisible(e_->cfg.nearEnabled);
 		near_->setText("Nearby: " + e_->nearbyStatus());
+		near_->setStyleSheet(e_->cfg.nearEnabled && !e_->appConnected() ? "color: #ce6050;" : "");
 	}
 	if (closest_) {
 		closest_->setChecked(e_->cfg.nearEnabled);
