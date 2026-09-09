@@ -39,7 +39,7 @@ Python/numpy on the user's three screenshots (`My Drive/screenshots/`), frames r
   (`.github/workflows/build-project.yaml`, unchanged from the template) — needs the repo pushed to
   GitHub (`SombreroAP/povbridge-obs`, private). **Ask before pushing.**
 - Engine throttles the full-frame search to every 3rd poll while unlocked (alive) — CPU question from the user.
-- Nothing has run inside OBS yet. First things to check on Windows: `obs_frontend_add_dock_by_id`
+- **Runs in OBS 32.2.2 on Windows (9 Sep 2026):** plugin loads, dock works. First crash: settings dialog fired changed-signals during construction → `collect()` on null widgets; fixed with `building_` guard (0.2.1). First things to check on Windows: `obs_frontend_add_dock_by_id`
   (OBS 30+), browser source setting keys, `color_filter_v2` opacity range 0..1, Twitch embed
   `parent=twitch.tv` autoplaying with sound in CEF, `file:///...?query` for the overlay.
 - `.deps/` and `build_macos/` are local build output (gitignored).

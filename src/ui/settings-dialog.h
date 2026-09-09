@@ -46,20 +46,23 @@ public:
 private:
 	Engine *e_;
 	// switch
-	QComboBox *scene_, *game_;
+	QComboBox *scene_ = nullptr, *game_ = nullptr;
 	QTableWidget *friends_;
-	QListWidget *mute_;
+	QListWidget *mute_ = nullptr;
 	QCheckBox *keepWarm_, *bringFront_;
 	// look
-	QCheckBox *lookName_, *lookPlate_, *lookCam_, *lookGrain_, *lookVig_;
+	QCheckBox *lookName_ = nullptr, *lookPlate_ = nullptr, *lookCam_ = nullptr, *lookGrain_ = nullptr,
+		  *lookVig_ = nullptr;
 	QLineEdit *lookLabel_;
 	QSlider *grain_;
 	QPushButton *preview_;
 	bool previewing_ = false;
+	bool building_ =
+		true; // widgets fire changed-signals while being given their saved values; ignore until all tabs exist
 	// detect
 	FramePreview *frame_;
 	QProgressBar *meter_;
-	QSlider *thr_;
+	QSlider *thr_ = nullptr;
 	QLabel *thrLbl_, *tplLbl_;
 	QSpinBox *downFrames_, *upFrames_, *minDown_, *pollMs_;
 	QCheckBox *auto_, *revive_;
@@ -71,11 +74,11 @@ private:
 	QWidget *buildDetectTab();
 	QWidget *buildAboutTab();
 	QWidget *buildClipsTab();
-	QLineEdit *playerName_;
+	QLineEdit *playerName_ = nullptr;
 	QCheckBox *lanOn_, *ndiShare_, *autoAdd_;
 	QListWidget *peers_;
 	QLabel *lanStatus_;
-	QCheckBox *bridgeOn_, *launchApp_, *autoReplay_, *clipDowned_;
+	QCheckBox *bridgeOn_ = nullptr, *launchApp_ = nullptr, *autoReplay_ = nullptr, *clipDowned_ = nullptr;
 	QSpinBox *bridgePort_;
 	QLineEdit *appPath_, *nameTpl_;
 	QListWidget *clipList_;

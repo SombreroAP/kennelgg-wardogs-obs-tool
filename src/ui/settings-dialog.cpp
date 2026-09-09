@@ -284,6 +284,7 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	tabs->addTab(buildDetectTab(), "Detect");
 	tabs->addTab(buildClipsTab(), "Clips");
 	tabs->addTab(buildAboutTab(), "Help");
+	building_ = false;
 	v->addWidget(tabs, 1);
 	auto *bb = new QDialogButtonBox(QDialogButtonBox::Close, this);
 	v->addWidget(bb);
@@ -853,6 +854,9 @@ void SettingsDialog::editFriend(int row)
 
 void SettingsDialog::collect()
 {
+	if (building_ || !game_ || !scene_ || !mute_ || !lookName_ || !thr_ || !autoReplay_ || !bridgeOn_ ||
+	    !playerName_)
+		return;
 	Config &c = e_->cfg;
 	c.gameSource = game_->currentText().toStdString();
 	c.sceneName = scene_->currentText() == kLiveScene ? "" : scene_->currentText().toStdString();
@@ -893,6 +897,8 @@ void SettingsDialog::collect()
 
 void SettingsDialog::saveAndApply()
 {
+	if (building_)
+		return;
 	collect();
 	e_->cfg.save();
 	e_->reloadConfig();
