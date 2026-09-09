@@ -191,14 +191,27 @@ class KillDetector:
         self._my_kills = [k for k in self._my_kills if now - k.ts <= win]
         if not self._my_kills:
             self._multikill_fired_for = 0
+        last = getattr(self, "_last_kill_key", None)
         for ev in events:
-            if ev.killer_me and ev.victim_rel not in ("me", "squad", "team"):
+            my_kill = ev.killer_me and ev.victim_rel not in ("me", "squad", "team")
+            if my_kill:
+                # the same feed row is sometimes decided twice (with and without the weapon icon);
+                # one kill = one entry
+                key = (ev.victim.strip().lower()[:12], ev.distance_m)
+                if last and last[0] == key and now - last[1] < 4:
+                    continue
+                self._last_kill_key = last = (key, now)
                 self._my_kills.append(ev)
+            matched = False
             for rule in self.rules:
                 if self._rule_hits(rule, ev):
                     title = rule["title"].format(dist=ev.distance_m, killer=ev.killer, victim=ev.victim)
                     out.append(Trigger.build(rule.get("kind", "rule"), title, [ev], rule.get("tags", ())))
+                    matched = True
                     break                                  # first matching rule wins
+            if not matched and my_kill and self.cfg.get("clip_every_kill"):
+                title = f"Kill {ev.distance_m}m" if ev.distance_m else "Kill"
+                out.append(Trigger.build("kill", title, [ev], ("kill",)))
         n = len(self._my_kills)
         if n >= self.cfg["multikill_min"] and n > self._multikill_fired_for:
             names = {2: "Double", 3: "Triple", 4: "Quad", 5: "Penta"}.get(n, f"{n}x")

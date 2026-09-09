@@ -37,6 +37,16 @@ class _Tee:
 
 if getattr(sys, "frozen", False):
     os.chdir(os.path.dirname(sys.executable))
+    # one ClipHound at a time (the plugin may try to start it again)
+    try:
+        import ctypes
+        _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\KennelClipHound")
+        if ctypes.windll.kernel32.GetLastError() == 183:
+            raise SystemExit(0)
+    except SystemExit:
+        raise
+    except Exception:
+        pass
     try:
         _lp = "cliphound.log"
         if os.path.exists(_lp) and os.path.getsize(_lp) > 2_000_000:
@@ -117,8 +127,10 @@ def main():
     state = {"tw": tw, "ob": ob}
 
     def apply_live(c):
-        # settings changed from the OBS plugin: name, library, Twitch
+        # settings changed from the OBS plugin: name, library, Twitch, clip rules
         det.me = c["detection"].get("player_name", det.me)
+        det.cfg["clip_every_kill"] = bool(c["detection"].get("clip_every_kill"))
+        det.cfg["multikill_window_s"] = float(c["detection"].get("multikill_window_s", 12))
         try:
             if not DRY and c["twitch"].get("enabled") and c["twitch"].get("access_token"):
                 from twitch import Twitch

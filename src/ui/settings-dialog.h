@@ -6,6 +6,7 @@
 #include <QLineEdit>
 #include <QSlider>
 #include <QSpinBox>
+#include <QDoubleSpinBox>
 #include <QListWidget>
 #include <QTableWidget>
 #include <QPushButton>
@@ -80,7 +81,8 @@ private:
 	QPlainTextEdit *logView_ = nullptr;
 	void refreshLogs();
 	QLineEdit *appName_ = nullptr, *appLibrary_ = nullptr, *appBroadcaster_ = nullptr, *clipFolder_ = nullptr;
-	QCheckBox *appTwitch_ = nullptr;
+	QCheckBox *appTwitch_ = nullptr, *appEveryKill_ = nullptr;
+	QDoubleSpinBox *appMulti_ = nullptr;
 	QLabel *twitchLbl_ = nullptr;
 	QPushButton *twitchLogin_ = nullptr, *twitchLogout_ = nullptr;
 	void refreshAppTab();

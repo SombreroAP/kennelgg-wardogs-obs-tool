@@ -69,6 +69,8 @@ class Bridge:
             "broadcaster": (c.get("twitch") or {}).get("broadcaster_login", ""),
             "twitch_enabled": bool((c.get("twitch") or {}).get("enabled")),
             "fps": (c.get("capture") or {}).get("fps", 3),
+            "clip_every_kill": bool(c["detection"].get("clip_every_kill")),
+            "multikill_window": float(c["detection"].get("multikill_window_s", 12)),
         }})
         from twitch_device import status
         self.send(status(c))
@@ -118,6 +120,10 @@ class Bridge:
                 c.setdefault("twitch", {})["enabled"] = bool(v["twitch_enabled"])
             if "fps" in v:
                 c.setdefault("capture", {})["fps"] = float(v["fps"])
+            if "clip_every_kill" in v:
+                c["detection"]["clip_every_kill"] = bool(v["clip_every_kill"])
+            if "multikill_window" in v:
+                c["detection"]["multikill_window_s"] = float(v["multikill_window"])
             if self.save_cfg:
                 self.save_cfg(c)
             print(f"[bridge] settings from the plugin: {v}")

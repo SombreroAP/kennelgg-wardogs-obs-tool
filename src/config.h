@@ -47,6 +47,8 @@ struct Config {
 	// ClipHound settings edited in the plugin and pushed to the app over the bridge
 	std::string appPlayerName, appLibrary, appBroadcaster;
 	bool appTwitchEnabled = false;
+	bool appEveryKill = false;
+	double appMultikillWindow = 12;
 	bool appConfigDirty =
 		false; // edited while the app was not connected; push on connect // tell ClipHound to quit when OBS closes (and end it if we started it)
 	std::string clipNameTemplate = "{date}_{time}_{tags}";

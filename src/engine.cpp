@@ -126,6 +126,10 @@ void Engine::applyLan()
 
 void Engine::launchApp()
 {
+	if (bridge.clients() > 0) {
+		log("ClipHound is already running.");
+		return;
+	}
 	QString p = QString::fromStdString(cfg.appPath);
 	const QString def = "C:/ProgramData/Kennel WARDOGS/ClipHound/ClipHound.exe";
 	if (p.isEmpty() && QFileInfo::exists(def)) {
@@ -254,6 +258,8 @@ void Engine::pushAppConfig()
 	set["library"] = QString::fromStdString(cfg.appLibrary);
 	set["broadcaster"] = QString::fromStdString(cfg.appBroadcaster);
 	set["twitch_enabled"] = cfg.appTwitchEnabled;
+	set["clip_every_kill"] = cfg.appEveryKill;
+	set["multikill_window"] = cfg.appMultikillWindow;
 	QJsonObject o;
 	o["type"] = "app_config";
 	o["set"] = set;
@@ -420,6 +426,8 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 			cfg.appLibrary = v.value("library").toString().toStdString();
 			cfg.appBroadcaster = v.value("broadcaster").toString().toStdString();
 			cfg.appTwitchEnabled = v.value("twitch_enabled").toBool();
+			cfg.appEveryKill = v.value("clip_every_kill").toBool();
+			cfg.appMultikillWindow = v.value("multikill_window").toDouble(12);
 			cfg.save();
 			emit appConfigReceived();
 		}

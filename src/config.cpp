@@ -98,6 +98,8 @@ void Config::load()
 	DEFS(appLibrary);
 	DEFS(appBroadcaster);
 	DEFB(appTwitchEnabled);
+	DEFB(appEveryKill);
+	DEFD(appMultikillWindow);
 	DEFB(appConfigDirty);
 	DEFS(clipNameTemplate);
 	DEFB(autoStartReplay);
@@ -145,6 +147,8 @@ void Config::load()
 	GETS(appLibrary);
 	GETS(appBroadcaster);
 	GETB(appTwitchEnabled);
+	GETB(appEveryKill);
+	GETD(appMultikillWindow);
 	GETB(appConfigDirty);
 	GETS(clipNameTemplate);
 	GETB(autoStartReplay);
@@ -224,6 +228,8 @@ void Config::save() const
 	SETS(appLibrary);
 	SETS(appBroadcaster);
 	SETB(appTwitchEnabled);
+	SETB(appEveryKill);
+	SETD(appMultikillWindow);
 	SETB(appConfigDirty);
 	SETS(clipNameTemplate);
 	SETB(autoStartReplay);

@@ -28,10 +28,14 @@ QString Clips::logFile() const
 
 void Clips::ensureReplayBuffer()
 {
-	if (!obs_frontend_replay_buffer_active()) {
-		obs_frontend_replay_buffer_start();
+	if (obs_frontend_replay_buffer_active())
+		return;
+	obs_frontend_replay_buffer_start();
+	if (obs_frontend_replay_buffer_active())
 		emit logged("Replay buffer started (Kennel needs it for clips).");
-	}
+	else
+		emit logged(
+			"REPLAY BUFFER IS OFF and could not be started: enable it in OBS Settings → Output → Replay Buffer (60-120 s), then restart OBS. Until then clips only fire your hotkeys.");
 }
 
 QList<QPair<QString, QString>> Clips::allHotkeys()
