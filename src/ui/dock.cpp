@@ -5,6 +5,8 @@
 #include <QHBoxLayout>
 #include <QDialog>
 #include <QMenu>
+#include <QScreen>
+#include <QGuiApplication>
 #include <QPlainTextEdit>
 #include <QApplication>
 #include <QClipboard>
@@ -17,6 +19,28 @@
 #include <plugin-support.h>
 #include <QFileInfo>
 #include <obs-frontend-api.h>
+
+/// Show a window fully inside the screen OBS is on: centred on OBS but never with its title bar off the top or
+/// its edges past the screen (a tall OBS window pushed dialogs above the screen, making them impossible to grab).
+static void showOnScreen(QWidget *w)
+{
+	QWidget *main = (QWidget *)obs_frontend_get_main_window();
+	QScreen *scr = main && main->screen() ? main->screen() : QGuiApplication::primaryScreen();
+	QRect avail = scr ? scr->availableGeometry() : QRect(0, 0, 1920, 1080);
+	QSize sz = w->size();
+	sz.setWidth(std::min(sz.width(), avail.width() - 40));
+	sz.setHeight(std::min(sz.height(), avail.height() - 40));
+	QPoint c = main ? main->frameGeometry().center() : avail.center();
+	int x = std::clamp(c.x() - sz.width() / 2, avail.left() + 20,
+			   std::max(avail.left() + 20, avail.right() - sz.width() - 20));
+	int y = std::clamp(c.y() - sz.height() / 2, avail.top() + 20,
+			   std::max(avail.top() + 20, avail.bottom() - sz.height() - 20));
+	w->resize(sz);
+	w->move(x, y);
+	w->show();
+	w->raise();
+	w->activateWindow();
+}
 
 Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 {
@@ -190,7 +214,7 @@ void Dock::openWizard()
 	auto *w = new SetupWizard(e_, (QWidget *)obs_frontend_get_main_window());
 	w->setAttribute(Qt::WA_DeleteOnClose);
 	wizard_ = w;
-	w->show();
+	showOnScreen(w);
 }
 
 static QString tailOf(const QString &path, int lines)
@@ -253,7 +277,7 @@ void Dock::openLogs()
 		[appDir]() { QDesktopServices::openUrl(QUrl::fromLocalFile(appDir)); });
 	connect(cfgFolder, &QPushButton::clicked, d,
 		[]() { QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(Config::configDir()))); });
-	d->show();
+	showOnScreen(d);
 }
 
 void Dock::openSettings()
@@ -266,5 +290,5 @@ void Dock::openSettings()
 	auto *dlg = new SettingsDialog(e_, (QWidget *)obs_frontend_get_main_window());
 	dlg->setAttribute(Qt::WA_DeleteOnClose);
 	settings_ = dlg;
-	dlg->show();
+	showOnScreen(dlg);
 }
