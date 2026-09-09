@@ -543,11 +543,6 @@ QWidget *SettingsDialog::buildSwitchTab()
 	nearFollow_ = new QCheckBox("Keep following the nearest one while you are down", gc);
 	nearFollow_->setChecked(e_->cfg.nearFollow);
 	fc->addRow(nearFollow_);
-	nearMargin_ = new QSpinBox(gc);
-	nearMargin_->setRange(0, 300);
-	nearMargin_->setSuffix(" m closer");
-	nearMargin_->setValue(e_->cfg.nearMarginM);
-	fc->addRow("Swap over only for someone", nearMargin_);
 	auto *cdRow = new QHBoxLayout();
 	nearCooldown_ = new QSlider(Qt::Horizontal, gc);
 	nearCooldown_->setRange(1, 10);
@@ -584,7 +579,6 @@ QWidget *SettingsDialog::buildSwitchTab()
 	v->addWidget(gc);
 	connect(nearOn_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(nearFollow_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
-	connect(nearMargin_, &QSpinBox::editingFinished, this, [this]() { saveAndApply(); });
 	connect(e_, &Engine::stateChanged, this, [this]() {
 		if (nearLbl_)
 			nearLbl_->setText(e_->nearbyStatus());
@@ -1631,7 +1625,6 @@ void SettingsDialog::collect()
 	c.closeAppWithObs = closeApp_ ? closeApp_->isChecked() : true;
 	c.nearEnabled = nearOn_ ? nearOn_->isChecked() : c.nearEnabled;
 	c.nearFollow = nearFollow_ ? nearFollow_->isChecked() : c.nearFollow;
-	c.nearMarginM = nearMargin_ ? nearMargin_->value() : c.nearMarginM;
 	c.nearCooldownS = nearCooldown_ ? nearCooldown_->value() : c.nearCooldownS;
 	c.appFps = appFps_ ? appFps_->value() : c.appFps;
 }

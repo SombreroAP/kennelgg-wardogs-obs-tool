@@ -126,9 +126,9 @@ Tick **Closest** in the dock (or Settings → Switch → **Show whoever is close
 round the NEARBY list on the Detect tab, and give each squad mate their **in-game name** in the Edit
 dialog. The dock's squad-mate box then follows the closest one by itself; untick Closest to choose a
 squad mate yourself. Only names you have configured are ever matched, so a stranger in the list
-cannot move your feed. Between swaps it changes only for someone clearly closer (15 m by default)
-and no more often than the **Wait between swaps** slider allows (1-10 s, 4 by default), so nothing
-flaps; the moment you go down both guards are dropped, so the feed that comes up is the nearest one.
+cannot move your feed. While you are going down every reading picks the nearest one outright; once a
+squad mate is on screen, a swap to a nearer one waits for the **Wait between swaps** slider (1-10 s,
+4 by default), so nothing flaps. The list is cleared the moment you are back up.
 
 If it reads nobody, press **Test read** next to the box: it shows the crop the plugin is sending and
 the rows, names and metres ClipHound got out of it, which says whether the box is in the wrong place,

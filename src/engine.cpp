@@ -576,8 +576,24 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 
 // ----- the game's NEARBY list (bottom right): who is closest -----
 
+void Engine::clearNearby()
+{
+	if (nearby_.isEmpty() && !nearbyAt_.isValid())
+		return;
+	nearby_.clear();
+	nearbyAt_ = QDateTime();
+	nearbyEmptySince_ = QDateTime();
+	nearbyLine_.clear();
+	nearbyWho_.clear();
+	emit stateChanged();
+}
+
 void Engine::onNearby(const QJsonObject &o)
 {
+	if (!detected_ && !applied_) {
+		clearNearby(); // you are up: who was near you a moment ago is not relevant
+		return;
+	}
 	QList<NearbyEntry> list;
 	for (auto v : o.value("list").toArray()) {
 		QJsonObject e = v.toObject();
@@ -760,12 +776,22 @@ void Engine::pickClosest(const QString &why, bool decisive)
 		return;
 	if (applied_ && !cfg.nearFollow)
 		return; // showing someone already and the user asked not to change mid-swap
-	if (!decisive) {
-		int cur = nearbyDistanceOf(cfg.activeFriend);
-		if (cur >= 0 && d > cur - cfg.nearMarginM)
-			return; // the one we have is still about as close: leave it alone
-		if (clock_::now() - lastPick_ < std::chrono::seconds(std::clamp(cfg.nearCooldownS, 1, 10)))
-			return; // one swap per cooldown, so the picture cannot flap
+	// Going down (not on screen yet): every reading is decisive, the nearest one wins outright.
+	// On screen: the "wait between swaps" slider is the only thing holding a swap back.
+	if (applied_ && !decisive) {
+		auto left = std::chrono::seconds(std::clamp(cfg.nearCooldownS, 1, 10)) - (clock_::now() - lastPick_);
+		if (left.count() > 0) {
+			if (clock_::now() - lastNearbyWarn_ > std::chrono::seconds(5)) {
+				lastNearbyWarn_ = clock_::now();
+				log(QString("Closest is %1 at %2 m; keeping %3 for another %4 s (wait between swaps).")
+					    .arg(QString::fromStdString(cfg.friends[idx].name))
+					    .arg(d)
+					    .arg(QString::fromStdString(cfg.active() ? cfg.active()->name : ""))
+					    .arg((int)std::chrono::duration_cast<std::chrono::seconds>(left).count() +
+						 1));
+			}
+			return;
+		}
 	}
 	QString nm = QString::fromStdString(cfg.friends[idx].name);
 	QString ign = QString::fromStdString(cfg.friends[idx].nearName());
@@ -1018,6 +1044,7 @@ void Engine::detect(const Match &m)
 	} else if (detected_ && upRun_ >= needUp && clock_::now() - downSince_ >= std::chrono::milliseconds(minDown)) {
 		detected_ = false;
 		downDelay_.stop();
+		clearNearby();
 		if (applied_) {
 			if (fast || cfg.upDelayMs <= 0)
 				applyNow(false, fast ? "revived (friend's revive seen, damage log gone)"
@@ -1051,8 +1078,11 @@ void Engine::applyNow(bool on, const QString &why)
 	lookPreview_ = false;
 	if (on)
 		downSince_ = clock_::now();
-	else
+	else {
 		detRevive_.unlock();
+		if (!detected_)
+			clearNearby();
+	}
 	sendPov(on ? "downed" : "up");
 	events_ << QDateTime::currentDateTime().toString("HH:mm:ss") +
 			   (on ? "  DOWNED - showing " + QString::fromStdString(cfg.active()->name) : "  back up");

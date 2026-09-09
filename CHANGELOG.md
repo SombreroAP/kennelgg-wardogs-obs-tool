@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.3.5
+- **The closest squad mate is actually the one shown.** While you are going down, every NEARBY reading now picks the nearest squad mate outright. Before, a "15 m closer" rule meant to stop flapping was also blocking the first pick: someone at 4 m was not "15 m closer" than the one at 12 m, so the feed stayed on whoever was already selected. That rule is gone; once a squad mate is on screen, only the **Wait between swaps** slider holds a swap back, and the log says when it does and for how long.
+- **The NEARBY list is cleared the moment you are back up.** Who was near you while you were down is not relevant once you are alive, so the dock shows nothing until the next time.
+
 ## 0.3.4
 - **A distance that cannot be read no longer throws the squad mate away.** The last distance actually read for them is used for up to 12 s, so one bad frame in a burst does not turn them into a question mark and does not change who is closest.
 - **Fewer unreadable distances.** The little chip is now accepted when it reads as a bare number (the reader only ever gets digits and an m there), a bright blob that is not a chip is rejected instead of being read as one, and the whole row is read as a last resort when the chip gives nothing.

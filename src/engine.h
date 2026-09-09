@@ -118,6 +118,7 @@ private:
 	void frameTick();
 	void onBridgeMessage(const QJsonObject &o);
 	void onNearby(const QJsonObject &o);
+	void clearNearby();
 	void pickClosest(const QString &why, bool decisive = false);
 	void switchTo(int idx, const QString &why);
 	int friendIndexFor(const QString &gameName) const;
