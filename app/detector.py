@@ -85,11 +85,13 @@ class _Row:
 class KillDetector:
     SIG_MATCH = 0.40           # IoU vs the previous frame above this = same row still on screen
     PROF_MATCH = 0.45          # ...and the killer-name profile must correlate (catches slot swaps)
-    Y_MATCH = 8                # ...and within this many ROI px vertically
-    ROW_TTL_S = 0.3            # a row must be seen every frame (4 fps); the feed blanks ~0.5 s
+    Y_MATCH = 8                # ...and within this many ROI px vertically (same slot)
+    Y_SHIFT = 120              # ...or up to this far down: a new kill pushes older rows down a slot
+    ROW_TTL_S = 0.7            # a row must be seen every frame or two; the feed blanks ~0.5 s
+    MIN_READS = 4              # a row that vanishes (pushed off by a multi-kill) is still decided with this many reads
                                # between kills, and pixels can't tell two kills in one slot apart
     FADE_IN_S = 0.5            # rows fade in; OCR is garbage before this
-    VOTES = 10                 # OCR samples before a row is decided (~2.5 s at 4 fps)
+    VOTES = 7                  # OCR samples before a row is decided (~1.5 s at 5 fps)
     DUP_S = 15.0               # same slot + same distance + same roles within this = same kill
 
     def __init__(self, cfg, dump_rows: str | None = None):
@@ -112,10 +114,13 @@ class KillDetector:
         for rd in read_rows(roi_bgr):
             best, best_iou = None, 0.0
             for r in self._rows:
-                if abs(r.y - rd.y) > self.Y_MATCH or r.last == now:
+                dy = rd.y - r.y
+                if r.last == now or dy < -self.Y_MATCH or dy > self.Y_SHIFT:
                     continue
                 iou = sig_iou(r.sig, rd.sig)
-                if iou > best_iou and prof_corr(r.prof, rd.prof) >= self.PROF_MATCH:
+                # a row that moved down a slot must match its name profile strongly, not just its shape
+                need_prof = self.PROF_MATCH if abs(dy) <= self.Y_MATCH else max(self.PROF_MATCH, 0.7)
+                if iou > best_iou and prof_corr(r.prof, rd.prof) >= need_prof:
                     best, best_iou = r, iou
             if best is None or best_iou < self.SIG_MATCH:
                 best = _Row(sig=rd.sig, prof=rd.prof, vprof=rd.vprof, y=rd.y, first=now, last=now)
@@ -131,8 +136,18 @@ class KillDetector:
                 ev = self._decide(best)
                 if ev:
                     events.append(ev)
-        # rows that vanish before VOTES reads are HUD noise / blips, not kills - dropped
-        self._rows = [r for r in self._rows if now - r.last < self.ROW_TTL_S]
+        # rows that vanish: HUD noise if they had almost no reads, otherwise (pushed off the feed by
+        # a multi-kill, or faded) decide them with what we have
+        keep = []
+        for r in self._rows:
+            if now - r.last < self.ROW_TTL_S:
+                keep.append(r)
+            elif not r.done and len(r.reads) >= self.MIN_READS:
+                r.done = True
+                ev = self._decide(r)
+                if ev:
+                    events.append(ev)
+        self._rows = keep
         self.last_new_events = events   # every decided feed row (the plugin's dock shows them)
         return self._apply_rules(events, now)
 

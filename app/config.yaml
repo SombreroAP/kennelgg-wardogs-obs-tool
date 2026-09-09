@@ -6,7 +6,7 @@ capture:
   backend: "bridge"        # "bridge" (frames from the Kennel WARDOGS OBS plugin, no obs-websocket) | "obs" | "screen"
   obs_source: "Game Capture"   # exact name of the OBS input carrying the game (capture card / NDI)
   monitor: 1               # screen backend only: mss monitor index. `python calibrate.py --list`
-  fps: 3                   # feed rows stay up for seconds; 3 fps decides a row in ~3 s and leaves CPU headroom
+  fps: 5                   # frames come from the plugin cheaply; 5 fps decides a row in ~1.5 s
   # Kill-feed region as FRACTIONS of the source frame (0..1). Measured from the two
   # screenshots: feed text sits at ~47-51% down the frame, ~2-20% across.
   roi:
