@@ -29,11 +29,9 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	state_->setFont(f);
 	v->addWidget(state_);
 
-	meter_ = new QProgressBar(this);
-	meter_->setRange(0, 1000);
-	meter_->setTextVisible(true);
-	meter_->setFormat("damage log match %v / 1000");
-	v->addWidget(meter_);
+	detector_ = new QLabel(this);
+	detector_->setTextFormat(Qt::RichText);
+	v->addWidget(detector_);
 
 	auto *row = new QHBoxLayout();
 	row->addWidget(new QLabel("Squad mate", this));
@@ -124,7 +122,11 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	connect(e_, &Engine::stateChanged, this, &Dock::refresh);
 	connect(e_, &Engine::frameUpdated, this, [this]() {
 		Match m = e_->lastGame();
-		meter_->setValue(m.score < 0 ? 0 : (int)(m.score * 1000));
+		bool down = m.score >= e_->cfg.threshold;
+		detector_->setText(QString("Downed state detector: <b style=\"color:%1\">%2</b>")
+					   .arg(down ? "#ce6050" : "#4cbe5a", m.score < 0 ? "no template"
+									      : down      ? "Downed"
+											  : "Alive"));
 		if (e_->revivingRecent())
 			state_->setText(QString::fromStdString(e_->stateText()) +
 					QString(" (%1%)").arg((int)(std::max(0.0, e_->reviveProgress()) * 100)));
