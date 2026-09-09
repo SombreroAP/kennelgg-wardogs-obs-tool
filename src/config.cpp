@@ -92,6 +92,7 @@ void Config::load()
 	DEFB(bridgeEnabled);
 	DEFS(appPath);
 	DEFB(launchApp);
+	DEFB(closeAppWithObs);
 	DEFS(clipNameTemplate);
 	DEFB(autoStartReplay);
 	DEFB(clipOnDowned);
@@ -132,6 +133,7 @@ void Config::load()
 	GETB(bridgeEnabled);
 	GETS(appPath);
 	GETB(launchApp);
+	GETB(closeAppWithObs);
 	GETS(clipNameTemplate);
 	GETB(autoStartReplay);
 	GETB(clipOnDowned);
@@ -204,6 +206,7 @@ void Config::save() const
 	SETB(bridgeEnabled);
 	SETS(appPath);
 	SETB(launchApp);
+	SETB(closeAppWithObs);
 	SETS(clipNameTemplate);
 	SETB(autoStartReplay);
 	SETB(clipOnDowned);

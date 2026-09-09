@@ -34,6 +34,7 @@ public:
 	bool appConnected() const { return bridge.clients() > 0; }
 	void onReplaySaved() { clips.onReplaySaved(); }
 	void launchApp();
+	void closeApp(); // on OBS exit
 
 	bool applied() const { return applied_; }
 	bool detected() const { return detected_; }
@@ -93,6 +94,7 @@ private:
 	std::atomic<bool> busy_{false}, stopping_{false}, frameBusy_{false};
 	Capture capGame_, capFriend_, capRoi_;
 	QString appStatus_;
+	qint64 appPid_ = 0;
 	Detector detGame_, detRevive_;
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
 	int downRun_ = 0, upRun_ = 0, tickN_ = 0;

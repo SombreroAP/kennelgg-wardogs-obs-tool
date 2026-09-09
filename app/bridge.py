@@ -42,7 +42,11 @@ class Bridge:
 
     # ---- connection ----
     def _run(self):
+        self._lost_at = None
         while True:
+            if self._lost_at and time.time() - self._lost_at > 20 and os.environ.get("KENNEL_FROM_OBS"):
+                print("[bridge] plugin gone for 20 s and we were started by OBS - exiting")
+                os._exit(0)
             try:
                 self.ws = websocket.WebSocketApp(self.url, on_open=self._on_open, on_message=self._on_message,
                                                  on_close=self._on_close, on_error=lambda *_: None)
@@ -62,6 +66,7 @@ class Bridge:
     def _on_close(self, ws, *_):
         if self.connected:
             print("[bridge] plugin went away; reconnecting")
+            self._lost_at = time.time()
         self.connected = False
 
     def _on_message(self, ws, msg):
@@ -81,6 +86,9 @@ class Bridge:
         t = o.get("type")
         if t == "hello":
             print(f"[bridge] plugin {o.get('plugin')} {o.get('version')} (protocol {o.get('protocol')})")
+        elif t == "shutdown":
+            print("[bridge] OBS is closing - ClipHound exiting")
+            os._exit(0)
         elif t == "config":
             self.game_source = o.get("gameSource", "")
             self.pov_state = o.get("povState", "up")

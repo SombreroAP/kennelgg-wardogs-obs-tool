@@ -42,6 +42,7 @@ struct Config {
 	bool bridgeEnabled = true;
 	std::string appPath; // ClipHound (or any companion) to launch when OBS starts
 	bool launchApp = false;
+	bool closeAppWithObs = true; // tell ClipHound to quit when OBS closes (and end it if we started it)
 	std::string clipNameTemplate = "{date}_{time}_{tags}";
 	bool autoStartReplay = true;
 	bool clipOnDowned = false;            // also clip when you get downed (the moment before is in the buffer)

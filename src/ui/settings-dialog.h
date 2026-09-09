@@ -83,6 +83,7 @@ private:
 	QLineEdit *appPath_, *nameTpl_;
 	QListWidget *clipList_;
 	QCheckBox *useReplay_ = nullptr;
+	QCheckBox *closeApp_ = nullptr;
 	QListWidget *hotkeyList_ = nullptr;
 	QLineEdit *hotkeyFilter_ = nullptr;
 	void fillHotkeys();

@@ -707,6 +707,10 @@ QWidget *SettingsDialog::buildClipsTab()
 	launchApp_ = new QCheckBox("Start it when OBS starts", g2);
 	launchApp_->setChecked(e_->cfg.launchApp);
 	f2->addRow(launchApp_);
+	closeApp_ = new QCheckBox("Close it when OBS closes", g2);
+	closeApp_->setChecked(e_->cfg.closeAppWithObs);
+	f2->addRow(closeApp_);
+	connect(closeApp_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	f2->addRow(muted(
 		"The app reads the kill feed (OCR) and asks the plugin for clips over ws://127.0.0.1:<port>. The plugin sends it native-resolution crops of the game source and POV events; the app sends clip requests with tags. Downed detection stays in the plugin.",
 		g2));
@@ -958,6 +962,7 @@ void SettingsDialog::collect()
 	c.bridgePort = bridgePort_->value();
 	c.appPath = appPath_->text().trimmed().toStdString();
 	c.launchApp = launchApp_->isChecked();
+	c.closeAppWithObs = closeApp_ ? closeApp_->isChecked() : true;
 }
 
 void SettingsDialog::saveAndApply()

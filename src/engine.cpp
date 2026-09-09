@@ -7,6 +7,11 @@
 #include <QProcess>
 #include <QFileInfo>
 #include <QDesktopServices>
+#include <QElapsedTimer>
+#include <QCoreApplication>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <QUrl>
 #include <QDateTime>
 #include <obs-module.h>
@@ -135,7 +140,14 @@ void Engine::launchApp()
 	}
 	QString dir = QFileInfo(p).absolutePath();
 	qint64 pid = 0;
-	if (QProcess::startDetached(p, {}, dir, &pid)) {
+	QProcess proc;
+	proc.setProgram(p);
+	proc.setWorkingDirectory(dir);
+	QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+	env.insert("KENNEL_FROM_OBS", "1");
+	proc.setProcessEnvironment(env);
+	if (proc.startDetached(&pid)) {
+		appPid_ = pid;
 		log(QString("Started ClipHound (pid %1): %2").arg(pid).arg(p));
 		return;
 	}
@@ -226,9 +238,37 @@ void Engine::start()
 	emit stateChanged();
 }
 
+void Engine::closeApp()
+{
+	if (!cfg.closeAppWithObs)
+		return;
+	if (bridge.clients() > 0) {
+		QJsonObject o;
+		o["type"] = "shutdown";
+		bridge.sendJson(o);
+		// give it a moment to exit cleanly before the socket goes away
+		QElapsedTimer t;
+		t.start();
+		while (bridge.clients() > 0 && t.elapsed() < 1500)
+			QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+	}
+#ifdef _WIN32
+	if (appPid_ > 0) {
+		HANDLE h = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, (DWORD)appPid_);
+		if (h) {
+			if (WaitForSingleObject(h, 0) == WAIT_TIMEOUT)
+				TerminateProcess(h, 0);
+			CloseHandle(h);
+		}
+		appPid_ = 0;
+	}
+#endif
+}
+
 void Engine::stop()
 {
 	stopping_ = true;
+	closeApp();
 	timer_.stop();
 	frameTimer_.stop();
 	bridge.close();
