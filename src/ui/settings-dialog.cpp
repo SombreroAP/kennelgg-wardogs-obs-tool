@@ -41,6 +41,19 @@ void FramePreview::setFrame(const QImage &img, const Match &m, double threshold,
 	update();
 }
 
+void FramePreview::setBox2(QRectF box)
+{
+	box2_ = box;
+	update();
+}
+
+void FramePreview::setPicker(const QString &caption)
+{
+	picker_ = true;
+	caption_ = caption;
+	update();
+}
+
 QRect FramePreview::imageRect() const
 {
 	if (img_.isNull())
@@ -73,15 +86,18 @@ void FramePreview::paintEvent(QPaintEvent *)
 		p.drawRect(r);
 	};
 	bool match = m_.score >= thr_;
-	if (m_.w > 0)
+	if (!picker_ && m_.w > 0)
 		draw(QRectF(m_.x, m_.y, m_.w, m_.h), match ? QColor(206, 96, 80) : QColor(139, 144, 150),
 		     match ? 3 : 1.5, false);
-	draw(box_, QColor(201, 154, 59), 1, true);
+	draw(box_, QColor(201, 154, 59), picker_ ? 2 : 1, true);
+	if (box2_.width() > 0)
+		draw(box2_, QColor(96, 176, 206), 2, true);
 	if (dragging_ && drag_.width() > 0)
 		draw(drag_, QColor(232, 229, 221), 1, true);
 	p.setPen(QColor(232, 229, 221));
 	QString txt =
-		match      ? QString("Damage log header found (%1) - downed").arg(m_.score, 0, 'f', 3)
+		picker_    ? caption_
+		: match    ? QString("Damage log header found (%1) - downed").arg(m_.score, 0, 'f', 3)
 		: m_.w > 0 ? QString("Best candidate %1 is under the threshold - not downed").arg(m_.score, 0, 'f', 3)
 			   : "Looking for the damage log header on the right of the game";
 	p.fillRect(QRect(ir.x(), ir.bottom() - 20, ir.width(), 20), QColor(11, 14, 16, 170));
@@ -142,6 +158,9 @@ public:
 		name_ = new QLineEdit(QString::fromStdString(result.name), this);
 		name_->setPlaceholderText("shown on the POV tag");
 		form_->addRow("Name", name_);
+		gameName_ = new QLineEdit(QString::fromStdString(result.gameName), this);
+		gameName_->setPlaceholderText("same as the name above unless it differs in game");
+		form_->addRow("In-game name", gameName_);
 		kind_ = new QComboBox(this);
 		kind_->addItems({"Twitch stream (~2 s, nothing for them to set up)",
 				 "VDO.Ninja / WebRTC (~0.3 s, they open one link)", "OBS source I already have",
@@ -240,7 +259,7 @@ public:
 
 private:
 	QFormLayout *form_;
-	QLineEdit *name_, *twitch_, *streamId_, *link_;
+	QLineEdit *name_, *gameName_, *twitch_, *streamId_, *link_;
 	QComboBox *kind_, *source_, *pick_, *res_, *fps_, *codec_;
 	QSpinBox *kbps_;
 	QWidget *qualityRow_, *linkWidget_, *pickWidget_;
@@ -250,6 +269,7 @@ private:
 	{
 		Friend f = result;
 		f.name = name_->text().trimmed().toStdString();
+		f.gameName = gameName_->text().trimmed().toStdString();
 		f.kind = kind();
 		f.vdoHeight = res_->currentIndex() == 2 ? 1440 : res_->currentIndex() == 1 ? 1080 : 720;
 		f.vdoFps = fps_->currentIndex() == 1 ? 60 : 30;
@@ -404,6 +424,11 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 		meter_->setValue(m.score < 0 ? 0 : (int)(m.score * 1000));
 		frame_->setFrame(e_->lastFrame(), m, e_->cfg.threshold,
 				 QRectF(e_->cfg.boxX, e_->cfg.boxY, e_->cfg.boxW, e_->cfg.boxH));
+		if (feedPick_) {
+			feedPick_->setFrame(e_->lastFrame(), Match(), 1.0,
+					    QRectF(e_->cfg.feedX, e_->cfg.feedY, e_->cfg.feedW, e_->cfg.feedH));
+			feedPick_->setBox2(QRectF(e_->cfg.nearX, e_->cfg.nearY, e_->cfg.nearW, e_->cfg.nearH));
+		}
 	});
 	connect(e_, &Engine::stateChanged, this, [this]() {
 		tplLbl_->setText(!e_->hasTemplate()     ? "No template"
@@ -506,6 +531,38 @@ QWidget *SettingsDialog::buildSwitchTab()
 			e_->setActive(r);
 			fillFriends();
 		}
+	});
+
+	auto *gc = new QGroupBox("Show whoever is closest", w);
+	auto *fc = new QFormLayout(gc);
+	nearOn_ = new QCheckBox("When you go down, show the squad mate the game says is nearest", gc);
+	nearOn_->setChecked(e_->cfg.nearEnabled);
+	fc->addRow(nearOn_);
+	nearFollow_ = new QCheckBox("Keep following the nearest one while you are down", gc);
+	nearFollow_->setChecked(e_->cfg.nearFollow);
+	fc->addRow(nearFollow_);
+	nearMargin_ = new QSpinBox(gc);
+	nearMargin_->setRange(0, 300);
+	nearMargin_->setSuffix(" m closer");
+	nearMargin_->setValue(e_->cfg.nearMarginM);
+	fc->addRow("Swap over only for someone", nearMargin_);
+	nearLbl_ = new QLabel(gc);
+	nearLbl_->setWordWrap(true);
+	fc->addRow("Nearby now", nearLbl_);
+	fc->addRow(muted(
+		"ClipHound reads the NEARBY list in the bottom-right corner of your game and tells the plugin who is how far away, so the POV you cut to is the squad mate who can actually revive you. It needs ClipHound running, the NEARBY area set on the ClipHound tab, and each squad mate's in-game name filled in (Edit... → In-game name). Without a reading the squad mate you picked above is used as before.",
+		gc));
+	v->addWidget(gc);
+	connect(nearOn_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(nearFollow_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(nearMargin_, &QSpinBox::editingFinished, this, [this]() { saveAndApply(); });
+	connect(e_, &Engine::stateChanged, this, [this]() {
+		if (!nearLbl_)
+			return;
+		QString t = e_->nearbyText();
+		nearLbl_->setText(!e_->cfg.nearEnabled ? "off"
+				  : t.isEmpty()        ? "nothing read yet"
+						       : t + (e_->nearbyFresh() ? "" : "  (stale)"));
 	});
 
 	auto *gl = new QGroupBox("Squad on this network", w);
@@ -930,6 +987,67 @@ QWidget *SettingsDialog::buildAppTab()
 		g));
 	v->addWidget(g);
 
+	auto *ga = new QGroupBox("Areas ClipHound reads", w);
+	auto *fa = new QVBoxLayout(ga);
+	feedPick_ = new FramePreview(ga);
+	feedPick_->setMinimumHeight(200);
+	feedPick_->setPicker("Drag a box on the picture to set the area");
+	fa->addWidget(feedPick_, 1);
+	auto *ar = new QHBoxLayout();
+	pickFeed_ = new QRadioButton("Kill feed (amber)", ga);
+	pickNear_ = new QRadioButton("NEARBY list (blue)", ga);
+	pickFeed_->setChecked(true);
+	auto *reset = new QPushButton("Reset this area", ga);
+	ar->addWidget(new QLabel("Drag sets:", ga));
+	ar->addWidget(pickFeed_);
+	ar->addWidget(pickNear_);
+	ar->addWidget(reset);
+	ar->addStretch(1);
+	fa->addLayout(ar);
+	auto *rr = new QHBoxLayout();
+	appFps_ = new QSpinBox(ga);
+	appFps_->setRange(3, 15);
+	appFps_->setSuffix(" times a second");
+	appFps_->setValue(e_->cfg.appFps > 0 ? e_->cfg.appFps : 10);
+	rr->addWidget(new QLabel("Read the feed", ga));
+	rr->addWidget(appFps_);
+	rr->addStretch(1);
+	fa->addLayout(rr);
+	areaLbl_ = muted("", ga);
+	fa->addWidget(areaLbl_);
+	fa->addWidget(muted(
+		"The kill feed is the list of kills on the left, about half way down. The NEARBY list is the squad list in the bottom-right corner, used to show whoever is closest when you go down (Switch tab). Drag around each one with a bit of margin; the game must be running so you can see where they are.  Reading faster gets the clip sooner - a kill is decided after about three quarters of a second of reading, whatever the rate - and costs a little more CPU: 10 a second is about a fifth of one core here, 5 is half that.",
+		ga));
+	v->addWidget(ga, 1);
+	auto setArea = [this](QRectF r) {
+		Config &c = e_->cfg;
+		if (pickNear_->isChecked()) {
+			c.nearX = r.x();
+			c.nearY = r.y();
+			c.nearW = r.width();
+			c.nearH = r.height();
+		} else {
+			c.feedX = r.x();
+			c.feedY = r.y();
+			c.feedW = r.width();
+			c.feedH = r.height();
+		}
+		c.save();
+		e_->pushAppConfig();
+		updateAreas();
+	};
+	connect(feedPick_, &FramePreview::boxChanged, this, setArea);
+	connect(reset, &QPushButton::clicked, this, [this, setArea]() {
+		setArea(pickNear_->isChecked() ? QRectF(0.80, 0.79, 0.19, 0.14) : QRectF(0.0, 0.42, 0.24, 0.16));
+	});
+	connect(pickFeed_, &QRadioButton::toggled, this, [this](bool) { updateAreas(); });
+	connect(appFps_, &QSpinBox::editingFinished, this, [this]() {
+		e_->cfg.appFps = appFps_->value();
+		e_->cfg.save();
+		e_->pushAppConfig();
+	});
+	updateAreas();
+
 	auto *gt = new QGroupBox("Twitch clips", w);
 	auto *ft = new QFormLayout(gt);
 	appTwitch_ = new QCheckBox("Create a Twitch clip on notable kills", gt);
@@ -996,6 +1114,26 @@ QWidget *SettingsDialog::buildAppTab()
 	connect(e_, &Engine::stateChanged, this, [this]() { refreshAppTab(); });
 	refreshAppTab();
 	return w;
+}
+
+void SettingsDialog::updateAreas()
+{
+	if (!areaLbl_ || !feedPick_)
+		return;
+	const Config &c = e_->cfg;
+	auto fmt = [](double x, double y, double w, double h) {
+		return QString("x %1  y %2  w %3  h %4")
+			.arg(x, 0, 'f', 2)
+			.arg(y, 0, 'f', 2)
+			.arg(w, 0, 'f', 2)
+			.arg(h, 0, 'f', 2);
+	};
+	areaLbl_->setText("Kill feed: " + fmt(c.feedX, c.feedY, c.feedW, c.feedH) +
+			  "     NEARBY list: " + fmt(c.nearX, c.nearY, c.nearW, c.nearH) +
+			  (e_->appConnected() ? "     (sent to ClipHound)" : "     (ClipHound is not running)"));
+	feedPick_->setPicker(pickNear_ && pickNear_->isChecked()
+				     ? "Drag around the NEARBY list in the bottom-right corner"
+				     : "Drag around the kill feed on the left");
 }
 
 void SettingsDialog::refreshAppTab()
@@ -1335,6 +1473,10 @@ void SettingsDialog::collect()
 	c.appPath = appPath_->text().trimmed().toStdString();
 	c.launchApp = launchApp_->isChecked();
 	c.closeAppWithObs = closeApp_ ? closeApp_->isChecked() : true;
+	c.nearEnabled = nearOn_ ? nearOn_->isChecked() : c.nearEnabled;
+	c.nearFollow = nearFollow_ ? nearFollow_->isChecked() : c.nearFollow;
+	c.nearMarginM = nearMargin_ ? nearMargin_->value() : c.nearMarginM;
+	c.appFps = appFps_ ? appFps_->value() : c.appFps;
 }
 
 void SettingsDialog::saveAndApply()

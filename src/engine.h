@@ -40,6 +40,18 @@ public:
 	bool appRunning() const;  // process alive (even if not connected yet)
 	QString appState() const; // "connected" | "starting" | "crashed" | "stopped"
 	void pushAppConfig();     // send the ClipHound settings to the app
+
+	/// One line of the game's NEARBY list, as ClipHound read it.
+	struct NearbyEntry {
+		QString name;  // what the OCR read
+		QString match; // the squad mate's in-game name it matched, "" = nobody we know
+		int dist = 0;  // metres
+	};
+	QList<NearbyEntry> nearby() const { return nearby_; }
+	bool nearbyFresh() const;
+	QString nearbyText() const; // "MasterBaiter 9 m  ·  ChusanDesu 76 m"
+	/// Index of the configured squad mate the game says is nearest, or -1. Fills metres if given.
+	int closestFriend(int *metres = nullptr) const;
 	void twitchLogin();
 	void twitchLogout();
 	QJsonObject twitchStatus() const { return twitch_; }
@@ -101,6 +113,13 @@ private:
 	void onResult(Result r);
 	void frameTick();
 	void onBridgeMessage(const QJsonObject &o);
+	void onNearby(const QJsonObject &o);
+	void pickClosest(const QString &why);
+	void switchTo(int idx, const QString &why);
+	int friendIndexFor(const QString &gameName) const;
+	int nearbyDistanceOf(int friendIdx) const;
+	bool feedUsable(const Friend &f) const;
+	void askNearbyNow();
 	void sendPov(const QString &state);
 	void detect(const Match &m);
 
@@ -124,4 +143,8 @@ private:
 	std::string lastWatchError_;
 	QStringList logLines_;
 	QStringList events_;
+	QList<NearbyEntry> nearby_;
+	QDateTime nearbyAt_;
+	QString nearbyLine_, nearbyWho_;
+	std::chrono::steady_clock::time_point lastPick_, lastNearbyWarn_;
 };

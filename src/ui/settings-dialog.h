@@ -12,6 +12,7 @@
 #include <QPushButton>
 #include <QProgressBar>
 #include <QPlainTextEdit>
+#include <QRadioButton>
 #include "engine.h"
 
 /// Shows the latest game frame with the found header and the capture box; drag to move the box.
@@ -20,6 +21,10 @@ class FramePreview : public QLabel {
 public:
 	explicit FramePreview(QWidget *parent = nullptr);
 	void setFrame(const QImage &img, const Match &m, double threshold, QRectF box);
+	/// A second box drawn in its own colour (the NEARBY area next to the kill-feed area).
+	void setBox2(QRectF box);
+	/// Area-picker mode: no detector rectangle, this caption along the bottom.
+	void setPicker(const QString &caption);
 signals:
 	void boxChanged(QRectF frac);
 
@@ -33,7 +38,9 @@ private:
 	QImage img_;
 	Match m_;
 	double thr_ = 0.85;
-	QRectF box_, drag_;
+	bool picker_ = false;
+	QString caption_;
+	QRectF box_, box2_, drag_;
 	QPoint start_;
 	bool dragging_ = false;
 	QRect imageRect() const;
@@ -85,6 +92,14 @@ private:
 	QCheckBox *appTwitch_ = nullptr, *appEveryKill_ = nullptr;
 	QDoubleSpinBox *appMulti_ = nullptr;
 	FramePreview *feedPick_ = nullptr;
+	QRadioButton *pickFeed_ = nullptr, *pickNear_ = nullptr;
+	QLabel *areaLbl_ = nullptr;
+	QSpinBox *appFps_ = nullptr;
+	void updateAreas();
+	// closest squad mate (the game's NEARBY list)
+	QCheckBox *nearOn_ = nullptr, *nearFollow_ = nullptr;
+	QSpinBox *nearMargin_ = nullptr;
+	QLabel *nearLbl_ = nullptr;
 	QLabel *twitchLbl_ = nullptr;
 	QPushButton *twitchLogin_ = nullptr, *twitchLogout_ = nullptr;
 	void refreshAppTab();

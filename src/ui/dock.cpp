@@ -57,6 +57,16 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	detector_->setTextFormat(Qt::RichText);
 	v->addWidget(detector_);
 
+	near_ = new QLabel(this);
+	near_->setWordWrap(true);
+	{
+		QFont nf = near_->font();
+		nf.setPointSizeF(nf.pointSizeF() - 0.5);
+		near_->setFont(nf);
+	}
+	near_->hide();
+	v->addWidget(near_);
+
 	auto *row = new QHBoxLayout();
 	row->addWidget(new QLabel("Squad mate", this));
 	active_ = new QComboBox(this);
@@ -161,12 +171,19 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 
 void Dock::refresh()
 {
-	filling_ = true;
-	active_->clear();
+	QStringList names;
 	for (auto &f : e_->cfg.friends)
-		active_->addItem(QString::fromStdString(f.name));
-	if (!e_->cfg.friends.empty())
-		active_->setCurrentIndex(std::clamp(e_->cfg.activeFriend, 0, (int)e_->cfg.friends.size() - 1));
+		names << QString::fromStdString(f.name);
+	QStringList shown;
+	for (int i = 0; i < active_->count(); i++)
+		shown << active_->itemText(i);
+	filling_ = true;
+	if (shown != names) { // rebuilding while the user has the list open would close it
+		active_->clear();
+		active_->addItems(names);
+	}
+	if (!names.isEmpty())
+		active_->setCurrentIndex(std::clamp(e_->cfg.activeFriend, 0, (int)names.size() - 1));
 	filling_ = false;
 	state_->setText(QString::fromStdString(e_->stateText()));
 	state_->setStyleSheet(e_->applied() ? "color: #ce6050;" : "");
@@ -195,6 +212,12 @@ void Dock::refresh()
 		events_->addItem(ev[i]);
 	if (events_->count() == 0)
 		events_->addItem("events from the kill feed and the POV swap appear here");
+	if (near_) {
+		near_->setVisible(e_->cfg.nearEnabled);
+		QString t = e_->nearbyText();
+		near_->setText("Nearby: " + (t.isEmpty() ? QString("nothing read yet") : t) +
+			       (e_->nearbyFresh() || t.isEmpty() ? "" : "  (stale)"));
+	}
 	QString lp = e_->clips.lastPath();
 	QString rb = (e_->cfg.clipUseReplay && !obs_frontend_replay_buffer_active())
 			     ? "REPLAY BUFFER OFF (OBS Settings → Output)  ·  "

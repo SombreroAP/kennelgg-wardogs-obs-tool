@@ -12,7 +12,9 @@ struct Friend {
 	std::string channel;     // Twitch login, VDO.Ninja stream id, Discord window, or NDI source name
 	int vdoHeight = 1080, vdoFps = 60, vdoKbps = 12000; // VDO.Ninja quality (push and view links)
 	std::string vdoCodec = "h264";
+	std::string gameName; // their name in the game's NEARBY list ("" = the name above)
 	bool isWeb() const { return kind == FriendKind::Twitch || kind == FriendKind::VdoNinja; }
+	const std::string &nearName() const { return gameName.empty() ? name : gameName; }
 	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }
 };
 
@@ -54,6 +56,14 @@ struct Config {
 	double feedX = 0.0, feedY = 0.42, feedW = 0.24,
 	       feedH = 0.16; // kill-feed area (fractions of the game source) sent to ClipHound
 	double appMultikillWindow = 30;
+	int appFps = 10; // frames per second ClipHound reads the kill feed at
+	// the game's NEARBY list (bottom right), read by ClipHound: show whoever is closest
+	bool nearEnabled = false; // pick the squad mate the game says is nearest when you go down
+	bool nearFollow = true;   // keep following the nearest one while you are down
+	double nearX = 0.80, nearY = 0.79, nearW = 0.19,
+	       nearH = 0.14;  // where the NEARBY list is (fractions of the game source)
+	int nearMarginM = 15; // someone must be this many metres closer to take over mid-swap
+	int nearTtlS = 20;    // a reading older than this is stale and ignored
 	bool appConfigDirty =
 		false; // edited while the app was not connected; push on connect // tell ClipHound to quit when OBS closes (and end it if we started it)
 	std::string clipNameTemplate = "{title}_{tags}_{date}_{time}";

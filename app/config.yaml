@@ -6,7 +6,9 @@ capture:
   backend: "bridge"        # "bridge" (frames from the Kennel WARDOGS OBS plugin, no obs-websocket) | "obs" | "screen"
   obs_source: "Game Capture"   # exact name of the OBS input carrying the game (capture card / NDI)
   monitor: 1               # screen backend only: mss monitor index. `python calibrate.py --list`
-  fps: 5                   # frames come from the plugin cheaply; 5 fps decides a row in ~1.5 s
+  fps: 10                  # frames per second read from the plugin. A kill is decided after ~0.75 s of
+                           # reading, so a higher rate means a faster clip, not more OCR per kill.
+                           # 10 is the default; drop to 5 on a weak CPU, raise to 15 for the quickest.
   # Kill-feed region as FRACTIONS of the source frame (0..1). Measured from the two
   # screenshots: feed text sits at ~47-51% down the frame, ~2-20% across.
   roi:
@@ -16,6 +18,14 @@ capture:
     h: 0.16
   upscale: 2.0             # OCR is much better on 2x upscaled text
   debug_dump: false        # write roi.png / roi_proc.png every frame to ./debug
+
+# ---- The NEARBY panel (bottom right of the HUD) ------------------------------
+# Read only when the plugin asks for it (Settings -> Switch -> "Show whoever is closest"):
+# the plugin sends the area and the squad mates' in-game names, and gets back who is how far
+# away, so it can put the closest one's POV on screen when you go down. Set from the plugin.
+nearby:
+  enabled: false
+  roi: [0.80, 0.79, 0.19, 0.14]
 
 # ---- Kennel WARDOGS OBS plugin bridge ---------------------------------------
 # With capture.backend "bridge" and obs.mode "bridge" the app needs no OBS password: the plugin

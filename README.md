@@ -10,6 +10,8 @@ One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional co
   kill feed and asks for a clip on a notable kill.
 - **Squad-mate feeds.** Twitch, VDO.Ninja (WebRTC), Discord Go Live, NDI or any OBS source. The
   plugin creates and places the OBS sources for you.
+- **The closest one.** With more than one feed, the game's NEARBY list decides which POV comes up:
+  the squad mate who is actually next to you, not the one you picked before the match.
 - **The look.** Optional name tag, camcorder frame, film grain and vignette over the friend's feed.
 
 ## Quick start (testers)
@@ -105,12 +107,31 @@ uint16 height, uint64 timestamp ms (little endian), then JPEG.
 | app | `status {text}` shown in the dock |
 | plugin | `pov {state: downed|reviving|up, friend}` |
 | app | `pov {force: downed|up}` |
+| plugin | `app_config {set: {..., fps, roi:[x,y,w,h], nearby:{enabled, roi, names:[...]}}}` → app `app_config {values}` |
+| plugin | `nearby_now` - read the NEARBY panel now (sent the moment the damage log appears) |
+| app | `nearby {list:[{name, dist, match}]}` - who the game says is near you, nearest first |
+
+## Show whoever is closest
+
+WARDOGS lists the squad mates near you in the bottom-right corner of the HUD, with a distance each,
+and that list stays up while you are down. ClipHound reads it and tells the plugin, which makes the
+nearest squad mate the active one just before your stream cuts to them - so the POV your viewers get
+is the one running towards you.
+
+Turn it on under Settings → Switch → **Show whoever is closest**, set the area under Settings →
+ClipHound (drag a box round the NEARBY list), and give each squad mate their **in-game name** in the
+Edit dialog. Only names you have configured are ever matched, so a stranger in the list cannot move
+your feed. While the swap is on screen the nearest one keeps being followed, but only if someone is
+clearly closer (15 m by default) and never more often than every 4 s, so the picture cannot flap.
 
 ## CPU
 
 The plugin's downed search is template matching on an 800 px frame: near zero once locked on, and
 while you are alive it runs on every third poll, about 1-2 % of one core. ClipHound's OCR is the
-heavier part; see its README for the numbers and the knobs (frame rate, only OCR changed rows).
+heavier part: at the default 10 frames a second the kill feed is a few per cent of one core between
+kills (rows are only OCR'd until they are decided), and reading the NEARBY panel is one tesseract
+call a second - names are only re-read when they change. Drop the rate on the ClipHound tab if the
+CPU matters more than the second it saves.
 
 ## Build
 

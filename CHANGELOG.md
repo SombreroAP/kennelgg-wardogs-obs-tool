@@ -2,6 +2,16 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.3.0
+- **Show whoever is closest.** The game's NEARBY list (bottom right of the HUD) is read while you play, so when you go down the POV that comes up is the squad mate who can actually reach you. Switch tab: turn it on, choose whether to keep following the nearest one while you are down, and how much closer someone must be (default 15 m) before the feed swaps over mid-swap. Each squad mate needs the name the game shows for them: Switch → Edit... → In-game name. Needs ClipHound running; without a reading the squad mate you picked is used exactly as before.
+- **The kill-feed and NEARBY areas are picked by dragging on the live picture** (ClipHound tab): choose which of the two the drag sets, drag a box, done. It goes to ClipHound straight away, no restart. This is the picker that 0.2.24 announced but did not actually ship.
+- **The kill feed is read twice as fast.** The default rate is now 10 times a second (was 5) and is on the ClipHound tab. A kill is decided after about 0.75 s of reading whatever the rate, so a kill now becomes a clip in about a second instead of two.
+- **A kill you cover up still clips.** A feed row that disappears early - you opened the inventory or the map, or a multi-kill pushed it off - is decided on what was read, and a row with your own name in it is decided on two reads.
+- Dock shows the NEARBY reading while the feature is on.
+
+## 0.2.24
+- Kill-feed area sent to ClipHound live (the picker for it arrived in 0.3.0).
+
 ## 0.2.23
 - Switch delays, on the Detect tab: the squad mate is shown 2 s after you go down by default (a revive inside that window never switches), and you come back instantly on revive (0 ms). Both editable.
 

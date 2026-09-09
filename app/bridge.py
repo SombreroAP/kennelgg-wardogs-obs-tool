@@ -22,6 +22,18 @@ except ImportError as e:  # pragma: no cover
     raise SystemExit("pip install websocket-client") from e
 
 
+def _roi_list(r) -> list:
+    """ROI as [x, y, w, h] floats, from either a list or a {x,y,w,h} mapping. [] if unusable."""
+    try:
+        if isinstance(r, dict):
+            return [float(r["x"]), float(r["y"]), float(r["w"]), float(r["h"])]
+        if isinstance(r, (list, tuple)) and len(r) == 4:
+            return [float(v) for v in r]
+    except (KeyError, TypeError, ValueError):
+        pass
+    return []
+
+
 class Bridge:
     """One connection shared by the frame source and the clip trigger. Reconnects on its own."""
 
@@ -41,6 +53,10 @@ class Bridge:
         self.cfg = None              # full config dict (set by main) for app_config / twitch messages
         self.save_cfg = None         # callable(cfg) that writes config.yaml
         self.on_config = None        # callable(cfg) after the plugin changed settings
+        # the game's NEARBY panel: the plugin says whether to read it, where it is and whose names
+        # to look for; nearby_burst is a deadline until which we read it every quarter second
+        self.nearby_cfg = {"enabled": False, "roi": [0.80, 0.79, 0.19, 0.14], "names": [], "interval": 1.0}
+        self.nearby_burst = 0.0
         threading.Thread(target=self._run, daemon=True).start()
 
     # ---- connection ----
@@ -71,6 +87,10 @@ class Bridge:
             "fps": (c.get("capture") or {}).get("fps", 3),
             "clip_every_kill": bool(c["detection"].get("clip_every_kill")),
             "multikill_window": float(c["detection"].get("multikill_window_s", 30)),
+            "roi": _roi_list((c.get("capture") or {}).get("roi")),
+            "nearby": {"enabled": bool(self.nearby_cfg.get("enabled")),
+                       "roi": list(self.nearby_cfg.get("roi") or []),
+                       "names": list(self.nearby_cfg.get("names") or [])},
         }})
         from twitch_device import status
         self.send(status(c))
@@ -79,8 +99,7 @@ class Bridge:
         self.connected = True
         print(f"[bridge] connected to the plugin at {self.url}")
         self._send_app_state()
-        # full frame at native size; we crop the kill feed ourselves so the minimap check still works
-        self.send({"type": "subscribe", "frames": True, "fps": self.fps, "roi": [0, 0, 1, 1], "width": 0})
+        self._subscribe()
         self.status("ClipHound watching the kill feed")
 
     def _on_close(self, ws, *_):
@@ -118,8 +137,24 @@ class Bridge:
                 c["twitch"]["broadcaster_id"] = ""
             if "twitch_enabled" in v:
                 c.setdefault("twitch", {})["enabled"] = bool(v["twitch_enabled"])
-            if "fps" in v:
-                c.setdefault("capture", {})["fps"] = float(v["fps"])
+            if "fps" in v and float(v["fps"]) > 0:
+                fps = max(1.0, min(20.0, float(v["fps"])))
+                if fps != float(c.setdefault("capture", {}).get("fps", 5)):
+                    c["capture"]["fps"] = fps
+                    self.fps = fps
+                    self._subscribe()      # ask the plugin for frames at the new rate
+            if "roi" in v and _roi_list(v["roi"]) and _roi_list(v["roi"])[2] > 0.01:
+                r = _roi_list(v["roi"])
+                c.setdefault("capture", {})["roi"] = {"x": r[0], "y": r[1], "w": r[2], "h": r[3]}
+            if isinstance(v.get("nearby"), dict):
+                nb = v["nearby"]
+                self.nearby_cfg["enabled"] = bool(nb.get("enabled"))
+                self.nearby_cfg["names"] = [str(n) for n in (nb.get("names") or []) if str(n).strip()]
+                roi = _roi_list(nb.get("roi"))
+                if roi and roi[2] > 0.01:
+                    self.nearby_cfg["roi"] = roi
+                c.setdefault("nearby", {}).update({"enabled": self.nearby_cfg["enabled"],
+                                                   "roi": self.nearby_cfg["roi"]})
             if "clip_every_kill" in v:
                 c["detection"]["clip_every_kill"] = bool(v["clip_every_kill"])
             if "multikill_window" in v:
@@ -137,6 +172,8 @@ class Bridge:
             from twitch_device import logout
             logout(self.cfg, lambda c: (self.save_cfg(c) if self.save_cfg else None, self.on_config(c) if self.on_config else None))
             self._send_app_state()
+        elif t == "nearby_now":
+            self.nearby_burst = time.time() + 3.0
         elif t == "app_state":
             self._send_app_state()
         elif t == "shutdown":
@@ -162,6 +199,11 @@ class Bridge:
                 cb = self._pending.pop(cid)
                 if cb:
                     cb(o.get("path", ""), o)
+
+    def _subscribe(self):
+        """Full frame at native size: we crop the kill feed (and the NEARBY panel) ourselves, so the
+        minimap team check keeps working from the same frames."""
+        self.send({"type": "subscribe", "frames": True, "fps": self.fps, "roi": [0, 0, 1, 1], "width": 0})
 
     def send(self, o: dict):
         try:
@@ -208,6 +250,21 @@ class BridgeRoiCapture:
         h, w = frame.shape[:2]
         self.box = (int(w * self.r["x"]), int(h * self.r["y"]), int(w * self.r["w"]), int(h * self.r["h"]))
         print(f"[capture] plugin source '{self.b.game_source}' is {w}x{h}; ROI x,y,w,h = {self.box}")
+
+    def set_roi(self, r):
+        """Kill-feed area changed in the plugin: re-cut the crop from the next frame on."""
+        rl = _roi_list(r)
+        if not rl or rl[2] <= 0.01:
+            return
+        self.r = {"x": rl[0], "y": rl[1], "w": rl[2], "h": rl[3]}
+        f = getattr(self, "_last", None)
+        if f is None:
+            f, _ = self.b.latest()
+        if f is None:
+            return
+        h, w = f.shape[:2]
+        self.box = (int(w * rl[0]), int(h * rl[1]), int(w * rl[2]), int(h * rl[3]))
+        print(f"[capture] kill-feed ROI is now x,y,w,h = {self.box}")
 
     def _wait_frame(self):
         while True:

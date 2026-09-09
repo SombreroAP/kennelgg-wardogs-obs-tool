@@ -111,6 +111,15 @@ void Config::load()
 	DEFD(feedW);
 	DEFD(feedH);
 	DEFD(appMultikillWindow);
+	DEFI(appFps);
+	DEFB(nearEnabled);
+	DEFB(nearFollow);
+	DEFD(nearX);
+	DEFD(nearY);
+	DEFD(nearW);
+	DEFD(nearH);
+	DEFI(nearMarginM);
+	DEFI(nearTtlS);
 	DEFB(appConfigDirty);
 	DEFS(clipNameTemplate);
 	DEFB(autoStartReplay);
@@ -172,6 +181,15 @@ void Config::load()
 	GETD(feedW);
 	GETD(feedH);
 	GETD(appMultikillWindow);
+	GETI(appFps);
+	GETB(nearEnabled);
+	GETB(nearFollow);
+	GETD(nearX);
+	GETD(nearY);
+	GETD(nearW);
+	GETD(nearH);
+	GETI(nearMarginM);
+	GETI(nearTtlS);
 	GETB(appConfigDirty);
 	GETS(clipNameTemplate);
 	GETB(autoStartReplay);
@@ -204,6 +222,7 @@ void Config::load()
 			f.source = obs_data_get_string(it, "source");
 			f.audioSource = obs_data_get_string(it, "audioSource");
 			f.channel = obs_data_get_string(it, "channel");
+			f.gameName = obs_data_get_string(it, "gameName");
 			if (obs_data_has_user_value(it, "vdoHeight")) {
 				f.vdoHeight = (int)obs_data_get_int(it, "vdoHeight");
 				f.vdoFps = (int)obs_data_get_int(it, "vdoFps");
@@ -282,6 +301,15 @@ void Config::save() const
 	SETD(feedW);
 	SETD(feedH);
 	SETD(appMultikillWindow);
+	SETI(appFps);
+	SETB(nearEnabled);
+	SETB(nearFollow);
+	SETD(nearX);
+	SETD(nearY);
+	SETD(nearW);
+	SETD(nearH);
+	SETI(nearMarginM);
+	SETI(nearTtlS);
 	SETB(appConfigDirty);
 	SETS(clipNameTemplate);
 	SETB(autoStartReplay);
@@ -309,6 +337,7 @@ void Config::save() const
 		obs_data_set_string(it, "source", f.source.c_str());
 		obs_data_set_string(it, "audioSource", f.audioSource.c_str());
 		obs_data_set_string(it, "channel", f.channel.c_str());
+		obs_data_set_string(it, "gameName", f.gameName.c_str());
 		obs_data_set_int(it, "vdoHeight", f.vdoHeight);
 		obs_data_set_int(it, "vdoFps", f.vdoFps);
 		obs_data_set_int(it, "vdoKbps", f.vdoKbps);

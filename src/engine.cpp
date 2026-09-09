@@ -35,13 +35,16 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	detRevive_.toY = 0.95f;
 	lastReviveSeen_ = clock_::now() - std::chrono::hours(1);
 	downSince_ = lastReviveSeen_;
+	lastPick_ = lastNearbyWarn_ = lastReviveSeen_;
 	connect(&timer_, &QTimer::timeout, this, &Engine::tick);
 	connect(&frameTimer_, &QTimer::timeout, this, &Engine::frameTick);
 	downDelay_.setSingleShot(true);
 	upDelay_.setSingleShot(true);
 	connect(&downDelay_, &QTimer::timeout, this, [this]() {
-		if (detected_ && !applied_)
+		if (detected_ && !applied_) {
+			pickClosest("about to switch"); // last reading before the feed goes on screen
 			applyNow(true, QString("downed for %1 ms").arg(cfg.downDelayMs));
+		}
 	});
 	connect(&upDelay_, &QTimer::timeout, this, [this]() {
 		if (!detected_ && applied_)
@@ -284,6 +287,16 @@ void Engine::pushAppConfig()
 	set["clip_every_kill"] = cfg.appEveryKill;
 	set["roi"] = QJsonArray{cfg.feedX, cfg.feedY, cfg.feedW, cfg.feedH};
 	set["multikill_window"] = cfg.appMultikillWindow;
+	set["fps"] = cfg.appFps > 0 ? cfg.appFps : 10;
+	QJsonObject nb;
+	nb["enabled"] = cfg.nearEnabled;
+	nb["roi"] = QJsonArray{cfg.nearX, cfg.nearY, cfg.nearW, cfg.nearH};
+	QJsonArray names;
+	for (const auto &f : cfg.friends)
+		if (!f.nearName().empty())
+			names.append(QString::fromStdString(f.nearName()));
+	nb["names"] = names;
+	set["nearby"] = nb;
 	QJsonObject o;
 	o["type"] = "app_config";
 	o["set"] = set;
@@ -421,6 +434,7 @@ void Engine::reloadConfig()
 	timer_.setInterval(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
+	pushAppConfig(); // areas, names and rules the app reads
 	emit stateChanged();
 }
 
@@ -506,16 +520,23 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 			cfg.appBroadcaster = v.value("broadcaster").toString().toStdString();
 			cfg.appTwitchEnabled = v.value("twitch_enabled").toBool();
 			cfg.appEveryKill = v.value("clip_every_kill").toBool();
-			QJsonArray r = v.value("roi").toArray();
-			if (r.size() == 4 && r[2].toDouble() > 0.01) {
-				cfg.feedX = r[0].toDouble();
-				cfg.feedY = r[1].toDouble();
-				cfg.feedW = r[2].toDouble();
-				cfg.feedH = r[3].toDouble();
-			}
 			cfg.appMultikillWindow = v.value("multikill_window").toDouble(30);
 			cfg.save();
 			emit appConfigReceived();
+			// the kill-feed and NEARBY areas are picked in this window, so ours win
+			QJsonArray r = v.value("roi").toArray();
+			QJsonObject nb = v.value("nearby").toObject();
+			QJsonArray nr = nb.value("roi").toArray();
+			auto same = [](const QJsonArray &a, double x, double y, double w, double h) {
+				return a.size() == 4 && std::abs(a[0].toDouble() - x) < 1e-4 &&
+				       std::abs(a[1].toDouble() - y) < 1e-4 && std::abs(a[2].toDouble() - w) < 1e-4 &&
+				       std::abs(a[3].toDouble() - h) < 1e-4;
+			};
+			if (!same(r, cfg.feedX, cfg.feedY, cfg.feedW, cfg.feedH) ||
+			    !same(nr, cfg.nearX, cfg.nearY, cfg.nearW, cfg.nearH) ||
+			    nb.value("enabled").toBool() != cfg.nearEnabled ||
+			    (int)v.value("fps").toDouble() != cfg.appFps)
+				pushAppConfig();
 		}
 	} else if (type == "twitch_status") {
 		twitch_ = o;
@@ -525,6 +546,8 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		else if (st == "error")
 			log("Twitch login: " + o.value("error").toString());
 		emit twitchStatusChanged();
+	} else if (type == "nearby") {
+		onNearby(o);
 	} else if (type == "event") {
 		addEvent(o.value("text").toString());
 	} else if (type == "status") {
@@ -537,6 +560,172 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		else if (force == "up")
 			applyNow(false, "companion app");
 	}
+}
+
+// ----- the game's NEARBY list (bottom right): who is closest -----
+
+void Engine::onNearby(const QJsonObject &o)
+{
+	QList<NearbyEntry> list;
+	for (auto v : o.value("list").toArray()) {
+		QJsonObject e = v.toObject();
+		NearbyEntry n;
+		n.name = e.value("name").toString();
+		n.match = e.value("match").toString();
+		n.dist = e.value("dist").toInt(-1);
+		if (n.dist >= 0)
+			list << n;
+	}
+	nearby_ = list;
+	nearbyAt_ = QDateTime::currentDateTime();
+	QString line = nearbyText();
+	if (line != nearbyLine_) {
+		nearbyLine_ = line;
+		emit stateChanged(); // the dock shows the metres; they change constantly
+	}
+	QStringList who;
+	for (const auto &e : nearby_)
+		who << (e.match.isEmpty() ? e.name : e.match);
+	if (who.join(',') != nearbyWho_) { // only who is there is worth a log line
+		nearbyWho_ = who.join(',');
+		log("Nearby: " + (line.isEmpty() ? QString("nobody") : line));
+	}
+	if (cfg.nearEnabled && (detected_ || applied_))
+		pickClosest(applied_ ? "still down" : "going down");
+}
+
+bool Engine::nearbyFresh() const
+{
+	return nearbyAt_.isValid() && nearbyAt_.secsTo(QDateTime::currentDateTime()) <= std::max(2, cfg.nearTtlS);
+}
+
+QString Engine::nearbyText() const
+{
+	QStringList parts;
+	for (const auto &e : nearby_)
+		parts << QString("%1 %2 m").arg(e.match.isEmpty() ? e.name : e.match).arg(e.dist);
+	return parts.join("  ·  ");
+}
+
+int Engine::friendIndexFor(const QString &gameName) const
+{
+	if (gameName.isEmpty())
+		return -1;
+	for (size_t i = 0; i < cfg.friends.size(); i++)
+		if (QString::fromStdString(cfg.friends[i].nearName()).compare(gameName, Qt::CaseInsensitive) == 0)
+			return (int)i;
+	for (size_t i = 0; i < cfg.friends.size(); i++)
+		if (QString::fromStdString(cfg.friends[i].name).compare(gameName, Qt::CaseInsensitive) == 0)
+			return (int)i;
+	return -1;
+}
+
+bool Engine::feedUsable(const Friend &f) const
+{
+	if (f.isWeb())
+		return !f.channel.empty();
+	std::string n = Config::sourceFor(f);
+	if (n.empty())
+		return false;
+	obs_source_t *src = obs_get_source_by_name(n.c_str());
+	if (!src)
+		return false;
+	obs_source_release(src);
+	return true;
+}
+
+int Engine::nearbyDistanceOf(int friendIdx) const
+{
+	if (friendIdx < 0 || friendIdx >= (int)cfg.friends.size())
+		return -1;
+	for (const auto &e : nearby_)
+		if (!e.match.isEmpty() && friendIndexFor(e.match) == friendIdx)
+			return e.dist;
+	return -1;
+}
+
+int Engine::closestFriend(int *metres) const
+{
+	if (!nearbyFresh())
+		return -1;
+	int best = -1, bestD = 0;
+	for (const auto &e : nearby_) {
+		if (e.match.isEmpty() || e.dist < 0)
+			continue;
+		int i = friendIndexFor(e.match);
+		if (i < 0 || !feedUsable(cfg.friends[i]))
+			continue;
+		if (best < 0 || e.dist < bestD) {
+			best = i;
+			bestD = e.dist;
+		}
+	}
+	if (best >= 0 && metres)
+		*metres = bestD;
+	return best;
+}
+
+void Engine::askNearbyNow()
+{
+	if (!cfg.nearEnabled || bridge.clients() == 0)
+		return;
+	QJsonObject o;
+	o["type"] = "nearby_now";
+	bridge.sendJson(o);
+}
+
+/// Make the squad mate the game says is nearest the active one. Cheap and safe to call often.
+void Engine::pickClosest(const QString &why)
+{
+	if (!cfg.nearEnabled || cfg.friends.size() < 2)
+		return;
+	int d = 0;
+	int idx = closestFriend(&d);
+	if (idx < 0) {
+		if (clock_::now() - lastNearbyWarn_ > std::chrono::seconds(60)) {
+			lastNearbyWarn_ = clock_::now();
+			log(bridge.clients() == 0
+				    ? "Closest squad mate: ClipHound is not running, so the NEARBY list cannot be read - keeping the squad mate you picked."
+				    : (nearbyFresh()
+					       ? "Closest squad mate: nobody in the NEARBY list is one of your squad mates (check their in-game names in Settings → Switch)."
+					       : "Closest squad mate: no reading from the NEARBY list yet (check the area on the ClipHound tab)."));
+		}
+		return;
+	}
+	if (idx == cfg.activeFriend)
+		return;
+	if (applied_) {
+		if (!cfg.nearFollow)
+			return;
+		int cur = nearbyDistanceOf(cfg.activeFriend);
+		if (cur >= 0 && d > cur - cfg.nearMarginM)
+			return; // on screen and still about as close: leave it alone
+		if (clock_::now() - lastPick_ < std::chrono::seconds(4))
+			return; // never flap
+	}
+	switchTo(
+		idx,
+		QString("%1 is closest (%2 m, %3)").arg(QString::fromStdString(cfg.friends[idx].name)).arg(d).arg(why));
+}
+
+/// setActive() without the "you chose this" wording: used by the closest-squad-mate picker.
+void Engine::switchTo(int idx, const QString &why)
+{
+	if (idx < 0 || idx >= (int)cfg.friends.size() || idx == cfg.activeFriend)
+		return;
+	bool wasOn = applied_;
+	if (wasOn)
+		applyNow(false, "switching squad mate");
+	cfg.activeFriend = idx;
+	cfg.save();
+	lastPick_ = clock_::now();
+	if (wasOn)
+		applyNow(true, why);
+	else if (cfg.keepWarm)
+		sw.armWarm(cfg);
+	log("Squad mate: " + why + ".");
+	addEvent("Closest: " + QString::fromStdString(cfg.friends[idx].name));
+	emit stateChanged();
 }
 
 void Engine::sendPov(const QString &state)
@@ -748,6 +937,8 @@ void Engine::detect(const Match &m)
 		detected_ = true;
 		peakScore_ = m.score;
 		upDelay_.stop();
+		askNearbyNow(); // fresh NEARBY reading while the delay runs
+		pickClosest("downed");
 		if (!applied_) {
 			if (cfg.downDelayMs <= 0)
 				applyNow(true, QString("downed screen detected (%1)").arg(m.score, 0, 'f', 3));

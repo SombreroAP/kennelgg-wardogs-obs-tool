@@ -108,7 +108,9 @@ def main():
     import ocr
     ocr.COLOR_BANDS = {k: tuple(v) for k, v in (cfg["detection"].get("colors") or {}).items()} or None
     det = KillDetector(cfg["detection"], dump_rows="debug/rows" if cfg["capture"].get("debug_dump") else None)
-    print(f"[capture] ROI {cap.box} @ {cfg['capture']['fps']} fps   dry-run={DRY}")
+    det.set_rate(cfg["capture"]["fps"])
+    print(f"[capture] ROI {cap.box} @ {cfg['capture']['fps']} fps, deciding a row on {det.votes} reads "
+          f"({det.min_reads} if it goes away early)   dry-run={DRY}")
 
     tw = ob = None
     if not DRY and cfg["twitch"]["enabled"] and cfg["twitch"].get("access_token"):
@@ -127,10 +129,13 @@ def main():
     state = {"tw": tw, "ob": ob}
 
     def apply_live(c):
-        # settings changed from the OBS plugin: name, library, Twitch, clip rules
+        # settings changed from the OBS plugin: name, library, Twitch, clip rules, the areas we read
         det.me = c["detection"].get("player_name", det.me)
         det.cfg["clip_every_kill"] = bool(c["detection"].get("clip_every_kill"))
         det.cfg["multikill_window_s"] = float(c["detection"].get("multikill_window_s", 30))
+        det.set_rate(c["capture"].get("fps", 5))
+        if hasattr(cap, "set_roi"):
+            cap.set_roi(c["capture"].get("roi"))
         try:
             if not DRY and c["twitch"].get("enabled") and c["twitch"].get("access_token"):
                 from twitch import Twitch
@@ -160,13 +165,17 @@ def main():
                     "icons": ev.icons if ev else [], "kills": len(trig.events)}
             threading.Timer(cfg["obs"]["replay_delay_s"], lambda: _safe(ob.trigger, trig.title, trig.tags, info)).start()
 
-    period = 1.0 / cfg["capture"]["fps"]
     if cfg["capture"].get("debug_dump"):
         os.makedirs("debug", exist_ok=True)
     from colors import detect_my_team
+    watcher = None
+    if bridge is not None:
+        from nearby import Watcher
+        watcher = Watcher(bridge)
     last_team_check = 0.0
     while True:
         t0 = time.time()
+        period = 1.0 / max(1.0, float(cfg["capture"]["fps"]))   # the plugin can change the rate live
         # team colour: re-check the minimap every 30 s while in auto (it changes each match)
         if cfg["detection"].get("my_team", "auto") == "auto" and t0 - last_team_check > 30 and hasattr(cap, "full_frame"):
             last_team_check = t0
@@ -175,6 +184,9 @@ def main():
             if team and team != det.my_team:
                 print(f"[team] you are on the {team} team")
                 det.my_team = team
+        # who is near you (bottom-right NEARBY panel): the plugin shows the closest squad mate's POV
+        if watcher is not None and hasattr(cap, "full_frame"):
+            watcher.maybe_read(cap.full_frame(), t0)
         roi = cap.grab()
         if cfg["capture"].get("debug_dump"):
             cv2.imwrite("debug/roi.png", roi)

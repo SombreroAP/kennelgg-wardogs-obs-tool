@@ -87,15 +87,19 @@ class KillDetector:
     PROF_MATCH = 0.45          # ...and the killer-name profile must correlate (catches slot swaps)
     Y_MATCH = 8                # ...and within this many ROI px vertically (same slot)
     Y_SHIFT = 120              # ...or up to this far down: a new kill pushes older rows down a slot
-    ROW_TTL_S = 0.7            # a row must be seen every frame or two; the feed blanks ~0.5 s
-    MIN_READS = 4              # a row that vanishes (pushed off by a multi-kill) is still decided with this many reads
-                               # between kills, and pixels can't tell two kills in one slot apart
-    FADE_IN_S = 0.5            # rows fade in; OCR is garbage before this
-    VOTES = 7                  # OCR samples before a row is decided (~1.5 s at 5 fps)
+    ROW_TTL_S = 0.6            # a row must be seen every frame or two; the feed blanks ~0.5 s
+    FADE_IN_S = 0.35           # rows fade in; OCR is garbage before this
     DUP_S = 15.0               # same slot + same distance + same roles within this = same kill
+    # How long a row must be watched, in SECONDS - the number of reads that takes is worked out from
+    # the capture rate, so raising the rate makes the decision sooner instead of only sampling more.
+    DECIDE_S = 0.75            # normal decision: this much of the row read
+    VANISH_S = 0.40            # a row that goes away early (inventory opened, pushed off by a multi-kill)
+    VOTES = 7                  # cap: never more OCR reads than this per row
+    MIN_VOTES = 3              # floor: never decide on fewer than this (except the "it was me" shortcut)
 
     def __init__(self, cfg, dump_rows: str | None = None):
         self.cfg = cfg
+        self.set_rate(float(cfg.get("fps", 5) or 5))
         self.me = cfg["player_name"]
         self.my_team = cfg.get("my_team", "auto")      # 'red' | 'blue' | 'green' | 'auto' (set by main from the HUD)
         self.rules = cfg.get("rules") or []
@@ -106,6 +110,13 @@ class KillDetector:
         self._last_trigger = float('-inf')
         self._multikill_fired_for = 0
         self._n = 0
+
+    def set_rate(self, fps: float):
+        """Frames per second we are being fed. Decisions are timed, not counted, so a faster feed
+        means a faster clip rather than more OCR per row."""
+        self.fps = max(1.0, float(fps))
+        self.votes = int(max(self.MIN_VOTES, min(self.VOTES, round(self.DECIDE_S * self.fps))))
+        self.min_reads = int(max(2, min(self.votes, round(self.VANISH_S * self.fps))))
 
     # ---- frame in ---------------------------------------------------------------
     def feed_frame(self, roi_bgr) -> list[Trigger]:
@@ -131,7 +142,7 @@ class KillDetector:
             best.reads.append(rd.ocr())              # only undecided rows cost tesseract time
             if best.crop is None:
                 best.crop = rd._bgr
-            if len(best.reads) >= self.VOTES:
+            if len(best.reads) >= self.votes:
                 best.done = True
                 ev = self._decide(best)
                 if ev:
@@ -140,9 +151,12 @@ class KillDetector:
         # a multi-kill, or faded) decide them with what we have
         keep = []
         for r in self._rows:
+            # a row with our own name in it is worth deciding on two reads: those are the kills and
+            # deaths we clip, and the feed can be covered (inventory, map) a moment after it appears
+            mine = len(r.reads) >= 2 and any(x.name_is_me or x.victim_is_me for x in r.reads)
             if now - r.last < self.ROW_TTL_S:
                 keep.append(r)
-            elif not r.done and len(r.reads) >= self.MIN_READS:
+            elif not r.done and (len(r.reads) >= self.min_reads or mine):
                 r.done = True
                 ev = self._decide(r)
                 if ev:

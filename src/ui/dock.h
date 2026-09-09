@@ -26,6 +26,7 @@ private:
 	QLabel *state_, *last_, *app_, *clip_;
 	QListWidget *events_;
 	QLabel *detector_;
+	QLabel *near_ = nullptr;
 	QComboBox *active_;
 	QPushButton *show_, *back_, *pause_, *clipNow_, *appBtn_;
 	QToolButton *saveBtn_;
