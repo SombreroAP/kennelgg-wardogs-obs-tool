@@ -66,7 +66,9 @@ struct Config {
 	bool enabled = true;
 	double threshold = 0.85;
 	int pollMs = 100;
-	int downFrames = 2, upFrames = 4, minDownMs = 2000;
+	int downFrames = 2, upFrames = 2, minDownMs = 500;
+	double releaseDrop =
+		0.08; // while downed the score is steady; a drop this big below its peak = the log is fading = revived
 	double memScale = 0, memX = 0, memY = 0; // where the damage log was last found (fast re-detect)
 	bool watchRevive =
 		true; // look for "REVIVING" on the friend's feed and switch back instantly when the damage log goes

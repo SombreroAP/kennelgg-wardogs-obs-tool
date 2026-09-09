@@ -115,6 +115,7 @@ private:
 	Detector detGame_, detRevive_;
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
 	int downRun_ = 0, upRun_ = 0, tickN_ = 0;
+	double peakScore_ = 0;
 	std::chrono::steady_clock::time_point downSince_, lastReviveSeen_;
 	Match lastGame_, lastRevive_;
 	double reviveProgress_ = -1;

@@ -706,6 +706,13 @@ void Engine::detect(const Match &m)
 	if (!cfg.enabled || !cfg.autoDetect || m.score < 0)
 		return;
 	bool match = m.score >= cfg.threshold;
+	if (detected_) {
+		// the log is static while you are down; the moment it starts fading the score falls away from its peak
+		if (m.score > peakScore_)
+			peakScore_ = m.score;
+		if (m.score < peakScore_ - cfg.releaseDrop)
+			match = false;
+	}
 	if (match) {
 		downRun_++;
 		upRun_ = 0;
@@ -718,6 +725,7 @@ void Engine::detect(const Match &m)
 	int minDown = fast ? 0 : cfg.minDownMs;
 	if (!detected_ && downRun_ >= cfg.downFrames) {
 		detected_ = true;
+		peakScore_ = m.score;
 		if (!applied_)
 			applyNow(true, QString("downed screen detected (%1)").arg(m.score, 0, 'f', 3));
 	} else if (detected_ && upRun_ >= needUp && clock_::now() - downSince_ >= std::chrono::milliseconds(minDown)) {

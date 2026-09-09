@@ -88,6 +88,7 @@ void Config::load()
 	DEFI(downFrames);
 	DEFI(upFrames);
 	DEFI(minDownMs);
+	DEFD(releaseDrop);
 	DEFD(memScale);
 	DEFD(memX);
 	DEFD(memY);
@@ -142,6 +143,7 @@ void Config::load()
 	GETI(downFrames);
 	GETI(upFrames);
 	GETI(minDownMs);
+	GETD(releaseDrop);
 	GETD(memScale);
 	GETD(memX);
 	GETD(memY);
@@ -209,8 +211,11 @@ void Config::load()
 	if (pollMs == 200 && downFrames == 3 && upFrames == 5) {
 		pollMs = 100;
 		downFrames = 2;
-		upFrames = 4;
 	}
+	if (upFrames == 4 || upFrames == 5)
+		upFrames = 2;
+	if (minDownMs == 2000)
+		minDownMs = 500;
 	obs_data_release(d);
 }
 
@@ -240,6 +245,7 @@ void Config::save() const
 	SETI(downFrames);
 	SETI(upFrames);
 	SETI(minDownMs);
+	SETD(releaseDrop);
 	SETD(memScale);
 	SETD(memX);
 	SETD(memY);

@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.2.17
+- Switching back after a revive is as fast as switching away: the plugin reacts to the damage log starting to fade (score falling away from its steady level) instead of waiting for it to cross the threshold, confirms in 2 polls, and the minimum time on the friend is 0.5 s. Existing configs are migrated.
+
 ## 0.2.16
 - Squad-mate dialog shows only the fields for the chosen kind (Twitch channel, VDO.Ninja stream ID + quality + link, OBS source, Discord window, NDI source).
 - Discord always saves: "Any Discord window" matches by executable and follows the pop-out when it appears; errors show in red.
