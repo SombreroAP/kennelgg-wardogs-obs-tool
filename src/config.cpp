@@ -119,6 +119,7 @@ void Config::load()
 	DEFD(nearW);
 	DEFD(nearH);
 	DEFI(nearMarginM);
+	DEFI(nearCooldownS);
 	DEFI(nearTtlS);
 	DEFB(appConfigDirty);
 	DEFS(clipNameTemplate);
@@ -189,6 +190,7 @@ void Config::load()
 	GETD(nearW);
 	GETD(nearH);
 	GETI(nearMarginM);
+	GETI(nearCooldownS);
 	GETI(nearTtlS);
 	GETB(appConfigDirty);
 	GETS(clipNameTemplate);
@@ -309,6 +311,7 @@ void Config::save() const
 	SETD(nearW);
 	SETD(nearH);
 	SETI(nearMarginM);
+	SETI(nearCooldownS);
 	SETI(nearTtlS);
 	SETB(appConfigDirty);
 	SETS(clipNameTemplate);

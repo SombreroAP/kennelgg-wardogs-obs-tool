@@ -124,8 +124,8 @@ round the NEARBY list on the Detect tab, and give each squad mate their **in-gam
 dialog. The dock's squad-mate box then follows the closest one by itself; untick Closest to choose a
 squad mate yourself. Only names you have configured are ever matched, so a stranger in the list
 cannot move your feed. Between swaps it changes only for someone clearly closer (15 m by default)
-and at most every 4 s, so nothing flaps; the moment you go down that guard is dropped so the feed
-that comes up is the nearest one.
+and no more often than the **Wait between swaps** slider allows (1-10 s, 4 by default), so nothing
+flaps; the moment you go down both guards are dropped, so the feed that comes up is the nearest one.
 
 If it reads nobody, press **Test read** next to the box: it shows the crop the plugin is sending and
 the rows, names and metres ClipHound got out of it, which says whether the box is in the wrong place,

@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.3.3
+- **Wait between swaps** slider (Switch tab, "Show whoever is closest"): how long the feed stays on one squad mate before it may swap to a closer one while you are down. 1 to 10 seconds, 4 by default. Low values follow whoever is nearest as they run to you, high values pick one and leave it. The swap the moment you go down never waits, whatever this is set to.
+
 ## 0.3.2
 - **Test read** button on the Detect tab, next to the NEARBY box: it shows the box as the plugin sees it and exactly what ClipHound reads there - the rows it found, the names, the metres, and whether any of it matched a squad mate. It also says what to change when nothing matched. ClipHound saves the picture it looked at as `nearby_debug.png` in its own folder.
 - **Several reasons the NEARBY list read nobody, fixed.** When the distance chip was not found the row was cut short before the metres, so the fallback could never find them; the whole row is read now. The chip is found as the rightmost solid box with much looser limits. A second way of picking out the text is tried when the scene behind the panel is bright, where the first one turns the whole crop into one blob. Names are matched more loosely, on letters and digits alone. A squad mate whose name is read but whose distance is not still counts as nearby.

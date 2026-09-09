@@ -61,9 +61,10 @@ struct Config {
 	bool nearEnabled = false; // pick the squad mate the game says is nearest when you go down
 	bool nearFollow = true;   // keep following the nearest one while you are down
 	double nearX = 0.80, nearY = 0.79, nearW = 0.19,
-	       nearH = 0.14;  // where the NEARBY list is (fractions of the game source)
-	int nearMarginM = 15; // someone must be this many metres closer to take over mid-swap
-	int nearTtlS = 20;    // a reading older than this is stale and ignored
+	       nearH = 0.14;   // where the NEARBY list is (fractions of the game source)
+	int nearMarginM = 15;  // someone must be this many metres closer to take over mid-swap
+	int nearCooldownS = 4; // shortest gap between two swaps of the feed while down, 1-10 s
+	int nearTtlS = 20;     // a reading older than this is stale and ignored
 	bool appConfigDirty =
 		false; // edited while the app was not connected; push on connect // tell ClipHound to quit when OBS closes (and end it if we started it)
 	std::string clipNameTemplate = "{title}_{tags}_{date}_{time}";

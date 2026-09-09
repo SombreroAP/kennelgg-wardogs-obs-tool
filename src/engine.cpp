@@ -764,8 +764,8 @@ void Engine::pickClosest(const QString &why, bool decisive)
 		int cur = nearbyDistanceOf(cfg.activeFriend);
 		if (cur >= 0 && d > cur - cfg.nearMarginM)
 			return; // the one we have is still about as close: leave it alone
-		if (clock_::now() - lastPick_ < std::chrono::seconds(4))
-			return; // never flap
+		if (clock_::now() - lastPick_ < std::chrono::seconds(std::clamp(cfg.nearCooldownS, 1, 10)))
+			return; // one swap per cooldown, so the picture cannot flap
 	}
 	switchTo(
 		idx,

@@ -1,5 +1,6 @@
 #include "ui/settings-dialog.h"
 #include <QJsonArray>
+#include <QTimer>
 #include <QApplication>
 #include <QClipboard>
 #include <QDialogButtonBox>
@@ -547,6 +548,33 @@ QWidget *SettingsDialog::buildSwitchTab()
 	nearMargin_->setSuffix(" m closer");
 	nearMargin_->setValue(e_->cfg.nearMarginM);
 	fc->addRow("Swap over only for someone", nearMargin_);
+	auto *cdRow = new QHBoxLayout();
+	nearCooldown_ = new QSlider(Qt::Horizontal, gc);
+	nearCooldown_->setRange(1, 10);
+	nearCooldown_->setValue(std::clamp(e_->cfg.nearCooldownS, 1, 10));
+	nearCooldown_->setTickPosition(QSlider::TicksBelow);
+	nearCooldown_->setTickInterval(1);
+	nearCdLbl_ = new QLabel(gc);
+	cdRow->addWidget(nearCooldown_, 1);
+	cdRow->addWidget(nearCdLbl_);
+	fc->addRow("Wait between swaps", cdRow);
+	auto showCd = [this]() {
+		int v = nearCooldown_->value();
+		nearCdLbl_->setText(QString("%1 s").arg(v) + (v <= 2   ? "  (follows them as they move)"
+							      : v >= 8 ? "  (settles on one feed and stays)"
+								       : ""));
+	};
+	showCd();
+	connect(nearCooldown_, &QSlider::valueChanged, this, [showCd](int) { showCd(); });
+	connect(nearCooldown_, &QSlider::sliderReleased, this, [this]() { saveAndApply(); });
+	connect(nearCooldown_, &QSlider::actionTriggered, this,
+		[this](int a) { // keyboard and click-on-groove changes never send sliderReleased
+			if (a != QAbstractSlider::SliderMove)
+				QTimer::singleShot(0, this, [this]() { saveAndApply(); });
+		});
+	fc->addRow(muted(
+		"How long the feed stays on one squad mate before it may swap to a closer one, while you are down and they are running to you. 4 s is the default: low values follow whoever is nearest as they move, high values pick one and leave it. The swap the moment you go down never waits.",
+		gc));
 	nearLbl_ = new QLabel(e_->nearbyStatus(), gc);
 	nearLbl_->setWordWrap(true);
 	fc->addRow("Nearby now", nearLbl_);
@@ -1587,6 +1615,7 @@ void SettingsDialog::collect()
 	c.nearEnabled = nearOn_ ? nearOn_->isChecked() : c.nearEnabled;
 	c.nearFollow = nearFollow_ ? nearFollow_->isChecked() : c.nearFollow;
 	c.nearMarginM = nearMargin_ ? nearMargin_->value() : c.nearMarginM;
+	c.nearCooldownS = nearCooldown_ ? nearCooldown_->value() : c.nearCooldownS;
 	c.appFps = appFps_ ? appFps_->value() : c.appFps;
 }
 
