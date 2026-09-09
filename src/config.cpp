@@ -73,6 +73,7 @@ void Config::load()
 	DEFI(activeFriend);
 	DEFB(bringToFront);
 	DEFB(keepWarm);
+	DEFI(vdoBitrateKbps);
 	DEFB(lookName);
 	DEFB(lookPlate);
 	DEFB(lookCam);
@@ -123,6 +124,7 @@ void Config::load()
 	GETI(activeFriend);
 	GETB(bringToFront);
 	GETB(keepWarm);
+	GETI(vdoBitrateKbps);
 	GETB(lookName);
 	GETB(lookPlate);
 	GETB(lookCam);
@@ -205,6 +207,7 @@ void Config::save() const
 	SETI(activeFriend);
 	SETB(bringToFront);
 	SETB(keepWarm);
+	SETI(vdoBitrateKbps);
 	SETB(lookName);
 	SETB(lookPlate);
 	SETB(lookCam);

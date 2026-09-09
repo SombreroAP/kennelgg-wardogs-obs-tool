@@ -28,20 +28,26 @@ static std::string lower(std::string s)
 	return s;
 }
 
-std::string Switcher::webUrl(const Friend &f)
+std::string Switcher::webUrl(const Friend &f, int vdoKbps)
 {
 	if (f.kind == FriendKind::VdoNinja)
-		return "https://vdo.ninja/?view=" + urlEncode(f.channel) + "&solo&cleanoutput&autostart&noaudio=0";
+		// ask for the full picture: bitrate in kbps, 1080p60, H.264 (hardware decode in OBS's browser), no buffering
+		return "https://vdo.ninja/?view=" + urlEncode(f.channel) +
+		       "&solo&cleanoutput&autostart&noaudio=0&videobitrate=" + std::to_string(vdoKbps) +
+		       "&codec=h264&scale=100&buffer=0&height=1080&framerate=60";
 	std::string ch = lower(f.channel);
 	if (!ch.empty() && ch[0] == '@')
 		ch.erase(0, 1);
 	return "https://player.twitch.tv/?channel=" + urlEncode(ch) + "&parent=twitch.tv&muted=false&autoplay=true";
 }
 
-std::string Switcher::vdoPushUrl(const std::string &id)
+std::string Switcher::vdoPushUrl(const std::string &id, int vdoKbps)
 {
+	// screenshare at 1080p60 with a high bitrate ceiling and stereo game audio, no mic
 	return "https://vdo.ninja/?push=" + urlEncode(id) +
-	       "&screenshare&audiodevice=0&quality=0&stereo&label=" + urlEncode(id);
+	       "&screenshare&audiodevice=0&quality=0&stereo&videobitrate=" + std::to_string(vdoKbps) +
+	       "&maxvideobitrate=" + std::to_string(vdoKbps * 2) +
+	       "&height=1080&width=1920&framerate=60&codec=h264&label=" + urlEncode(id);
 }
 
 std::string Switcher::overlayUrl(const Config &cfg, const std::string &friendName)

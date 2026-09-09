@@ -24,6 +24,7 @@ struct Config {
 	bool audioAutoPicked = false; // desktop audio was ticked automatically once
 	bool bringToFront = true;
 	bool keepWarm = true;
+	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
 
 	// look overlay
 	bool lookName = true, lookPlate = true, lookCam = false, lookGrain = false, lookVignette = false;

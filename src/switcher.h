@@ -47,8 +47,8 @@ private:
 
 public:
 	static std::vector<std::pair<std::string, std::string>> inputs(); // name, id
-	static std::string webUrl(const Friend &f);
-	static std::string vdoPushUrl(const std::string &id);
+	static std::string webUrl(const Friend &f, int vdoKbps = 12000);
+	static std::string vdoPushUrl(const std::string &id, int vdoKbps = 12000);
 	static std::string overlayUrl(const Config &cfg, const std::string &friendName);
 
 private:
