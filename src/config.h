@@ -42,7 +42,13 @@ struct Config {
 	bool bridgeEnabled = true;
 	std::string appPath; // ClipHound (or any companion) to launch when OBS starts
 	bool launchApp = false;
-	bool closeAppWithObs = true; // tell ClipHound to quit when OBS closes (and end it if we started it)
+	bool closeAppWithObs = true;
+	std::string clipFolder; // move renamed replay clips here ("" = leave in OBS's recording folder)
+	// ClipHound settings edited in the plugin and pushed to the app over the bridge
+	std::string appPlayerName, appLibrary, appBroadcaster;
+	bool appTwitchEnabled = false;
+	bool appConfigDirty =
+		false; // edited while the app was not connected; push on connect // tell ClipHound to quit when OBS closes (and end it if we started it)
 	std::string clipNameTemplate = "{date}_{time}_{tags}";
 	bool autoStartReplay = true;
 	bool clipOnDowned = false;            // also clip when you get downed (the moment before is in the buffer)

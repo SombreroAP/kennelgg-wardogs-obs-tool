@@ -93,6 +93,12 @@ void Config::load()
 	DEFS(appPath);
 	DEFB(launchApp);
 	DEFB(closeAppWithObs);
+	DEFS(clipFolder);
+	DEFS(appPlayerName);
+	DEFS(appLibrary);
+	DEFS(appBroadcaster);
+	DEFB(appTwitchEnabled);
+	DEFB(appConfigDirty);
 	DEFS(clipNameTemplate);
 	DEFB(autoStartReplay);
 	DEFB(clipOnDowned);
@@ -134,6 +140,12 @@ void Config::load()
 	GETS(appPath);
 	GETB(launchApp);
 	GETB(closeAppWithObs);
+	GETS(clipFolder);
+	GETS(appPlayerName);
+	GETS(appLibrary);
+	GETS(appBroadcaster);
+	GETB(appTwitchEnabled);
+	GETB(appConfigDirty);
 	GETS(clipNameTemplate);
 	GETB(autoStartReplay);
 	GETB(clipOnDowned);
@@ -207,6 +219,12 @@ void Config::save() const
 	SETS(appPath);
 	SETB(launchApp);
 	SETB(closeAppWithObs);
+	SETS(clipFolder);
+	SETS(appPlayerName);
+	SETS(appLibrary);
+	SETS(appBroadcaster);
+	SETB(appTwitchEnabled);
+	SETB(appConfigDirty);
 	SETS(clipNameTemplate);
 	SETB(autoStartReplay);
 	SETB(clipOnDowned);

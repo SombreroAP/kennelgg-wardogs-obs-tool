@@ -132,10 +132,18 @@ void Clips::onReplaySaved()
 	name = safe(name);
 	while (name.contains("__"))
 		name.replace("__", "_");
-	QString target = fi.dir().filePath(name + "." + fi.suffix());
+	QDir outDir = fi.dir();
+	if (!folder.isEmpty()) {
+		QDir want(folder);
+		if (want.exists() || want.mkpath("."))
+			outDir = want;
+		else
+			emit logged("Clip folder does not exist and could not be created: " + folder);
+	}
+	QString target = outDir.filePath(name + "." + fi.suffix());
 	int n = 2;
 	while (QFile::exists(target) && target != path)
-		target = fi.dir().filePath(name + QString("_%1.").arg(n++) + fi.suffix());
+		target = outDir.filePath(name + QString("_%1.").arg(n++) + fi.suffix());
 	QString finalPath = path;
 	if (!name.isEmpty() && QFile::rename(path, target))
 		finalPath = target;

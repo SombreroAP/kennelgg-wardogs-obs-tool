@@ -34,8 +34,16 @@ public:
 	bool appConnected() const { return bridge.clients() > 0; }
 	void onReplaySaved() { clips.onReplaySaved(); }
 	void launchApp();
-	void closeApp(); // on OBS exit
+	void closeApp();      // on OBS exit
+	void pushAppConfig(); // send the ClipHound settings to the app
+	void twitchLogin();
+	void twitchLogout();
+	QJsonObject twitchStatus() const { return twitch_; }
+signals:
+	void twitchStatusChanged();
+	void appConfigReceived();
 
+public:
 	bool applied() const { return applied_; }
 	bool detected() const { return detected_; }
 	bool revivingRecent() const;
@@ -94,6 +102,7 @@ private:
 	std::atomic<bool> busy_{false}, stopping_{false}, frameBusy_{false};
 	Capture capGame_, capFriend_, capRoi_;
 	QString appStatus_;
+	QJsonObject twitch_;
 	qint64 appPid_ = 0;
 	Detector detGame_, detRevive_;
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;

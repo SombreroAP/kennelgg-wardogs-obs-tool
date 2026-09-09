@@ -81,6 +81,9 @@ def main():
     if cfg["capture"].get("backend", "obs") == "bridge" or cfg["obs"].get("mode") == "bridge":
         from bridge import Bridge
         bridge = Bridge({**(cfg.get("bridge") or {}), "fps": cfg["capture"]["fps"]})
+    if bridge is not None:
+        bridge.cfg = cfg
+        bridge.save_cfg = lambda c: yaml.safe_dump(c, open("config.yaml", "w", encoding="utf-8"), sort_keys=False, allow_unicode=True)
     if cfg["capture"].get("backend", "obs") == "bridge":
         from bridge import BridgeRoiCapture
         cap = BridgeRoiCapture(cfg["capture"], bridge)
@@ -95,9 +98,12 @@ def main():
     print(f"[capture] ROI {cap.box} @ {cfg['capture']['fps']} fps   dry-run={DRY}")
 
     tw = ob = None
-    if not DRY and cfg["twitch"]["enabled"]:
-        from twitch import Twitch
-        tw = Twitch(cfg["twitch"])
+    if not DRY and cfg["twitch"]["enabled"] and cfg["twitch"].get("access_token"):
+        try:
+            from twitch import Twitch
+            tw = Twitch(cfg["twitch"])
+        except Exception as e:
+            print(f"[twitch] not ready ({e}); log in from the OBS plugin (ClipHound tab)")
     if not DRY and cfg["obs"]["enabled"] and cfg["obs"].get("mode") == "bridge":
         from bridge import BridgeOBS
         ob = BridgeOBS(cfg["obs"], bridge)
@@ -105,7 +111,26 @@ def main():
         from obs import OBS
         ob = OBS(cfg["obs"])
 
+    state = {"tw": tw, "ob": ob}
+
+    def apply_live(c):
+        # settings changed from the OBS plugin: name, library, Twitch
+        det.me = c["detection"].get("player_name", det.me)
+        try:
+            if not DRY and c["twitch"].get("enabled") and c["twitch"].get("access_token"):
+                from twitch import Twitch
+                state["tw"] = Twitch(c["twitch"])
+                print(f"[twitch] ready as {c['twitch'].get('clipper_login', '?')} for channel {c['twitch'].get('broadcaster_login', '?')}")
+            else:
+                state["tw"] = None
+        except Exception as e:
+            print(f"[twitch] not ready: {e}")
+            state["tw"] = None
+    if bridge is not None:
+        bridge.on_config = apply_live
+
     def fire(trig):
+        tw, ob = state["tw"], state["ob"]
         print(f"\n*** {trig.kind.upper()}: {trig.title}   tags={trig.tags} ***\n")
         if tw:
             threading.Timer(cfg["twitch"]["clip_delay_s"], lambda: _safe(tw.create_clip, trig.title, trig.tags)).start()

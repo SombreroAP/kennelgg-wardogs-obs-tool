@@ -74,6 +74,12 @@ private:
 	QWidget *buildDetectTab();
 	QWidget *buildAboutTab();
 	QWidget *buildClipsTab();
+	QWidget *buildAppTab();
+	QLineEdit *appName_ = nullptr, *appLibrary_ = nullptr, *appBroadcaster_ = nullptr, *clipFolder_ = nullptr;
+	QCheckBox *appTwitch_ = nullptr;
+	QLabel *twitchLbl_ = nullptr;
+	QPushButton *twitchLogin_ = nullptr, *twitchLogout_ = nullptr;
+	void refreshAppTab();
 	QLineEdit *playerName_ = nullptr;
 	QCheckBox *lanOn_, *ndiShare_, *autoAdd_;
 	QListWidget *peers_;

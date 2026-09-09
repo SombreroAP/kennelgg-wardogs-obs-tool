@@ -38,6 +38,9 @@ class Bridge:
         self.pov_state = "up"
         self.on_pov = None            # callback(state, friend)
         self.game_source = ""
+        self.cfg = None              # full config dict (set by main) for app_config / twitch messages
+        self.save_cfg = None         # callable(cfg) that writes config.yaml
+        self.on_config = None        # callable(cfg) after the plugin changed settings
         threading.Thread(target=self._run, daemon=True).start()
 
     # ---- connection ----
@@ -56,9 +59,24 @@ class Bridge:
             self.connected = False
             time.sleep(3)
 
+    def _send_app_state(self):
+        if self.cfg is None:
+            return
+        c = self.cfg
+        self.send({"type": "app_config", "values": {
+            "player_name": c["detection"].get("player_name", ""),
+            "library": (c.get("obs") or {}).get("library", ""),
+            "broadcaster": (c.get("twitch") or {}).get("broadcaster_login", ""),
+            "twitch_enabled": bool((c.get("twitch") or {}).get("enabled")),
+            "fps": (c.get("capture") or {}).get("fps", 3),
+        }})
+        from twitch_device import status
+        self.send(status(c))
+
     def _on_open(self, ws):
         self.connected = True
         print(f"[bridge] connected to the plugin at {self.url}")
+        self._send_app_state()
         # full frame at native size; we crop the kill feed ourselves so the minimap check still works
         self.send({"type": "subscribe", "frames": True, "fps": self.fps, "roi": [0, 0, 1, 1], "width": 0})
         self.status("ClipHound watching the kill feed")
@@ -86,6 +104,35 @@ class Bridge:
         t = o.get("type")
         if t == "hello":
             print(f"[bridge] plugin {o.get('plugin')} {o.get('version')} (protocol {o.get('protocol')})")
+        elif t == "app_config" and self.cfg is not None and "set" in o:
+            v = o["set"]
+            c = self.cfg
+            if "player_name" in v:
+                c["detection"]["player_name"] = v["player_name"]
+            if "library" in v:
+                c.setdefault("obs", {})["library"] = v["library"]
+            if "broadcaster" in v:
+                c.setdefault("twitch", {})["broadcaster_login"] = v["broadcaster"]
+                c["twitch"]["broadcaster_id"] = ""
+            if "twitch_enabled" in v:
+                c.setdefault("twitch", {})["enabled"] = bool(v["twitch_enabled"])
+            if "fps" in v:
+                c.setdefault("capture", {})["fps"] = float(v["fps"])
+            if self.save_cfg:
+                self.save_cfg(c)
+            print(f"[bridge] settings from the plugin: {v}")
+            if self.on_config:
+                self.on_config(c)
+            self._send_app_state()
+        elif t == "twitch_login" and self.cfg is not None:
+            from twitch_device import start_login
+            start_login(self.cfg, lambda st: self.send({"type": "twitch_status", **st}), lambda c: (self.save_cfg(c) if self.save_cfg else None, self.on_config(c) if self.on_config else None, self._send_app_state()))
+        elif t == "twitch_logout" and self.cfg is not None:
+            from twitch_device import logout
+            logout(self.cfg, lambda c: (self.save_cfg(c) if self.save_cfg else None, self.on_config(c) if self.on_config else None))
+            self._send_app_state()
+        elif t == "app_state":
+            self._send_app_state()
         elif t == "shutdown":
             print("[bridge] OBS is closing - ClipHound exiting")
             os._exit(0)

@@ -10,6 +10,9 @@
 #include <QElapsedTimer>
 #include <QCoreApplication>
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 #include <QUrl>
@@ -220,6 +223,7 @@ void Engine::start()
 		}
 	}
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
+	clips.folder = QString::fromStdString(cfg.clipFolder);
 	clips.autoStartReplay = cfg.autoStartReplay && cfg.clipUseReplay;
 	clips.useReplay = cfg.clipUseReplay;
 	clips.hotkeys.clear();
@@ -236,6 +240,44 @@ void Engine::start()
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
 	emit stateChanged();
+}
+
+void Engine::pushAppConfig()
+{
+	if (bridge.clients() == 0) {
+		cfg.appConfigDirty = true;
+		cfg.save();
+		return;
+	}
+	QJsonObject set;
+	set["player_name"] = QString::fromStdString(cfg.appPlayerName);
+	set["library"] = QString::fromStdString(cfg.appLibrary);
+	set["broadcaster"] = QString::fromStdString(cfg.appBroadcaster);
+	set["twitch_enabled"] = cfg.appTwitchEnabled;
+	QJsonObject o;
+	o["type"] = "app_config";
+	o["set"] = set;
+	bridge.sendJson(o);
+	cfg.appConfigDirty = false;
+	cfg.save();
+}
+
+void Engine::twitchLogin()
+{
+	if (bridge.clients() == 0) {
+		log("Twitch login needs ClipHound running (Settings → Clips → Start now).");
+		return;
+	}
+	QJsonObject o;
+	o["type"] = "twitch_login";
+	bridge.sendJson(o);
+}
+
+void Engine::twitchLogout()
+{
+	QJsonObject o;
+	o["type"] = "twitch_logout";
+	bridge.sendJson(o);
 }
 
 void Engine::closeApp()
@@ -281,6 +323,7 @@ void Engine::stop()
 void Engine::reloadConfig()
 {
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
+	clips.folder = QString::fromStdString(cfg.clipFolder);
 	clips.autoStartReplay = cfg.autoStartReplay && cfg.clipUseReplay;
 	clips.useReplay = cfg.clipUseReplay;
 	clips.hotkeys.clear();
@@ -359,6 +402,26 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		bridge.sendJson(r);
 		if (!err.isEmpty())
 			log("Clip request: " + err);
+	} else if (type == "app_config" && o.contains("values")) {
+		QJsonObject v = o.value("values").toObject();
+		if (cfg.appConfigDirty) {
+			pushAppConfig(); // ours wins: the user edited while the app was away
+		} else {
+			cfg.appPlayerName = v.value("player_name").toString().toStdString();
+			cfg.appLibrary = v.value("library").toString().toStdString();
+			cfg.appBroadcaster = v.value("broadcaster").toString().toStdString();
+			cfg.appTwitchEnabled = v.value("twitch_enabled").toBool();
+			cfg.save();
+			emit appConfigReceived();
+		}
+	} else if (type == "twitch_status") {
+		twitch_ = o;
+		QString st = o.value("state").toString();
+		if (st == "ok" && !o.value("login").toString().isEmpty())
+			log("Twitch: logged in as " + o.value("login").toString() + ".");
+		else if (st == "error")
+			log("Twitch login: " + o.value("error").toString());
+		emit twitchStatusChanged();
 	} else if (type == "status") {
 		appStatus_ = o.value("text").toString();
 		emit stateChanged();

@@ -21,12 +21,10 @@ class Twitch:
         return r.json()
 
     def _refresh(self):
-        r = requests.post("https://id.twitch.tv/oauth2/token", data={
-            "grant_type": "refresh_token",
-            "refresh_token": self.cfg["refresh_token"],
-            "client_id": self.cfg["client_id"],
-            "client_secret": self.cfg["client_secret"],
-        }, timeout=10)
+        data = {"grant_type": "refresh_token", "refresh_token": self.cfg["refresh_token"], "client_id": self.cfg["client_id"]}
+        if self.cfg.get("client_secret"):
+            data["client_secret"] = self.cfg["client_secret"]
+        r = requests.post("https://id.twitch.tv/oauth2/token", data=data, timeout=10)
         r.raise_for_status()
         tok = r.json()
         self.cfg["access_token"] = tok["access_token"]

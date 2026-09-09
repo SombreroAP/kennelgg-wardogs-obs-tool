@@ -17,7 +17,8 @@ public:
 	};
 	explicit Clips(QObject *parent = nullptr);
 
-	QString nameTemplate = "{date}_{time}_{tags}"; // {date} {time} {title} {tags} {source}
+	QString nameTemplate = "{date}_{time}_{tags}";
+	QString folder;              // move clips here when set // {date} {time} {title} {tags} {source}
 	bool autoStartReplay = true; // start the replay buffer when OBS loads / when a clip is asked for
 	bool useReplay = true;       // save OBS's replay buffer
 	QStringList hotkeys;         // OBS hotkeys to fire as well (Aitum Backtrack saves, anything else)

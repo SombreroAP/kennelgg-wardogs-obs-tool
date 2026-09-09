@@ -12,6 +12,9 @@
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QJsonObject>
 #include <QFileInfo>
 #include <obs-module.h>
 #include <plugin-support.h>
@@ -286,6 +289,7 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	tabs->addTab(buildLookTab(), "Look");
 	tabs->addTab(buildDetectTab(), "Detect");
 	tabs->addTab(buildClipsTab(), "Clips");
+	tabs->addTab(buildAppTab(), "ClipHound");
 	tabs->addTab(buildAboutTab(), "Help");
 	building_ = false;
 	v->addWidget(tabs, 1);
@@ -751,6 +755,118 @@ QWidget *SettingsDialog::buildClipsTab()
 	return w;
 }
 
+QWidget *SettingsDialog::buildAppTab()
+{
+	auto *w = new QWidget(this);
+	auto *v = new QVBoxLayout(w);
+	auto *g = new QGroupBox("ClipHound - kill-feed clips", w);
+	auto *f = new QFormLayout(g);
+	appName_ = new QLineEdit(QString::fromStdString(e_->cfg.appPlayerName), g);
+	appName_->setPlaceholderText("exactly as it appears in the kill feed");
+	f->addRow("Your in-game name", appName_);
+	auto *libRow = new QHBoxLayout();
+	appLibrary_ = new QLineEdit(QString::fromStdString(e_->cfg.appLibrary), g);
+	appLibrary_->setPlaceholderText("blank = no index; otherwise index.csv and Resolve metadata are kept here");
+	auto *libBrowse = new QPushButton("Browse...", g);
+	libRow->addWidget(appLibrary_, 1);
+	libRow->addWidget(libBrowse);
+	f->addRow("Clip library index", libRow);
+	f->addRow(muted(
+		"Where the clip files themselves go is the Clips tab's clip folder. The library is an optional index of what happened in each clip.",
+		g));
+	v->addWidget(g);
+
+	auto *gt = new QGroupBox("Twitch clips", w);
+	auto *ft = new QFormLayout(gt);
+	appTwitch_ = new QCheckBox("Create a Twitch clip on notable kills", gt);
+	appTwitch_->setChecked(e_->cfg.appTwitchEnabled);
+	ft->addRow(appTwitch_);
+	appBroadcaster_ = new QLineEdit(QString::fromStdString(e_->cfg.appBroadcaster), gt);
+	appBroadcaster_->setPlaceholderText("the channel that is live, e.g. sombrero");
+	ft->addRow("Channel to clip", appBroadcaster_);
+	auto *tRow = new QHBoxLayout();
+	twitchLbl_ = new QLabel(gt);
+	twitchLbl_->setWordWrap(true);
+	twitchLogin_ = new QPushButton("Log in with Twitch...", gt);
+	twitchLogout_ = new QPushButton("Log out", gt);
+	tRow->addWidget(twitchLbl_, 1);
+	tRow->addWidget(twitchLogin_);
+	tRow->addWidget(twitchLogout_);
+	ft->addRow("Clipping account", tRow);
+	ft->addRow(muted(
+		"Log in as the account that should own the clips (a bot account such as InfoKennel works). A code appears and is copied; twitch.tv/activate opens, paste the code, done. Needs ClipHound running.",
+		gt));
+	v->addWidget(gt);
+	v->addStretch(1);
+
+	auto push = [this]() {
+		Config &c = e_->cfg;
+		c.appPlayerName = appName_->text().trimmed().toStdString();
+		c.appLibrary = appLibrary_->text().trimmed().toStdString();
+		c.appBroadcaster = appBroadcaster_->text().trimmed().toLower().remove('@').toStdString();
+		c.appTwitchEnabled = appTwitch_->isChecked();
+		e_->pushAppConfig();
+	};
+	connect(appName_, &QLineEdit::editingFinished, this, push);
+	connect(appLibrary_, &QLineEdit::editingFinished, this, push);
+	connect(appBroadcaster_, &QLineEdit::editingFinished, this, push);
+	connect(appTwitch_, &QCheckBox::toggled, this, [push](bool) { push(); });
+	connect(libBrowse, &QPushButton::clicked, this, [this, push]() {
+		QString d = QFileDialog::getExistingDirectory(this, "Clip library folder", appLibrary_->text());
+		if (!d.isEmpty()) {
+			appLibrary_->setText(d);
+			push();
+		}
+	});
+	connect(twitchLogin_, &QPushButton::clicked, this, [this]() { e_->twitchLogin(); });
+	connect(twitchLogout_, &QPushButton::clicked, this, [this]() { e_->twitchLogout(); });
+	connect(e_, &Engine::appConfigReceived, this, [this]() {
+		appName_->setText(QString::fromStdString(e_->cfg.appPlayerName));
+		appLibrary_->setText(QString::fromStdString(e_->cfg.appLibrary));
+		appBroadcaster_->setText(QString::fromStdString(e_->cfg.appBroadcaster));
+		appTwitch_->blockSignals(true);
+		appTwitch_->setChecked(e_->cfg.appTwitchEnabled);
+		appTwitch_->blockSignals(false);
+	});
+	connect(e_, &Engine::twitchStatusChanged, this, [this]() { refreshAppTab(); });
+	connect(e_, &Engine::stateChanged, this, [this]() { refreshAppTab(); });
+	refreshAppTab();
+	return w;
+}
+
+void SettingsDialog::refreshAppTab()
+{
+	if (!twitchLbl_)
+		return;
+	QJsonObject t = e_->twitchStatus();
+	QString st = t.value("state").toString();
+	bool connected = e_->appConnected();
+	if (!connected)
+		twitchLbl_->setText("ClipHound is not running (Clips tab → Start now)");
+	else if (st == "code")
+		twitchLbl_->setText("Go to " + t.value("verification_uri").toString() + " and enter code  " +
+				    t.value("user_code").toString());
+	else if (st == "ok" && !t.value("login").toString().isEmpty())
+		twitchLbl_->setText("Logged in as " + t.value("login").toString());
+	else if (st == "error")
+		twitchLbl_->setText("Login failed: " + t.value("error").toString());
+	else if (t.contains("has_app_id") && !t.value("has_app_id").toBool())
+		twitchLbl_->setText("Twitch login is not available in this build yet");
+	else
+		twitchLbl_->setText("Not logged in");
+	twitchLogin_->setEnabled(connected && st != "code");
+	twitchLogout_->setEnabled(connected && st == "ok" && !t.value("login").toString().isEmpty());
+	if (st == "code") {
+		static QString shown;
+		QString code = t.value("user_code").toString();
+		if (shown != code) {
+			shown = code;
+			QDesktopServices::openUrl(QUrl(t.value("verification_uri").toString()));
+			QApplication::clipboard()->setText(code);
+		}
+	}
+}
+
 QWidget *SettingsDialog::buildAboutTab()
 {
 	auto *w = new QWidget(this);
@@ -958,6 +1074,7 @@ void SettingsDialog::collect()
 	c.clipOnDowned = clipDowned_->isChecked();
 	c.clipNameTemplate = nameTpl_->text().trimmed().isEmpty() ? "{date}_{time}_{tags}"
 								  : nameTpl_->text().trimmed().toStdString();
+	c.clipFolder = clipFolder_ ? clipFolder_->text().trimmed().toStdString() : c.clipFolder;
 	c.bridgeEnabled = bridgeOn_->isChecked();
 	c.bridgePort = bridgePort_->value();
 	c.appPath = appPath_->text().trimmed().toStdString();
