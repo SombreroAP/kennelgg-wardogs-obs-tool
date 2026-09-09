@@ -1,4 +1,5 @@
 #include "ui/settings-dialog.h"
+#include <QJsonArray>
 #include <QApplication>
 #include <QClipboard>
 #include <QDialogButtonBox>
@@ -550,7 +551,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 	nearLbl_->setWordWrap(true);
 	fc->addRow("Nearby now", nearLbl_);
 	fc->addRow(muted(
-		"ClipHound reads the NEARBY list in the bottom-right corner of your game and tells the plugin who is how far away, so the POV you cut to is the squad mate who can actually revive you. While this is on, the squad mate box in the dock follows the closest one by itself; untick it (here or in the dock) to choose the squad mate yourself. It needs ClipHound running, the blue NEARBY box set on the Detect tab, and each squad mate's in-game name filled in (Edit... → In-game name). Without a reading, the squad mate picked in the dock is used as before.",
+		"The moment you go down, ClipHound reads the NEARBY list in the bottom-right corner of your game and tells the plugin who is how far away, so the POV you cut to is the squad mate who can actually revive you. Nothing is read while you are up, so it costs nothing between fights. While this is on, the squad mate box in the dock follows the closest one by itself; untick it (here or in the dock) to choose the squad mate yourself. It needs ClipHound running, the blue NEARBY box set on the Detect tab, and each squad mate's in-game name filled in (Edit... → In-game name). Without a reading, the squad mate picked in the dock is used as before.",
 		gc));
 	v->addWidget(gc);
 	connect(nearOn_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
@@ -725,11 +726,15 @@ QWidget *SettingsDialog::buildDetectTab()
 	pickNear_ = new QRadioButton("the NEARBY list (blue)", w);
 	pickTpl_->setChecked(true);
 	auto *nearReset = new QPushButton("Reset NEARBY box", w);
+	auto *nearTest = new QPushButton("Test read", w);
+	nearTest->setToolTip("Read the NEARBY area once, right now, and show what ClipHound sees there.");
 	nr->addWidget(new QLabel("Dragging on the picture sets:", w));
 	nr->addWidget(pickTpl_);
 	nr->addWidget(pickNear_);
 	nr->addWidget(nearReset);
+	nr->addWidget(nearTest);
 	nr->addStretch(1);
+	connect(nearTest, &QPushButton::clicked, this, [this]() { showNearbyTest(); });
 	v->addLayout(nr);
 	nearLbl2_ = muted("", w);
 	v->addWidget(nearLbl2_);
@@ -745,7 +750,7 @@ QWidget *SettingsDialog::buildDetectTab()
 		updateAreas();
 	});
 	v->addWidget(muted(
-		"The blue box is the NEARBY list in the bottom-right corner of your game: the squad mates next to you and how far away they are. It is what \"Show whoever is closest\" on the Switch tab reads, through ClipHound. Drag round it with a little margin, including room above for a full squad.",
+		"The blue box is the NEARBY list in the bottom-right corner of your game: the squad mates next to you and how far away they are. It is what \"Show whoever is closest\" on the Switch tab reads, through ClipHound, from the moment you go down until you are back up. Drag round it with a little margin, including room above for a full squad, then press Test read to see what ClipHound makes of it.",
 		w));
 
 	auto *row = new QHBoxLayout();
@@ -1133,6 +1138,94 @@ QWidget *SettingsDialog::buildAppTab()
 	connect(e_, &Engine::stateChanged, this, [this]() { refreshAppTab(); });
 	refreshAppTab();
 	return w;
+}
+
+/// What ClipHound sees in the NEARBY box: our own crop of it, and the text it read there.
+void SettingsDialog::showNearbyTest()
+{
+	auto *d = new QDialog(this);
+	d->setAttribute(Qt::WA_DeleteOnClose);
+	d->setWindowTitle("NEARBY test read");
+	d->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowCloseButtonHint);
+	auto *v = new QVBoxLayout(d);
+	auto *pic = new QLabel(d);
+	pic->setAlignment(Qt::AlignCenter);
+	pic->setStyleSheet("background: #0b0e10;");
+	pic->setMinimumHeight(160);
+	QImage f = e_->lastFrame();
+	const Config &c = e_->cfg;
+	if (!f.isNull()) {
+		QRect r((int)(c.nearX * f.width()), (int)(c.nearY * f.height()), (int)(c.nearW * f.width()),
+			(int)(c.nearH * f.height()));
+		r &= QRect(0, 0, f.width(), f.height());
+		if (r.width() > 4 && r.height() > 4) {
+			QImage crop = f.copy(r);
+			pic->setPixmap(QPixmap::fromImage(
+				crop.scaledToWidth(std::min(760, crop.width() * 4), Qt::FastTransformation)));
+		}
+	} else
+		pic->setText("No frame from the game source yet.");
+	v->addWidget(pic);
+	v->addWidget(muted("The blue box, as the plugin sees it. If this is not the NEARBY list, drag the box again "
+			   "on the Detect tab while the game is showing.",
+			   d));
+	auto *out = new QPlainTextEdit(d);
+	out->setReadOnly(true);
+	out->setMinimumHeight(150);
+	out->setPlainText("Asking ClipHound to read it...");
+	v->addWidget(out, 1);
+	auto *row = new QHBoxLayout();
+	auto *again = new QPushButton("Read again", d);
+	auto *close = new QPushButton("Close", d);
+	row->addStretch(1);
+	row->addWidget(again);
+	row->addWidget(close);
+	v->addLayout(row);
+	connect(close, &QPushButton::clicked, d, &QDialog::close);
+	connect(again, &QPushButton::clicked, d, [this, out]() {
+		out->setPlainText("Asking ClipHound to read it...");
+		e_->nearbyTest();
+	});
+	connect(e_, &Engine::nearbyTested, d, [this, out](const QJsonObject &o) {
+		if (o.contains("error")) {
+			out->setPlainText(o.value("error").toString() +
+					  ".\nStart it from the dock, then press Read again.");
+			return;
+		}
+		auto list = [&o](const char *k) {
+			QStringList v;
+			for (auto x : o.value(k).toArray())
+				v << x.toString();
+			return v;
+		};
+		QStringList names = list("names"), texts = list("texts"), dists = list("dists");
+		QStringList found;
+		for (auto x : o.value("found").toArray())
+			found << x.toObject().value("match").toString() + " " +
+					 QString::number(x.toObject().value("dist").toInt()) + " m";
+		QString t;
+		t += QString("Rows found in the box: %1     distance chips found: %2\n")
+			     .arg(o.value("rows").toInt())
+			     .arg(o.value("chips").toInt());
+		t += "Names read:   " + (texts.isEmpty() ? QString("(nothing)") : texts.join("  |  ")) + "\n";
+		t += "Metres read:  " + (dists.isEmpty() ? QString("(nothing)") : dists.join("  |  ")) + "\n";
+		t += "Looking for:  " + (names.isEmpty() ? QString("(no in-game names set)") : names.join(", ")) +
+		     "\n\n";
+		if (!found.isEmpty())
+			t += "Matched: " + found.join(", ") + "\nThis is working.\n";
+		else if (o.value("rows").toInt() == 0)
+			t += "No rows of text were found in the box. It is probably not over the NEARBY list, or the list is empty right now (be in a match, with squad mates near you).\n";
+		else if (texts.isEmpty())
+			t += "Rows were found but no text came out of them. Try dragging the box a little wider, and make sure it is not covering the map or the score bar.\n";
+		else
+			t += "Text was read but it does not match any squad mate's in-game name. Set each squad mate's In-game name on the Switch tab to exactly what is shown above.\n";
+		if (!o.value("saved").toString().isEmpty())
+			t += "\nClipHound saved what it looked at: " + o.value("saved").toString();
+		out->setPlainText(t);
+	});
+	d->resize(820, 560);
+	d->show();
+	e_->nearbyTest();
 }
 
 void SettingsDialog::updateAreas()

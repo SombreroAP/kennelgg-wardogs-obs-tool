@@ -548,6 +548,18 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		emit twitchStatusChanged();
 	} else if (type == "nearby") {
 		onNearby(o);
+	} else if (type == "nearby_test_result") {
+		QStringList texts;
+		for (auto v : o.value("texts").toArray())
+			texts << v.toString();
+		QStringList dists;
+		for (auto v : o.value("dists").toArray())
+			dists << v.toString();
+		log(QString("Test read of the NEARBY area: %1 row(s), %2 chip(s); names read [%3]; metres read [%4].")
+			    .arg(o.value("rows").toInt())
+			    .arg(o.value("chips").toInt())
+			    .arg(texts.join(" | "), dists.join(" | ")));
+		emit nearbyTested(o);
 	} else if (type == "event") {
 		addEvent(o.value("text").toString());
 	} else if (type == "status") {
@@ -573,6 +585,7 @@ void Engine::onNearby(const QJsonObject &o)
 		n.name = e.value("name").toString();
 		n.match = e.value("match").toString();
 		n.dist = e.value("dist").toInt(-1);
+		n.unknown = e.value("unknown").toBool() || n.dist >= 998;
 		if (n.dist >= 0)
 			list << n;
 	}
@@ -611,7 +624,8 @@ QString Engine::nearbyText() const
 {
 	QStringList parts;
 	for (const auto &e : nearby_)
-		parts << QString("%1 %2 m").arg(e.match.isEmpty() ? e.name : e.match).arg(e.dist);
+		parts << (e.match.isEmpty() ? e.name : e.match) +
+				 (e.unknown ? QString(" ? m") : QString(" %1 m").arg(e.dist));
 	return parts.join("  ·  ");
 }
 
@@ -621,8 +635,8 @@ QString Engine::nearbyStatus() const
 	if (!cfg.nearEnabled)
 		return "off";
 	if (!nearbyAt_.isValid())
-		return nearbyEmptySince_.isValid() ? "nobody in the list yet"
-						   : (bridge.clients() > 0 ? "waiting for ClipHound to read it"
+		return nearbyEmptySince_.isValid() ? "nobody matched yet - use Test read on the Detect tab"
+						   : (bridge.clients() > 0 ? "read when you go down (nothing read yet)"
 									   : "ClipHound is not running");
 	QString t = nearbyText();
 	if (nearbyFresh())
@@ -695,6 +709,20 @@ int Engine::closestFriend(int *metres, QString *problem) const
 	if (best >= 0 && metres)
 		*metres = bestD;
 	return best;
+}
+
+void Engine::nearbyTest()
+{
+	if (bridge.clients() == 0) {
+		log("Test read: ClipHound is not running (dock → Start ClipHound).");
+		QJsonObject o;
+		o["error"] = "ClipHound is not running";
+		emit nearbyTested(o);
+		return;
+	}
+	QJsonObject o;
+	o["type"] = "nearby_test";
+	bridge.sendJson(o);
 }
 
 void Engine::askNearbyNow()

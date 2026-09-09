@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.3.2
+- **Test read** button on the Detect tab, next to the NEARBY box: it shows the box as the plugin sees it and exactly what ClipHound reads there - the rows it found, the names, the metres, and whether any of it matched a squad mate. It also says what to change when nothing matched. ClipHound saves the picture it looked at as `nearby_debug.png` in its own folder.
+- **Several reasons the NEARBY list read nobody, fixed.** When the distance chip was not found the row was cut short before the metres, so the fallback could never find them; the whole row is read now. The chip is found as the rightmost solid box with much looser limits. A second way of picking out the text is tried when the scene behind the panel is bright, where the first one turns the whole crop into one blob. Names are matched more loosely, on letters and digits alone. A squad mate whose name is read but whose distance is not still counts as nearby.
+- **The NEARBY list is only read while you are down.** Nothing is read between fights: the plugin asks the moment the damage log appears and keeps asking until you are back up, so it costs nothing while you play.
+
 ## 0.3.1
 - **The kill feed keeps up now.** Each row used to cost four separate tesseract runs per frame, so with three rows on screen ClipHound managed under two frames a second and a kill took four or five seconds to come out. All the rows in a frame are now read in one run, and a row is decided 0.75 s after it is first read whatever the frame rate. A kill reaches the dock about a second after it happens. (The clip file still lands about four seconds later on purpose, so the moment is inside it: Clips tab.)
 - **Closest actually drives the feed.** The squad-mate box in the dock now follows the closest one by itself while the new **Closest** tick box next to it is on, and only that box is used when it is off. Nothing changes mid-swap unless someone is clearly closer (15 m) and not more than once every four seconds; the moment you go down that guard is dropped so you always get the nearest one.

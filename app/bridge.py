@@ -55,8 +55,9 @@ class Bridge:
         self.on_config = None        # callable(cfg) after the plugin changed settings
         # the game's NEARBY panel: the plugin says whether to read it, where it is and whose names
         # to look for; nearby_burst is a deadline until which we read it every quarter second
-        self.nearby_cfg = {"enabled": False, "roi": [0.80, 0.79, 0.19, 0.14], "names": [], "interval": 1.0}
+        self.nearby_cfg = {"enabled": False, "roi": [0.80, 0.79, 0.19, 0.14], "names": [], "interval": 0.4}
         self.nearby_burst = 0.0
+        self.nearby_test = False     # the plugin's Test read button: read once and report back
         threading.Thread(target=self._run, daemon=True).start()
 
     # ---- connection ----
@@ -174,6 +175,8 @@ class Bridge:
             self._send_app_state()
         elif t == "nearby_now":
             self.nearby_burst = time.time() + 3.0
+        elif t == "nearby_test":
+            self.nearby_test = True
         elif t == "app_state":
             self._send_app_state()
         elif t == "shutdown":

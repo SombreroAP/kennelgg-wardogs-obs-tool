@@ -114,9 +114,10 @@ uint16 height, uint64 timestamp ms (little endian), then JPEG.
 ## Show whoever is closest
 
 WARDOGS lists the squad mates near you in the bottom-right corner of the HUD, with a distance each,
-and that list stays up while you are down. ClipHound reads it and tells the plugin, which makes the
-nearest squad mate the active one just before your stream cuts to them - so the POV your viewers get
-is the one running towards you.
+and that list stays up while you are down. From the moment the damage log appears until you are back
+up, ClipHound reads it and tells the plugin, which makes the nearest squad mate the active one just
+before your stream cuts to them - so the POV your viewers get is the one running towards you.
+Nothing is read while you are up, so it costs nothing between fights.
 
 Tick **Closest** in the dock (or Settings → Switch → **Show whoever is closest**), drag the blue box
 round the NEARBY list on the Detect tab, and give each squad mate their **in-game name** in the Edit
@@ -126,6 +127,10 @@ cannot move your feed. Between swaps it changes only for someone clearly closer 
 and at most every 4 s, so nothing flaps; the moment you go down that guard is dropped so the feed
 that comes up is the nearest one.
 
+If it reads nobody, press **Test read** next to the box: it shows the crop the plugin is sending and
+the rows, names and metres ClipHound got out of it, which says whether the box is in the wrong place,
+the text is unreadable, or the in-game names do not match.
+
 ## CPU
 
 The plugin's downed search is template matching on an 800 px frame: near zero once locked on, and
@@ -133,8 +138,8 @@ while you are alive it runs on every third poll, about 1-2 % of one core. ClipHo
 heavier part, and it is one tesseract run per frame for the whole feed however many rows are on
 screen (rows are only read until they are decided, 0.75 s after they appear). At the default 10
 frames a second that is roughly 10-20 % of one core while kills are being read and a few per cent
-between them. Reading the NEARBY panel is one more run a second, or one every 0.4 s while you are
-down; names are only re-read when they change. Drop the rate on the ClipHound tab if the CPU matters
+between them. The NEARBY panel is only read while you are down, one run every 0.4 s, and
+names are only re-read when they change. Drop the rate on the ClipHound tab if the CPU matters
 more to you than the second it saves.
 
 ## Build

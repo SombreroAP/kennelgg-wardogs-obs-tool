@@ -97,6 +97,7 @@ private:
 	QLabel *areaLbl_ = nullptr;
 	QSpinBox *appFps_ = nullptr;
 	void updateAreas();
+	void showNearbyTest();
 	// closest squad mate (the game's NEARBY list)
 	QCheckBox *nearOn_ = nullptr, *nearFollow_ = nullptr;
 	QSpinBox *nearMargin_ = nullptr;

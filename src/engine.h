@@ -43,9 +43,10 @@ public:
 
 	/// One line of the game's NEARBY list, as ClipHound read it.
 	struct NearbyEntry {
-		QString name;  // what the OCR read
-		QString match; // the squad mate's in-game name it matched, "" = nobody we know
-		int dist = 0;  // metres
+		QString name;         // what the OCR read
+		QString match;        // the squad mate's in-game name it matched, "" = nobody we know
+		int dist = 0;         // metres
+		bool unknown = false; // nearby, but the metres could not be read
 	};
 	QList<NearbyEntry> nearby() const { return nearby_; }
 	bool nearbyFresh() const;
@@ -53,12 +54,14 @@ public:
 	QString nearbyStatus() const; // the same, or why there is no reading
 	/// Index of the configured squad mate the game says is nearest, or -1. Fills metres if given.
 	int closestFriend(int *metres = nullptr, QString *problem = nullptr) const;
+	void nearbyTest(); // ask ClipHound to read the NEARBY area once and say what it saw
 	void twitchLogin();
 	void twitchLogout();
 	QJsonObject twitchStatus() const { return twitch_; }
 signals:
 	void twitchStatusChanged();
 	void appConfigReceived();
+	void nearbyTested(const QJsonObject &result);
 
 public:
 	bool applied() const { return applied_; }

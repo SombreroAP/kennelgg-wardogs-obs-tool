@@ -28,6 +28,9 @@ Sombrero; sibling apps live next door (HotkeyBridge, InputOverlayBridge, povbrid
 - All undecided rows of a frame are read in ONE tesseract run (`ocr.ocr_rows` stacks them into one
   sheet and splits the word boxes by y band). Four runs per row was the reason a kill took ~5 s to
   come out: three rows on screen meant under two frames a second.
+- NEARBY panel is read only while the plugin asks (`nearby_now` sets a 3 s burst when the damage
+  log appears; held while `pov_state != "up"`). `nearby_test` forces one read, saves
+  nearby_debug.png and answers `nearby_test_result` for the plugin's Test read button.
 - NEARBY panel: bottom right, ~x 80–99 %, y 79–93 %; one row per squad mate, right-aligned name
   then a light chip with the metres (dark text on light, the opposite of everything else, which is
   why `nearby._chip` finds it by eroding the bright mask).

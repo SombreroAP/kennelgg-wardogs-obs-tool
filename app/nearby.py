@@ -9,6 +9,8 @@ Only rows whose name matches one of the squad mates configured in the plugin are
 OCR noise cannot make the plugin switch to somebody who is not there. Kept deliberately cheap:
 one tesseract call per row, a second small one only when the distance chip did not come out.
 """
+import difflib
+import os
 import re
 
 import cv2
@@ -26,15 +28,39 @@ CONFUSE = str.maketrans({"i": "1", "l": "1", "I": "1", "|": "1", "!": "1", "O": 
                          "S": "5", "B": "8", "G": "6"})
 MAX_M = 999
 GAP = 24                      # white space between stacked rows so tesseract keeps them apart
-JUNK = ("nearby", "squad")    # the panel's own header
+JUNK = ("nearby", "squad")    # the panel's own header (matched on letters only)
 
 
-def _mask(gray_up: np.ndarray) -> np.ndarray:
-    """Small bright features (HUD text) on any background."""
+def _mask_tophat(gray_up: np.ndarray) -> np.ndarray:
+    """Small bright features (HUD text) on a darker background."""
     k = cv2.getStructuringElement(cv2.MORPH_RECT, (5 * SCALE, 5 * SCALE))
     th = cv2.morphologyEx(gray_up, cv2.MORPH_TOPHAT, k)
     _, m = cv2.threshold(th, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     return m
+
+
+def _mask_local(gray_up: np.ndarray) -> np.ndarray:
+    """Pixels brighter than their surroundings. Survives a bright scene behind the panel, where
+    the tophat's global Otsu split turns the whole crop into one blob."""
+    return cv2.adaptiveThreshold(cv2.GaussianBlur(gray_up, (0, 0), 1.0), 255,
+                                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, -12)
+
+
+def _usable(mask: np.ndarray, spans: list) -> bool:
+    """Do these look like rows of a name list, rather than one blob of background?"""
+    return bool(spans) and all(y1 - y0 < mask.shape[0] * 0.35 for y0, y1 in spans)
+
+
+def _rows_of(gray_up: np.ndarray):
+    """(mask, spans), from whichever way of finding the text works on this frame: bright-on-dark
+    normally, brighter-than-its-surroundings when the scene behind the panel is light."""
+    best = None
+    for mask in (_mask_tophat(gray_up), _mask_local(gray_up)):
+        spans = _row_spans(mask)
+        rank = (0 if _usable(mask, spans) else 1, float((mask > 0).mean()))
+        if best is None or rank < best[0]:
+            best = (rank, mask, spans)
+    return best[1], best[2]
 
 
 def _row_spans(mask: np.ndarray, min_h: int = 5, pad: int = 2) -> list[tuple[int, int]]:
@@ -51,7 +77,7 @@ def _row_spans(mask: np.ndarray, min_h: int = 5, pad: int = 2) -> list[tuple[int
                 out.append((max(0, y0 - pad * SCALE), min(mask.shape[0], y + pad * SCALE)))
     if on and mask.shape[0] - y0 >= min_h * SCALE:
         out.append((max(0, y0 - pad * SCALE), mask.shape[0]))
-    return out
+    return out[-8:]                       # a squad is four; the panel is never a screenful
 
 
 def _sheet(crops: list[np.ndarray]) -> tuple[np.ndarray, list[tuple[int, int]]]:
@@ -94,8 +120,10 @@ def _ocr_one(crop: np.ndarray) -> str:
     return pytesseract.image_to_string(img, config=ONE_CFG).strip()
 
 
-def _metres(text: str) -> int | None:
+def _metres(text: str, tail: bool = False) -> int | None:
     m = DIST_RE.search(text)
+    if not m and tail:
+        m = re.search(r"([0-9]{1,3})\s*$", text.strip())   # "MasterBaiter 9": the m was not read
     if not m:
         return None
     g = m.group(1).translate(CONFUSE)
@@ -105,24 +133,24 @@ def _metres(text: str) -> int | None:
 def _chip(gray_row: np.ndarray):
     """The distance sits in a small solid chip at the right end of the row: dark text on a light
     box, the opposite way round from the name. Eroding the bright pixels rubs out the thin glyphs
-    and leaves the chip, which is then the biggest thing left. Returns (x, y, w, h) or None."""
+    and leaves the chip. The rightmost survivor is the chip. Returns (x, y, w, h) or None."""
     _, th = cv2.threshold(gray_row, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     k = max(3, (SCALE * 3) // 2)
     er = cv2.erode(th, np.ones((k, k), np.uint8))
     n, _lab, stats, _c = cv2.connectedComponentsWithStats(er, 8)
-    W, H = gray_row.shape[1], gray_row.shape[0]
+    H, W = gray_row.shape[:2]
     best = None
     for i in range(1, n):
-        x, y, w, h, area = stats[i]
-        if w < 6 * SCALE or h < 4 * SCALE:
-            continue
-        if w > W * 0.45 or h > H * 0.95:
+        x, y, w, h, _area = stats[i]
+        if w < 4 * SCALE or h < 3 * SCALE:
+            continue                       # a stray blob
+        if w > W * 0.8 or h > H * 0.95:
             continue                       # a bright background, not the chip
-        if x + w < W * 0.5:
-            continue                       # the chip is always at the right end of the row
-        if best is None or area > best[4]:
-            best = (x, y, w, h, area)
-    return best[:4] if best else None
+        if x + w < W * 0.45:
+            continue                       # the chip is at the right end of the row
+        if best is None or x > best[0]:
+            best = (x, y, w, h)
+    return best
 
 
 def _sig(crop: np.ndarray) -> np.ndarray:
@@ -143,9 +171,22 @@ def _cached(prev: list, sig: np.ndarray) -> str:
     return ""
 
 
-def read(roi_bgr: np.ndarray, names: list[str], cache: dict | None = None) -> tuple[list[dict], dict]:
+def _matches(text: str, name: str) -> bool:
+    """Is this row's text the squad mate called `name`? Fuzzy, then a plain letters-and-digits
+    comparison for the names OCR mangles the punctuation of."""
+    if name_matches(text, name):
+        return True
+    a = re.sub(r"[^a-z0-9]", "", text.lower())
+    b = re.sub(r"[^a-z0-9]", "", name.lower())
+    if len(b) >= 4 and (b in a or (len(a) >= 4 and a in b)):
+        return True
+    return len(b) >= 4 and difflib.SequenceMatcher(None, a, b).ratio() >= 0.7
+
+
+def read(roi_bgr: np.ndarray, names: list[str], cache: dict | None = None,
+         debug: bool = False) -> tuple[list[dict], dict]:
     """([{name, dist, match}] nearest first, notes). Only rows whose name matched one of `names`
-    are returned; `notes` says what was seen, for the log when nothing matched.
+    are returned; `notes` says what was seen, which the plugin's Test read button shows.
 
     Two tesseract calls for the whole panel: one for the names, one for the distance chips.
     Pass a dict as `cache` and names that have not changed since the last frame are not read
@@ -155,25 +196,24 @@ def read(roi_bgr: np.ndarray, names: list[str], cache: dict | None = None) -> tu
         return [], notes
     up = cv2.resize(roi_bgr, None, fx=SCALE, fy=SCALE, interpolation=cv2.INTER_CUBIC)
     gray = cv2.cvtColor(up, cv2.COLOR_BGR2GRAY)
-    mask = _mask(gray)
+    mask, spans = _rows_of(gray)
     nameCrops, chipCrops = [], []
-    spans = _row_spans(mask)
     notes["rows"] = len(spans)
     for y0, y1 in spans:
         g, m = gray[y0:y1], mask[y0:y1]
         box = _chip(g)
-        cx = box[0] if box else int(g.shape[1] * 0.62)   # no chip found: guess where it sits and
-        if cx < 8:                                       # read the distance off the row text instead
-            continue
         if box:
-            cy, cw, ch = box[1], box[2], box[3]
+            cx, cy, cw, ch = box
             crop = g[max(0, cy - 2):cy + ch + 2, max(0, cx - 3):cx + cw + 3]
             crop = cv2.resize(crop, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
             _, bw = cv2.threshold(crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             chipCrops.append(bw)
+            # the name is whatever sits left of the chip
+            nameCrops.append(cv2.bitwise_not(m[:, :max(8, cx - 2)]))
         else:
+            # no chip found: read the whole row, so the metres are in the text we get back
             chipCrops.append(None)
-        nameCrops.append(cv2.bitwise_not(m[:, :cx - 2]))
+            nameCrops.append(cv2.bitwise_not(m))
     notes["chips"] = sum(c is not None for c in chipCrops)
     if not nameCrops:
         return [], notes
@@ -199,23 +239,37 @@ def read(roi_bgr: np.ndarray, names: list[str], cache: dict | None = None) -> tu
     for c in chipCrops:
         dists.append(next(it) if c is not None else "")
     notes["texts"] = [t for t in texts if t]
-    notes["dists"] = dists
+    notes["dists"] = [d for d in dists]
+    if debug:
+        try:
+            cv2.imwrite("nearby_debug.png", up)
+            if nameCrops:
+                sheet, _b = _sheet(nameCrops)
+                cv2.imwrite("nearby_names.png", sheet)
+            notes["saved"] = os.path.abspath("nearby_debug.png")
+        except Exception as e:
+            notes["saved"] = f"could not save: {e}"
+
     seen: dict[str, dict] = {}
     for i, (text, dtext) in enumerate(zip(texts, dists)):
+        if not text or re.sub(r"[^a-z]", "", text.lower()) in JUNK:
+            continue
+        match = next((n for n in names if n and _matches(text, n)), "")
+        if not match:
+            continue
         dist = _metres(dtext)
         if dist is None and chipCrops[i] is not None:  # the stacked read missed it: try it alone
             dist = _metres(_ocr_one(chipCrops[i]))
         if dist is None:
-            dist = _metres(text)                       # no chip: the metres may be in the row text
-        if dist is None or not text or any(j in text.lower() for j in JUNK):
-            continue
-        match = next((n for n in names if n and name_matches(text, n)), "")
-        if not match:
-            continue
+            dist = _metres(text, tail=True)            # no chip: the metres are in the row text
+        unknown = dist is None
+        if unknown:
+            dist = 998                                 # nearby but unreadable: still better than nothing
         who = re.sub(r"[^A-Za-z0-9 ._-]", "", text).strip()
         old = seen.get(match.lower())
         if old is None or dist < old["dist"]:
-            seen[match.lower()] = {"name": who or match, "dist": dist, "match": match}
+            seen[match.lower()] = {"name": who or match, "dist": dist, "match": match,
+                                   "unknown": unknown}
     return sorted(seen.values(), key=lambda e: e["dist"]), notes
 
 
@@ -233,14 +287,16 @@ class Watcher:
         self.diag_at = 0.0
         self.cache: dict = {}
 
-    def maybe_read(self, frame, now: float):
+    def maybe_read(self, frame, now: float, force: bool = False):
         c = self.b.nearby_cfg
         if frame is None or not c.get("enabled") or not c.get("names"):
             return
-        # read often while it matters (going down, or a squad mate's POV already on screen),
-        # once a second otherwise: one tesseract call a second is a few per cent of one core
+        # Nothing is read while you are alive: the plugin asks (nearby_now) the moment the damage
+        # log appears, which starts a burst, and the burst is held while a squad mate is on screen.
         busy = now < self.b.nearby_burst or self.b.pov_state != "up"
-        if now - self.last < (0.4 if busy else float(c.get("interval", 1.0))):
+        if not force and not busy:
+            return
+        if not force and now - self.last < float(c.get("interval", 0.4)):
             return
         self.last = now
         h, w = frame.shape[:2]
@@ -248,7 +304,7 @@ class Watcher:
         x0, y0 = int(w * r[0]), int(h * r[1])
         crop = frame[y0:y0 + int(h * r[3]), x0:x0 + int(w * r[2])]
         try:
-            found, notes = read(crop, list(c["names"]), self.cache)
+            found, notes = read(crop, list(c["names"]), self.cache, debug=force)
         except Exception as e:
             if not self.warned:
                 self.warned = True
@@ -266,8 +322,15 @@ class Watcher:
                 self.diag_at = now
                 print(f"[nearby] nothing matched: {notes['rows']} rows, {notes['chips']} chips, "
                       f"read {notes['texts']} {notes['dists']}, looking for {list(c['names'])}")
-        if found != self.sent or now - self.sent_at > 5:
+        if force or found != self.sent or now - self.sent_at > 5:
             if found != self.sent:
                 print("[nearby] " + (", ".join(f"{e['match']} {e['dist']}m" for e in found) or "nobody"))
             self.sent, self.sent_at = found, now
             self.b.send({"type": "nearby", "list": found})
+        if force:
+            print(f"[nearby] test read: {notes['rows']} rows, {notes['chips']} chips, "
+                  f"texts={notes['texts']} dists={notes['dists']} -> {[e['match'] for e in found]}")
+            self.b.send({"type": "nearby_test_result", "rows": notes["rows"], "chips": notes["chips"],
+                         "texts": notes["texts"], "dists": notes["dists"],
+                         "names": list(c["names"]), "saved": notes.get("saved", ""),
+                         "found": [{"match": e["match"], "dist": e["dist"]} for e in found]})

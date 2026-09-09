@@ -184,9 +184,13 @@ def main():
             if team and team != det.my_team:
                 print(f"[team] you are on the {team} team")
                 det.my_team = team
-        # who is near you (bottom-right NEARBY panel): the plugin shows the closest squad mate's POV
+        # who is near you (bottom-right NEARBY panel): read only while the plugin asks for it,
+        # which is from the moment you go down until you are back up
         if watcher is not None and hasattr(cap, "full_frame"):
-            watcher.maybe_read(cap.full_frame(), t0)
+            test = bridge is not None and bridge.nearby_test
+            if bridge is not None:
+                bridge.nearby_test = False
+            watcher.maybe_read(cap.full_frame(), t0, force=test)
         roi = cap.grab()
         if cfg["capture"].get("debug_dump"):
             cv2.imwrite("debug/roi.png", roi)
