@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.2.20
+- Backtrack file naming: the output folder is found from any Backtrack/Aitum source or filter setting that looks like a path, subfolders are scanned, the watch lasts 90 s, and the log says which folders are watched (or that none is known - set it under Settings → Clips).
+
 ## 0.2.19
 - Dock: the damage-log match bar is replaced by "Downed state detector: Alive / Downed".
 

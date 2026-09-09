@@ -15,22 +15,64 @@ Clips::Clips(QObject *parent) : QObject(parent)
 	connect(&watchTimer_, &QTimer::timeout, this, &Clips::pollWatches);
 }
 
+static void collectPaths(obs_data_t *st, QStringList *out)
+{
+	for (obs_data_item_t *it = obs_data_first(st); it; obs_data_item_next(&it)) {
+		if (obs_data_item_gettype(it) != OBS_DATA_STRING)
+			continue;
+		QString v = QString::fromUtf8(obs_data_item_get_string(it));
+		if (v.size() < 3 ||
+		    !(v.contains(":/") || v.contains(":\\") || v.startsWith("/") || v.startsWith("\\\\")))
+			continue;
+		QFileInfo fi(v);
+		QString dir = fi.isDir() ? fi.absoluteFilePath() : fi.absolutePath();
+		if (QDir(dir).exists() && !out->contains(dir))
+			out->append(dir);
+	}
+}
+
 QStringList Clips::discoverBacktrackFolders()
 {
 	QStringList out;
 	obs_enum_sources(
 		[](void *data, obs_source_t *src) {
 			auto *o = (QStringList *)data;
-			const char *id = obs_source_get_id(src);
-			if (!id || !strstr(id, "backtrack"))
+			QString id = QString::fromUtf8(obs_source_get_id(src)),
+				name = QString::fromUtf8(obs_source_get_name(src));
+			if (!id.contains("backtrack", Qt::CaseInsensitive) &&
+			    !id.contains("aitum", Qt::CaseInsensitive) &&
+			    !name.contains("backtrack", Qt::CaseInsensitive))
 				return true;
 			obs_data_t *st = obs_source_get_settings(src);
-			for (const char *key : {"path", "directory", "folder", "output_path", "save_path"}) {
-				const char *v = obs_data_get_string(st, key);
-				if (v && *v && !o->contains(QString::fromUtf8(v)))
-					o->append(QString::fromUtf8(v));
-			}
+			collectPaths(st, o);
 			obs_data_release(st);
+			// Backtrack keeps its recorder as a filter on the source
+			obs_source_enum_filters(
+				src,
+				[](obs_source_t *, obs_source_t *f, void *d) {
+					obs_data_t *fs = obs_source_get_settings(f);
+					collectPaths(fs, (QStringList *)d);
+					obs_data_release(fs);
+				},
+				o);
+			return true;
+		},
+		&out);
+	// filters named backtrack on any source
+	obs_enum_sources(
+		[](void *data, obs_source_t *src) {
+			obs_source_enum_filters(
+				src,
+				[](obs_source_t *, obs_source_t *f, void *d) {
+					QString id = QString::fromUtf8(obs_source_get_id(f));
+					if (!id.contains("backtrack", Qt::CaseInsensitive) &&
+					    !id.contains("aitum", Qt::CaseInsensitive))
+						return;
+					obs_data_t *fs = obs_source_get_settings(f);
+					collectPaths(fs, (QStringList *)d);
+					obs_data_release(fs);
+				},
+				data);
 			return true;
 		},
 		&out);
@@ -52,6 +94,17 @@ QString Clips::nameFor(const QDateTime &when, const QString &title, const QStrin
 	return name;
 }
 
+/// Clip files in a folder and its first level of subfolders (Backtrack can write into dated folders).
+static QFileInfoList listClips(const QString &folder)
+{
+	static const QStringList exts{"*.mkv", "*.mp4", "*.mov", "*.flv", "*.ts"};
+	QDir d(folder);
+	QFileInfoList out = d.entryInfoList(exts, QDir::Files, QDir::Time);
+	for (const QFileInfo &sub : d.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot))
+		out += QDir(sub.absoluteFilePath()).entryInfoList(exts, QDir::Files, QDir::Time);
+	return out;
+}
+
 void Clips::pollWatches()
 {
 	QStringList folders = watchFolders + discoverBacktrackFolders();
@@ -61,13 +114,12 @@ void Clips::pollWatches()
 		Watch &w = *it;
 		bool done = false;
 		for (const QString &folder : folders) {
-			QDir d(folder);
-			if (!d.exists())
+			if (!QDir(folder).exists())
 				continue;
-			for (const QFileInfo &fi :
-			     d.entryInfoList({"*.mkv", "*.mp4", "*.mov", "*.flv", "*.ts"}, QDir::Files, QDir::Time)) {
+			for (const QFileInfo &fi : listClips(folder)) {
 				if (fi.lastModified() < w.since.addSecs(-2) || w.seen.contains(fi.absoluteFilePath()))
 					continue;
+				QDir d = fi.dir();
 				if (fi.lastModified().msecsTo(now) < 2000)
 					continue; // still being written
 				w.seen.insert(fi.absoluteFilePath());
@@ -85,7 +137,7 @@ void Clips::pollWatches()
 				}
 			}
 		}
-		if (done || w.since.secsTo(now) > 25)
+		if (done || w.since.secsTo(now) > 90)
 			it = watches_.erase(it);
 		else
 			++it;
