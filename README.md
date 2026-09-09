@@ -31,7 +31,10 @@ Close OBS, run `kennel-wardogs-<version>-windows-x64-installer.exe`, start OBS. 
 the plugin in `C:\ProgramData\obs-studio\plugins\kennel-wardogs` and, if you keep the ClipHound
 component ticked, the app in `C:\ProgramData\Kennel WARDOGS\ClipHound` (self-contained, Tesseract
 included, no Python install). The plugin finds it there and starts it with OBS. Start-menu
-shortcuts: **ClipHound** and **ClipHound setup** (your in-game name, Twitch login). An optional
+shortcut: **ClipHound** (it runs in the background with no window; the plugin starts it with OBS
+and all of its settings, including the Twitch login, are on the ClipHound tab in Settings). Two
+optional installer tasks download and run the official **NDI 6 Runtime** (Vizrt) and **DistroAV**
+installers for LAN squad feeds; neither is bundled, both come from their publishers. An optional
 **DistroAV** task downloads the official DistroAV installer (GPL-2, from its GitHub release) and runs
 it; DistroAV then asks you to fetch the NDI Runtime from Vizrt, which nobody may redistribute. Settings open by
 themselves on first run; later they are under **Tools → Kennel.gg WARDOGS OBS Tools...** and the

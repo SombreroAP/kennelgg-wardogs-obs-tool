@@ -218,7 +218,7 @@ QWizardPage *SetupWizard::pageClips()
 	v->addWidget(launchApp_);
 	v->addWidget(note(
 		appInstalled
-			? "ClipHound asks for your in-game name the first time it runs (a console window). Twitch clips are optional and set up in that window."
+			? "ClipHound runs silently in the background. Your in-game name, clip folder and the Twitch login are on the ClipHound tab in Settings."
 			: "ClipHound was not installed. Run the installer again and tick it if you want kill-feed clips.",
 		p));
 	v->addWidget(note(
