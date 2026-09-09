@@ -16,5 +16,5 @@ a = Analysis(
     noarchive=False,
 )
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="ClipHound", console=True, icon=None)
+exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="ClipHound", console=False, icon=None)
 coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, strip=False, upx=False, name="ClipHound")
