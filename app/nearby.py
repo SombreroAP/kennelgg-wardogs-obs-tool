@@ -110,10 +110,17 @@ def _chip(gray_row: np.ndarray):
     k = max(3, (SCALE * 3) // 2)
     er = cv2.erode(th, np.ones((k, k), np.uint8))
     n, _lab, stats, _c = cv2.connectedComponentsWithStats(er, 8)
+    W, H = gray_row.shape[1], gray_row.shape[0]
     best = None
     for i in range(1, n):
         x, y, w, h, area = stats[i]
-        if w >= 6 * SCALE and h >= 4 * SCALE and (best is None or area > best[4]):
+        if w < 6 * SCALE or h < 4 * SCALE:
+            continue
+        if w > W * 0.45 or h > H * 0.95:
+            continue                       # a bright background, not the chip
+        if x + w < W * 0.5:
+            continue                       # the chip is always at the right end of the row
+        if best is None or area > best[4]:
             best = (x, y, w, h, area)
     return best[:4] if best else None
 
@@ -136,33 +143,40 @@ def _cached(prev: list, sig: np.ndarray) -> str:
     return ""
 
 
-def read(roi_bgr: np.ndarray, names: list[str], cache: dict | None = None) -> list[dict]:
-    """[{name, dist, match}] for every row that matched one of `names`, nearest first.
+def read(roi_bgr: np.ndarray, names: list[str], cache: dict | None = None) -> tuple[list[dict], dict]:
+    """([{name, dist, match}] nearest first, notes). Only rows whose name matched one of `names`
+    are returned; `notes` says what was seen, for the log when nothing matched.
 
     Two tesseract calls for the whole panel: one for the names, one for the distance chips.
     Pass a dict as `cache` and names that have not changed since the last frame are not read
     again, which leaves one call per frame in the steady state."""
+    notes = {"rows": 0, "chips": 0, "texts": [], "dists": []}
     if roi_bgr is None or roi_bgr.size == 0 or not names:
-        return []
+        return [], notes
     up = cv2.resize(roi_bgr, None, fx=SCALE, fy=SCALE, interpolation=cv2.INTER_CUBIC)
     gray = cv2.cvtColor(up, cv2.COLOR_BGR2GRAY)
     mask = _mask(gray)
     nameCrops, chipCrops = [], []
-    for y0, y1 in _row_spans(mask):
+    spans = _row_spans(mask)
+    notes["rows"] = len(spans)
+    for y0, y1 in spans:
         g, m = gray[y0:y1], mask[y0:y1]
         box = _chip(g)
-        if box is None:
-            continue                                  # no distance chip: the NEARBY header, or noise
-        cx, cy, cw, ch = box
-        if cx < 8:
-            continue                                  # nothing left of the chip to read a name from
-        crop = g[max(0, cy - 2):cy + ch + 2, max(0, cx - 3):cx + cw + 3]
-        crop = cv2.resize(crop, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-        _, bw = cv2.threshold(crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        chipCrops.append(bw)
+        cx = box[0] if box else int(g.shape[1] * 0.62)   # no chip found: guess where it sits and
+        if cx < 8:                                       # read the distance off the row text instead
+            continue
+        if box:
+            cy, cw, ch = box[1], box[2], box[3]
+            crop = g[max(0, cy - 2):cy + ch + 2, max(0, cx - 3):cx + cw + 3]
+            crop = cv2.resize(crop, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+            _, bw = cv2.threshold(crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            chipCrops.append(bw)
+        else:
+            chipCrops.append(None)
         nameCrops.append(cv2.bitwise_not(m[:, :cx - 2]))
-    if not chipCrops:
-        return []
+    notes["chips"] = sum(c is not None for c in chipCrops)
+    if not nameCrops:
+        return [], notes
 
     sigs = [_sig(c) for c in nameCrops]
     prev = (cache or {}).get("rows", [])
@@ -179,12 +193,20 @@ def read(roi_bgr: np.ndarray, names: list[str], cache: dict | None = None) -> li
     if cache is not None:                             # only ever holds the rows on screen now
         cache["rows"] = [(sig, t) for sig, t in zip(sigs, texts) if t]
 
-    dists = _read_sheet(chipCrops, DIST_CFG)
+    have = [c for c in chipCrops if c is not None]
+    read_dists = _read_sheet(have, DIST_CFG)
+    dists, it = [], iter(read_dists)
+    for c in chipCrops:
+        dists.append(next(it) if c is not None else "")
+    notes["texts"] = [t for t in texts if t]
+    notes["dists"] = dists
     seen: dict[str, dict] = {}
     for i, (text, dtext) in enumerate(zip(texts, dists)):
         dist = _metres(dtext)
-        if dist is None:                              # the stacked read missed this one: try it alone
+        if dist is None and chipCrops[i] is not None:  # the stacked read missed it: try it alone
             dist = _metres(_ocr_one(chipCrops[i]))
+        if dist is None:
+            dist = _metres(text)                       # no chip: the metres may be in the row text
         if dist is None or not text or any(j in text.lower() for j in JUNK):
             continue
         match = next((n for n in names if n and name_matches(text, n)), "")
@@ -194,7 +216,7 @@ def read(roi_bgr: np.ndarray, names: list[str], cache: dict | None = None) -> li
         old = seen.get(match.lower())
         if old is None or dist < old["dist"]:
             seen[match.lower()] = {"name": who or match, "dist": dist, "match": match}
-    return sorted(seen.values(), key=lambda e: e["dist"])
+    return sorted(seen.values(), key=lambda e: e["dist"]), notes
 
 
 class Watcher:
@@ -207,6 +229,8 @@ class Watcher:
         self.sent: list[dict] = []
         self.sent_at = 0.0
         self.warned = False
+        self.misses = 0
+        self.diag_at = 0.0
         self.cache: dict = {}
 
     def maybe_read(self, frame, now: float):
@@ -224,12 +248,24 @@ class Watcher:
         x0, y0 = int(w * r[0]), int(h * r[1])
         crop = frame[y0:y0 + int(h * r[3]), x0:x0 + int(w * r[2])]
         try:
-            found = read(crop, list(c["names"]), self.cache)
+            found, notes = read(crop, list(c["names"]), self.cache)
         except Exception as e:
             if not self.warned:
                 self.warned = True
                 print(f"[nearby] cannot read the panel: {e}")
             return
+        if found:
+            self.misses = 0
+        else:
+            # a single bad frame is normal (something bright behind the panel, a fade): only tell
+            # the plugin the list is empty once we have missed three in a row
+            self.misses += 1
+            if self.misses < 3 and self.sent:
+                return
+            if now - self.diag_at > 10:
+                self.diag_at = now
+                print(f"[nearby] nothing matched: {notes['rows']} rows, {notes['chips']} chips, "
+                      f"read {notes['texts']} {notes['dists']}, looking for {list(c['names'])}")
         if found != self.sent or now - self.sent_at > 5:
             if found != self.sent:
                 print("[nearby] " + (", ".join(f"{e['match']} {e['dist']}m" for e in found) or "nobody"))

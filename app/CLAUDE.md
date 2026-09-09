@@ -22,9 +22,12 @@ Sombrero; sibling apps live next door (HotkeyBridge, InputOverlayBridge, povbrid
 ## Facts that set the constants (measured on the 7 Sep 2026 VODs, 1080p)
 - Kill feed: x 0–24 %, y 42–58 % of the frame; rows 24 px apart, ~9 px text; a row fades in
   ~0.35 s and must be present every frame or two (the feed blanks ~0.5 s between kills).
-- Decisions are timed, not counted: `DECIDE_S` 0.75 s of reading (capped at 7 reads), `VANISH_S`
-  0.4 s for a row that goes away early, 2 reads if the row carries your own name. Default rate 10
-  fps, set from the plugin's ClipHound tab and applied live.
+- Decisions are on the clock: a row is decided `DECIDE_S` 0.75 s after its first read (min 3 reads,
+  capped at 7), `VANISH_S` 0.4 s worth for a row that goes away early, 2 reads if it carries your
+  own name. Default rate 10 fps, set from the plugin's ClipHound tab and applied live.
+- All undecided rows of a frame are read in ONE tesseract run (`ocr.ocr_rows` stacks them into one
+  sheet and splits the word boxes by y band). Four runs per row was the reason a kill took ~5 s to
+  come out: three rows on screen meant under two frames a second.
 - NEARBY panel: bottom right, ~x 80–99 %, y 79–93 %; one row per squad mate, right-aligned name
   then a light chip with the metres (dark text on light, the opposite of everything else, which is
   why `nearby._chip` finds it by eroding the bright mask).

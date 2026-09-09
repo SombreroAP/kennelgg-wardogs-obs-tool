@@ -58,32 +58,88 @@ class RowRead:
     icons: list = field(default_factory=list)
 
     def ocr(self):
-        """Read the columns. Called only for rows the detector is undecided on."""
+        """Read this row on its own. The detector uses ocr_rows() instead, which reads every
+        undecided row in one tesseract call - starting tesseract costs far more than the pixels."""
+        ocr_rows([self])
+        return self
+
+    def fill(self, data: dict, prepped: np.ndarray):
+        """Columns out of the words tesseract found in this row: killer name, distance, victim.
+        `data` is image_to_data output in this row's coordinates (padded by _prep_row)."""
         W = self._inv.shape[1]
-        col = lambda c: self._inv[:, int(W * c[0]):int(W * c[1])]
-        self.name = _ocr(col(NAME_COL))
-        self.victim = _ocr(col(VICTIM_COL))
-        W = self._mask.shape[1]
-        mcol = lambda c: self._mask[:, int(W * c[0]):int(W * c[1])]
-        hcol = lambda c: self._hsv[:, int(W * c[0]):int(W * c[1])]
-        # distance: read the whole row (context helps tesseract keep the brackets), then also
-        # re-read just the bracketed word box at 2x. Both votes go to the detector.
-        row = _prep_row(self._inv)
-        text, data = _ocr_data(row)
-        self.dists = [d for d in (_digits(text), _digits_from_box(row, data)) if d]
+        idx = [i for i in range(len(data["text"])) if data["text"][i].strip()]
+        text = " ".join(data["text"][i] for i in idx)
+        mid = lambda i: data["left"][i] - PAD_X + data["width"][i] / 2
+        self.name = " ".join(data["text"][i] for i in idx if mid(i) < W * NAME_COL[1])
+        vx = _victim_span(data, W)
+        if vx:
+            self.victim = " ".join(data["text"][i] for i in idx
+                                   if data["left"][i] - PAD_X >= vx[0] - 4
+                                   and data["left"][i] - PAD_X + data["width"][i] <= vx[1] + 4)
+        else:
+            self.victim = " ".join(data["text"][i] for i in idx if mid(i) > W * 0.5)
+        # distance: from the whole-row text; if that fails, re-read just the bracketed word box
+        # (one extra call, and only on rows that have something bracket-shaped in them)
+        d = _digits(text)
+        self.dists = [d] if d else [x for x in (_digits_from_box(prepped, data),) if x]
+        M = self._mask.shape[1]
+        mcol = lambda c: self._mask[:, int(M * c[0]):int(M * c[1])]
+        hcol = lambda c: self._hsv[:, int(M * c[0]):int(M * c[1])]
         # colour comes from the team icon in front of the killer / after the victim (and orange
         # squad text), so measure the whole column on saturated pixels, not just text pixels
         self.name_color = classify(measure(hcol(NAME_COL), mcol(NAME_COL)), COLOR_BANDS)
-        vx = _victim_span(data, W)                     # exact x-span of the victim's name, if found
-        vsel = slice(vx[0], W) if vx else slice(int(W * 0.5), W)
+        vsel = slice(vx[0], M) if vx else slice(int(M * 0.5), M)
         self.victim_color = classify(measure(self._hsv[:, vsel], self._mask[:, vsel]), COLOR_BANDS)
         # icons are pure white; match on a white-pixel mask, which stays clean on busy backgrounds
         white = ((self._hsv[:, :, 2] > 150) & (self._hsv[:, :, 1] < 70)).astype(np.uint8) * 255
-        self.icons = match_icons(white[:, int(W * ICON_COL[0]):int(W * ICON_COL[1])])
+        self.icons = match_icons(white[:, int(M * ICON_COL[0]):int(M * ICON_COL[1])])
         # own-name template: robust where OCR fails (rock, sky, wood backgrounds)
-        self.name_is_me = match_name(white[:, :int(W * NAME_COL[1])])
-        self.victim_is_me = match_name(white[:, int(W * 0.45):])
+        self.name_is_me = match_name(white[:, :int(M * NAME_COL[1])])
+        self.victim_is_me = match_name(white[:, int(M * 0.45):])
         return self
+
+
+SHEET_CFG = "--psm 6 --oem 3"   # several rows stacked into one image, one line each
+SHEET_GAP = 26                  # white space between them
+
+
+def _stack(imgs: list[np.ndarray]):
+    """One tall image holding every row, and each row's (top, bottom) inside it. Rows keep their
+    own x coordinates (padding is added on the right only), so word boxes need no rebasing."""
+    w = max(i.shape[1] for i in imgs)
+    parts, bands, y = [np.full((SHEET_GAP, w), 255, np.uint8)], [], SHEET_GAP
+    for im in imgs:
+        pad = np.full((im.shape[0], w), 255, np.uint8)
+        pad[:, :im.shape[1]] = im
+        parts.append(pad)
+        bands.append((y, y + im.shape[0]))
+        y += im.shape[0] + SHEET_GAP
+        parts.append(np.full((SHEET_GAP, w), 255, np.uint8))
+    return np.vstack(parts), bands
+
+
+def ocr_rows(rows: list["RowRead"]) -> list["RowRead"]:
+    """Read every row in one tesseract call, then fill each one's columns. This is the whole
+    per-frame OCR cost of the detector: one call, not four per row."""
+    if not rows:
+        return rows
+    imgs = [_prep_row(r._inv) for r in rows]
+    sheet, bands = _stack(imgs)
+    d = pytesseract.image_to_data(sheet, config=SHEET_CFG, output_type=pytesseract.Output.DICT)
+    keys = ("text", "left", "top", "width", "height", "conf")
+    per = [{k: [] for k in keys} for _ in rows]
+    for i, word in enumerate(d["text"]):
+        if not word.strip():
+            continue
+        centre = d["top"][i] + d["height"][i] / 2
+        for j, (y0, y1) in enumerate(bands):
+            if y0 - SHEET_GAP / 2 <= centre <= y1 + SHEET_GAP / 2:
+                for k in keys:
+                    per[j][k].append(d[k][i] if k != "top" else d[k][i] - y0)
+                break
+    for r, data, img in zip(rows, per, imgs):
+        r.fill(data, img)
+    return rows
 
 
 def binarize(roi_bgr: np.ndarray):

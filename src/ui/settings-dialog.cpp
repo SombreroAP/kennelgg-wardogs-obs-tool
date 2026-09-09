@@ -424,12 +424,12 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 		meter_->setValue(m.score < 0 ? 0 : (int)(m.score * 1000));
 		frame_->setFrame(e_->lastFrame(), m, e_->cfg.threshold,
 				 QRectF(e_->cfg.boxX, e_->cfg.boxY, e_->cfg.boxW, e_->cfg.boxH));
-		if (feedPick_) {
+		frame_->setBox2(QRectF(e_->cfg.nearX, e_->cfg.nearY, e_->cfg.nearW, e_->cfg.nearH));
+		if (feedPick_)
 			feedPick_->setFrame(e_->lastFrame(), Match(), 1.0,
 					    QRectF(e_->cfg.feedX, e_->cfg.feedY, e_->cfg.feedW, e_->cfg.feedH));
-			feedPick_->setBox2(QRectF(e_->cfg.nearX, e_->cfg.nearY, e_->cfg.nearW, e_->cfg.nearH));
-		}
 	});
+	connect(e_, &Engine::stateChanged, this, [this]() { updateAreas(); });
 	connect(e_, &Engine::stateChanged, this, [this]() {
 		tplLbl_->setText(!e_->hasTemplate()     ? "No template"
 				 : e_->customTemplate() ? "Custom template"
@@ -546,23 +546,19 @@ QWidget *SettingsDialog::buildSwitchTab()
 	nearMargin_->setSuffix(" m closer");
 	nearMargin_->setValue(e_->cfg.nearMarginM);
 	fc->addRow("Swap over only for someone", nearMargin_);
-	nearLbl_ = new QLabel(gc);
+	nearLbl_ = new QLabel(e_->nearbyStatus(), gc);
 	nearLbl_->setWordWrap(true);
 	fc->addRow("Nearby now", nearLbl_);
 	fc->addRow(muted(
-		"ClipHound reads the NEARBY list in the bottom-right corner of your game and tells the plugin who is how far away, so the POV you cut to is the squad mate who can actually revive you. It needs ClipHound running, the NEARBY area set on the ClipHound tab, and each squad mate's in-game name filled in (Edit... → In-game name). Without a reading the squad mate you picked above is used as before.",
+		"ClipHound reads the NEARBY list in the bottom-right corner of your game and tells the plugin who is how far away, so the POV you cut to is the squad mate who can actually revive you. While this is on, the squad mate box in the dock follows the closest one by itself; untick it (here or in the dock) to choose the squad mate yourself. It needs ClipHound running, the blue NEARBY box set on the Detect tab, and each squad mate's in-game name filled in (Edit... → In-game name). Without a reading, the squad mate picked in the dock is used as before.",
 		gc));
 	v->addWidget(gc);
 	connect(nearOn_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(nearFollow_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(nearMargin_, &QSpinBox::editingFinished, this, [this]() { saveAndApply(); });
 	connect(e_, &Engine::stateChanged, this, [this]() {
-		if (!nearLbl_)
-			return;
-		QString t = e_->nearbyText();
-		nearLbl_->setText(!e_->cfg.nearEnabled ? "off"
-				  : t.isEmpty()        ? "nothing read yet"
-						       : t + (e_->nearbyFresh() ? "" : "  (stale)"));
+		if (nearLbl_)
+			nearLbl_->setText(e_->nearbyStatus());
 	});
 
 	auto *gl = new QGroupBox("Squad on this network", w);
@@ -706,12 +702,51 @@ QWidget *SettingsDialog::buildDetectTab()
 	meter_->setFormat("match %v / 1000");
 	v->addWidget(meter_);
 	connect(frame_, &FramePreview::boxChanged, this, [this](QRectF r) {
-		e_->cfg.boxX = r.x();
-		e_->cfg.boxY = r.y();
-		e_->cfg.boxW = r.width();
-		e_->cfg.boxH = r.height();
-		e_->cfg.save();
+		Config &c = e_->cfg;
+		if (pickNear_ && pickNear_->isChecked()) {
+			c.nearX = r.x();
+			c.nearY = r.y();
+			c.nearW = r.width();
+			c.nearH = r.height();
+			c.save();
+			e_->pushAppConfig();
+		} else {
+			c.boxX = r.x();
+			c.boxY = r.y();
+			c.boxW = r.width();
+			c.boxH = r.height();
+			c.save();
+		}
+		updateAreas();
 	});
+
+	auto *nr = new QHBoxLayout();
+	pickTpl_ = new QRadioButton("the header box (dotted amber)", w);
+	pickNear_ = new QRadioButton("the NEARBY list (blue)", w);
+	pickTpl_->setChecked(true);
+	auto *nearReset = new QPushButton("Reset NEARBY box", w);
+	nr->addWidget(new QLabel("Dragging on the picture sets:", w));
+	nr->addWidget(pickTpl_);
+	nr->addWidget(pickNear_);
+	nr->addWidget(nearReset);
+	nr->addStretch(1);
+	v->addLayout(nr);
+	nearLbl2_ = muted("", w);
+	v->addWidget(nearLbl2_);
+	connect(pickTpl_, &QRadioButton::toggled, this, [this](bool) { updateAreas(); });
+	connect(nearReset, &QPushButton::clicked, this, [this]() {
+		Config &c = e_->cfg;
+		c.nearX = 0.80;
+		c.nearY = 0.79;
+		c.nearW = 0.19;
+		c.nearH = 0.14;
+		c.save();
+		e_->pushAppConfig();
+		updateAreas();
+	});
+	v->addWidget(muted(
+		"The blue box is the NEARBY list in the bottom-right corner of your game: the squad mates next to you and how far away they are. It is what \"Show whoever is closest\" on the Switch tab reads, through ClipHound. Drag round it with a little margin, including room above for a full squad.",
+		w));
 
 	auto *row = new QHBoxLayout();
 	auto *cap = new QPushButton("Capture my own header template from the box (while downed)", w);
@@ -987,20 +1022,14 @@ QWidget *SettingsDialog::buildAppTab()
 		g));
 	v->addWidget(g);
 
-	auto *ga = new QGroupBox("Areas ClipHound reads", w);
+	auto *ga = new QGroupBox("Kill-feed area", w);
 	auto *fa = new QVBoxLayout(ga);
 	feedPick_ = new FramePreview(ga);
 	feedPick_->setMinimumHeight(200);
 	feedPick_->setPicker("Drag a box on the picture to set the area");
 	fa->addWidget(feedPick_, 1);
 	auto *ar = new QHBoxLayout();
-	pickFeed_ = new QRadioButton("Kill feed (amber)", ga);
-	pickNear_ = new QRadioButton("NEARBY list (blue)", ga);
-	pickFeed_->setChecked(true);
-	auto *reset = new QPushButton("Reset this area", ga);
-	ar->addWidget(new QLabel("Drag sets:", ga));
-	ar->addWidget(pickFeed_);
-	ar->addWidget(pickNear_);
+	auto *reset = new QPushButton("Reset the kill-feed area", ga);
 	ar->addWidget(reset);
 	ar->addStretch(1);
 	fa->addLayout(ar);
@@ -1016,31 +1045,21 @@ QWidget *SettingsDialog::buildAppTab()
 	areaLbl_ = muted("", ga);
 	fa->addWidget(areaLbl_);
 	fa->addWidget(muted(
-		"The kill feed is the list of kills on the left, about half way down. The NEARBY list is the squad list in the bottom-right corner, used to show whoever is closest when you go down (Switch tab). Drag around each one with a bit of margin; the game must be running so you can see where they are.  Reading faster gets the clip sooner - a kill is decided after about three quarters of a second of reading, whatever the rate - and costs a little more CPU: 10 a second is about a fifth of one core here, 5 is half that.",
+		"Drag a box round the kill feed - the list of kills on the left, about half way down - with a bit of margin. The game must be running so you can see where it is. Reading faster gets the clip sooner; a kill is decided about three quarters of a second after it appears whatever the rate, so 10 a second is plenty and 5 costs half the CPU. (The NEARBY box that drives the POV switch is on the Detect tab.)",
 		ga));
 	v->addWidget(ga, 1);
 	auto setArea = [this](QRectF r) {
 		Config &c = e_->cfg;
-		if (pickNear_->isChecked()) {
-			c.nearX = r.x();
-			c.nearY = r.y();
-			c.nearW = r.width();
-			c.nearH = r.height();
-		} else {
-			c.feedX = r.x();
-			c.feedY = r.y();
-			c.feedW = r.width();
-			c.feedH = r.height();
-		}
+		c.feedX = r.x();
+		c.feedY = r.y();
+		c.feedW = r.width();
+		c.feedH = r.height();
 		c.save();
 		e_->pushAppConfig();
 		updateAreas();
 	};
 	connect(feedPick_, &FramePreview::boxChanged, this, setArea);
-	connect(reset, &QPushButton::clicked, this, [this, setArea]() {
-		setArea(pickNear_->isChecked() ? QRectF(0.80, 0.79, 0.19, 0.14) : QRectF(0.0, 0.42, 0.24, 0.16));
-	});
-	connect(pickFeed_, &QRadioButton::toggled, this, [this](bool) { updateAreas(); });
+	connect(reset, &QPushButton::clicked, this, [setArea]() { setArea(QRectF(0.0, 0.42, 0.24, 0.16)); });
 	connect(appFps_, &QSpinBox::editingFinished, this, [this]() {
 		e_->cfg.appFps = appFps_->value();
 		e_->cfg.save();
@@ -1118,8 +1137,6 @@ QWidget *SettingsDialog::buildAppTab()
 
 void SettingsDialog::updateAreas()
 {
-	if (!areaLbl_ || !feedPick_)
-		return;
 	const Config &c = e_->cfg;
 	auto fmt = [](double x, double y, double w, double h) {
 		return QString("x %1  y %2  w %3  h %4")
@@ -1128,12 +1145,13 @@ void SettingsDialog::updateAreas()
 			.arg(w, 0, 'f', 2)
 			.arg(h, 0, 'f', 2);
 	};
-	areaLbl_->setText("Kill feed: " + fmt(c.feedX, c.feedY, c.feedW, c.feedH) +
-			  "     NEARBY list: " + fmt(c.nearX, c.nearY, c.nearW, c.nearH) +
-			  (e_->appConnected() ? "     (sent to ClipHound)" : "     (ClipHound is not running)"));
-	feedPick_->setPicker(pickNear_ && pickNear_->isChecked()
-				     ? "Drag around the NEARBY list in the bottom-right corner"
-				     : "Drag around the kill feed on the left");
+	if (areaLbl_)
+		areaLbl_->setText(
+			"Kill feed: " + fmt(c.feedX, c.feedY, c.feedW, c.feedH) +
+			(e_->appConnected() ? "     (sent to ClipHound)" : "     (ClipHound is not running)"));
+	if (nearLbl2_)
+		nearLbl2_->setText("NEARBY list: " + fmt(c.nearX, c.nearY, c.nearW, c.nearH) +
+				   "     reading: " + e_->nearbyStatus());
 }
 
 void SettingsDialog::refreshAppTab()

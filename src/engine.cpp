@@ -42,7 +42,7 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	upDelay_.setSingleShot(true);
 	connect(&downDelay_, &QTimer::timeout, this, [this]() {
 		if (detected_ && !applied_) {
-			pickClosest("about to switch"); // last reading before the feed goes on screen
+			pickClosest("about to switch", true); // last reading before the feed goes on screen
 			applyNow(true, QString("downed for %1 ms").arg(cfg.downDelayMs));
 		}
 	});
@@ -576,8 +576,14 @@ void Engine::onNearby(const QJsonObject &o)
 		if (n.dist >= 0)
 			list << n;
 	}
-	nearby_ = list;
-	nearbyAt_ = QDateTime::currentDateTime();
+	// an empty reading is usually one bad frame (ClipHound only reports empty after three in a
+	// row), so it never throws away a good list: freshness decides when that list stops counting
+	if (!list.isEmpty()) {
+		nearby_ = list;
+		nearbyAt_ = QDateTime::currentDateTime();
+		nearbyEmptySince_ = QDateTime();
+	} else if (!nearbyEmptySince_.isValid())
+		nearbyEmptySince_ = QDateTime::currentDateTime();
 	QString line = nearbyText();
 	if (line != nearbyLine_) {
 		nearbyLine_ = line;
@@ -590,8 +596,10 @@ void Engine::onNearby(const QJsonObject &o)
 		nearbyWho_ = who.join(',');
 		log("Nearby: " + (line.isEmpty() ? QString("nobody") : line));
 	}
-	if (cfg.nearEnabled && (detected_ || applied_))
-		pickClosest(applied_ ? "still down" : "going down");
+	// follow the closest all the time, so the dock always shows who would be used and that feed
+	// is the one kept warm; the margin and the cooldown inside pickClosest stop it flapping
+	if (cfg.nearEnabled)
+		pickClosest(applied_ ? "still down" : detected_ ? "going down" : "nearest");
 }
 
 bool Engine::nearbyFresh() const
@@ -605,6 +613,21 @@ QString Engine::nearbyText() const
 	for (const auto &e : nearby_)
 		parts << QString("%1 %2 m").arg(e.match.isEmpty() ? e.name : e.match).arg(e.dist);
 	return parts.join("  ·  ");
+}
+
+/// One line for the dock: the reading, or why there is not one.
+QString Engine::nearbyStatus() const
+{
+	if (!cfg.nearEnabled)
+		return "off";
+	if (!nearbyAt_.isValid())
+		return nearbyEmptySince_.isValid() ? "nobody in the list yet"
+						   : (bridge.clients() > 0 ? "waiting for ClipHound to read it"
+									   : "ClipHound is not running");
+	QString t = nearbyText();
+	if (nearbyFresh())
+		return nearbyEmptySince_.isValid() ? t + "  (last seen)" : t;
+	return t + QString("  (%1 s old)").arg(nearbyAt_.secsTo(QDateTime::currentDateTime()));
 }
 
 int Engine::friendIndexFor(const QString &gameName) const
@@ -644,7 +667,7 @@ int Engine::nearbyDistanceOf(int friendIdx) const
 	return -1;
 }
 
-int Engine::closestFriend(int *metres) const
+int Engine::closestFriend(int *metres, QString *problem) const
 {
 	if (!nearbyFresh())
 		return -1;
@@ -653,8 +676,17 @@ int Engine::closestFriend(int *metres) const
 		if (e.match.isEmpty() || e.dist < 0)
 			continue;
 		int i = friendIndexFor(e.match);
-		if (i < 0 || !feedUsable(cfg.friends[i]))
+		if (i < 0) {
+			if (problem)
+				*problem = e.match + " is nearby but is not one of your squad mates here";
 			continue;
+		}
+		if (!feedUsable(cfg.friends[i])) {
+			if (problem)
+				*problem = QString::fromStdString(cfg.friends[i].name) +
+					   " is nearby but their feed is not usable (source missing in OBS?)";
+			continue;
+		}
 		if (best < 0 || e.dist < bestD) {
 			best = i;
 			bestD = e.dist;
@@ -675,31 +707,35 @@ void Engine::askNearbyNow()
 }
 
 /// Make the squad mate the game says is nearest the active one. Cheap and safe to call often.
-void Engine::pickClosest(const QString &why)
+void Engine::pickClosest(const QString &why, bool decisive)
 {
 	if (!cfg.nearEnabled || cfg.friends.size() < 2)
 		return;
 	int d = 0;
-	int idx = closestFriend(&d);
+	QString problem;
+	int idx = closestFriend(&d, &problem);
 	if (idx < 0) {
 		if (clock_::now() - lastNearbyWarn_ > std::chrono::seconds(60)) {
 			lastNearbyWarn_ = clock_::now();
-			log(bridge.clients() == 0
-				    ? "Closest squad mate: ClipHound is not running, so the NEARBY list cannot be read - keeping the squad mate you picked."
-				    : (nearbyFresh()
-					       ? "Closest squad mate: nobody in the NEARBY list is one of your squad mates (check their in-game names in Settings → Switch)."
-					       : "Closest squad mate: no reading from the NEARBY list yet (check the area on the ClipHound tab)."));
+			if (!problem.isEmpty())
+				log("Closest squad mate: " + problem + ".");
+			else
+				log(bridge.clients() == 0
+					    ? "Closest squad mate: ClipHound is not running, so the NEARBY list cannot be read - keeping the squad mate you picked."
+					    : (nearbyFresh()
+						       ? "Closest squad mate: nobody in the NEARBY list is one of your squad mates (check their in-game names in Settings → Switch)."
+						       : "Closest squad mate: no reading from the NEARBY list yet (check the blue box on the Detect tab)."));
 		}
 		return;
 	}
 	if (idx == cfg.activeFriend)
 		return;
-	if (applied_) {
-		if (!cfg.nearFollow)
-			return;
+	if (applied_ && !cfg.nearFollow)
+		return; // showing someone already and the user asked not to change mid-swap
+	if (!decisive) {
 		int cur = nearbyDistanceOf(cfg.activeFriend);
 		if (cur >= 0 && d > cur - cfg.nearMarginM)
-			return; // on screen and still about as close: leave it alone
+			return; // the one we have is still about as close: leave it alone
 		if (clock_::now() - lastPick_ < std::chrono::seconds(4))
 			return; // never flap
 	}
@@ -938,7 +974,7 @@ void Engine::detect(const Match &m)
 		peakScore_ = m.score;
 		upDelay_.stop();
 		askNearbyNow(); // fresh NEARBY reading while the delay runs
-		pickClosest("downed");
+		pickClosest("downed", true);
 		if (!applied_) {
 			if (cfg.downDelayMs <= 0)
 				applyNow(true, QString("downed screen detected (%1)").arg(m.score, 0, 'f', 3));

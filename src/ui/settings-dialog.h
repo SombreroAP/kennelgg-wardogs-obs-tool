@@ -92,7 +92,8 @@ private:
 	QCheckBox *appTwitch_ = nullptr, *appEveryKill_ = nullptr;
 	QDoubleSpinBox *appMulti_ = nullptr;
 	FramePreview *feedPick_ = nullptr;
-	QRadioButton *pickFeed_ = nullptr, *pickNear_ = nullptr;
+	QRadioButton *pickTpl_ = nullptr, *pickNear_ = nullptr;
+	QLabel *nearLbl2_ = nullptr;
 	QLabel *areaLbl_ = nullptr;
 	QSpinBox *appFps_ = nullptr;
 	void updateAreas();

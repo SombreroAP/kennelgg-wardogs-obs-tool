@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 import cv2
 import numpy as np
 
-from ocr import read_rows, sig_iou, prof_corr, vote_distance, name_matches
+from ocr import read_rows, ocr_rows, sig_iou, prof_corr, vote_distance, name_matches
 from colors import relation
 
 
@@ -78,6 +78,7 @@ class _Row:
     first: float
     last: float
     reads: list = field(default_factory=list)
+    read_since: float = 0.0      # when the first OCR read of this row happened
     done: bool = False
     crop: np.ndarray | None = None
 
@@ -90,9 +91,10 @@ class KillDetector:
     ROW_TTL_S = 0.6            # a row must be seen every frame or two; the feed blanks ~0.5 s
     FADE_IN_S = 0.35           # rows fade in; OCR is garbage before this
     DUP_S = 15.0               # same slot + same distance + same roles within this = same kill
-    # How long a row must be watched, in SECONDS - the number of reads that takes is worked out from
-    # the capture rate, so raising the rate makes the decision sooner instead of only sampling more.
-    DECIDE_S = 0.75            # normal decision: this much of the row read
+    # A row is decided on the CLOCK, not on a number of reads: 0.75 s after we start reading it,
+    # with however many reads that turned out to be. OCR speed then changes the accuracy a little
+    # instead of changing how long you wait for the clip.
+    DECIDE_S = 0.75            # decide this long after the first read of a row
     VANISH_S = 0.40            # a row that goes away early (inventory opened, pushed off by a multi-kill)
     VOTES = 7                  # cap: never more OCR reads than this per row
     MIN_VOTES = 3              # floor: never decide on fewer than this (except the "it was me" shortcut)
@@ -122,6 +124,7 @@ class KillDetector:
     def feed_frame(self, roi_bgr) -> list[Trigger]:
         now = time.time()
         events = []
+        pending = []                     # rows still undecided: read together, in one call
         for rd in read_rows(roi_bgr):
             best, best_iou = None, 0.0
             for r in self._rows:
@@ -139,10 +142,17 @@ class KillDetector:
             best.last, best.sig, best.prof, best.y = now, rd.sig, rd.prof, rd.y
             if best.done or now - best.first < self.FADE_IN_S:
                 continue
-            best.reads.append(rd.ocr())              # only undecided rows cost tesseract time
+            pending.append((best, rd))               # only undecided rows cost tesseract time
+        ocr_rows([rd for _, rd in pending])
+        for best, rd in pending:
+            best.reads.append(rd)
             if best.crop is None:
                 best.crop = rd._bgr
-            if len(best.reads) >= self.votes:
+            if best.read_since == 0.0:
+                best.read_since = now
+            enough = (len(best.reads) >= self.votes or
+                      (len(best.reads) >= self.MIN_VOTES and now - best.read_since >= self.DECIDE_S))
+            if enough:
                 best.done = True
                 ev = self._decide(best)
                 if ev:

@@ -71,7 +71,22 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	row->addWidget(new QLabel("Squad mate", this));
 	active_ = new QComboBox(this);
 	row->addWidget(active_, 1);
+	closest_ = new QCheckBox("Closest", this);
+	closest_->setToolTip(
+		"Show whoever the game's NEARBY list says is closest, instead of the squad mate chosen here.\n"
+		"Needs ClipHound running and each squad mate's in-game name (Settings → Switch).");
+	row->addWidget(closest_);
 	v->addLayout(row);
+	connect(closest_, &QCheckBox::toggled, this, [this](bool on) {
+		if (filling_ || on == e_->cfg.nearEnabled)
+			return;
+		e_->cfg.nearEnabled = on;
+		e_->cfg.save();
+		e_->pushAppConfig();
+		e_->log(on ? "Following the closest squad mate (NEARBY list)."
+			   : "Following the squad mate you picked.");
+		refresh();
+	});
 	connect(active_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int i) {
 		if (!filling_ && i >= 0)
 			e_->setActive(i);
@@ -214,9 +229,14 @@ void Dock::refresh()
 		events_->addItem("events from the kill feed and the POV swap appear here");
 	if (near_) {
 		near_->setVisible(e_->cfg.nearEnabled);
-		QString t = e_->nearbyText();
-		near_->setText("Nearby: " + (t.isEmpty() ? QString("nothing read yet") : t) +
-			       (e_->nearbyFresh() || t.isEmpty() ? "" : "  (stale)"));
+		near_->setText("Nearby: " + e_->nearbyStatus());
+	}
+	if (closest_) {
+		closest_->setChecked(e_->cfg.nearEnabled);
+		active_->setEnabled(!e_->cfg.nearEnabled);
+		active_->setToolTip(e_->cfg.nearEnabled
+					    ? "Set automatically to whoever is closest; untick Closest to choose."
+					    : "");
 	}
 	QString lp = e_->clips.lastPath();
 	QString rb = (e_->cfg.clipUseReplay && !obs_frontend_replay_buffer_active())

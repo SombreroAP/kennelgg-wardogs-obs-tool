@@ -118,20 +118,24 @@ and that list stays up while you are down. ClipHound reads it and tells the plug
 nearest squad mate the active one just before your stream cuts to them - so the POV your viewers get
 is the one running towards you.
 
-Turn it on under Settings → Switch → **Show whoever is closest**, set the area under Settings →
-ClipHound (drag a box round the NEARBY list), and give each squad mate their **in-game name** in the
-Edit dialog. Only names you have configured are ever matched, so a stranger in the list cannot move
-your feed. While the swap is on screen the nearest one keeps being followed, but only if someone is
-clearly closer (15 m by default) and never more often than every 4 s, so the picture cannot flap.
+Tick **Closest** in the dock (or Settings → Switch → **Show whoever is closest**), drag the blue box
+round the NEARBY list on the Detect tab, and give each squad mate their **in-game name** in the Edit
+dialog. The dock's squad-mate box then follows the closest one by itself; untick Closest to choose a
+squad mate yourself. Only names you have configured are ever matched, so a stranger in the list
+cannot move your feed. Between swaps it changes only for someone clearly closer (15 m by default)
+and at most every 4 s, so nothing flaps; the moment you go down that guard is dropped so the feed
+that comes up is the nearest one.
 
 ## CPU
 
 The plugin's downed search is template matching on an 800 px frame: near zero once locked on, and
 while you are alive it runs on every third poll, about 1-2 % of one core. ClipHound's OCR is the
-heavier part: at the default 10 frames a second the kill feed is a few per cent of one core between
-kills (rows are only OCR'd until they are decided), and reading the NEARBY panel is one tesseract
-call a second - names are only re-read when they change. Drop the rate on the ClipHound tab if the
-CPU matters more than the second it saves.
+heavier part, and it is one tesseract run per frame for the whole feed however many rows are on
+screen (rows are only read until they are decided, 0.75 s after they appear). At the default 10
+frames a second that is roughly 10-20 % of one core while kills are being read and a few per cent
+between them. Reading the NEARBY panel is one more run a second, or one every 0.4 s while you are
+down; names are only re-read when they change. Drop the rate on the ClipHound tab if the CPU matters
+more to you than the second it saves.
 
 ## Build
 

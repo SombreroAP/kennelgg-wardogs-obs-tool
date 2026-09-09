@@ -6,6 +6,7 @@
 #include <QProgressBar>
 #include <QListWidget>
 #include <QToolButton>
+#include <QCheckBox>
 #include <QPointer>
 #include <QDialog>
 #include "engine.h"
@@ -27,6 +28,7 @@ private:
 	QListWidget *events_;
 	QLabel *detector_;
 	QLabel *near_ = nullptr;
+	QCheckBox *closest_ = nullptr;
 	QComboBox *active_;
 	QPushButton *show_, *back_, *pause_, *clipNow_, *appBtn_;
 	QToolButton *saveBtn_;

@@ -49,9 +49,10 @@ public:
 	};
 	QList<NearbyEntry> nearby() const { return nearby_; }
 	bool nearbyFresh() const;
-	QString nearbyText() const; // "MasterBaiter 9 m  ·  ChusanDesu 76 m"
+	QString nearbyText() const;   // "MasterBaiter 9 m  ·  ChusanDesu 76 m"
+	QString nearbyStatus() const; // the same, or why there is no reading
 	/// Index of the configured squad mate the game says is nearest, or -1. Fills metres if given.
-	int closestFriend(int *metres = nullptr) const;
+	int closestFriend(int *metres = nullptr, QString *problem = nullptr) const;
 	void twitchLogin();
 	void twitchLogout();
 	QJsonObject twitchStatus() const { return twitch_; }
@@ -114,7 +115,7 @@ private:
 	void frameTick();
 	void onBridgeMessage(const QJsonObject &o);
 	void onNearby(const QJsonObject &o);
-	void pickClosest(const QString &why);
+	void pickClosest(const QString &why, bool decisive = false);
 	void switchTo(int idx, const QString &why);
 	int friendIndexFor(const QString &gameName) const;
 	int nearbyDistanceOf(int friendIdx) const;
@@ -144,7 +145,7 @@ private:
 	QStringList logLines_;
 	QStringList events_;
 	QList<NearbyEntry> nearby_;
-	QDateTime nearbyAt_;
+	QDateTime nearbyAt_, nearbyEmptySince_;
 	QString nearbyLine_, nearbyWho_;
 	std::chrono::steady_clock::time_point lastPick_, lastNearbyWarn_;
 };
