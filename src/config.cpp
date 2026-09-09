@@ -190,6 +190,12 @@ void Config::load()
 			f.source = obs_data_get_string(it, "source");
 			f.audioSource = obs_data_get_string(it, "audioSource");
 			f.channel = obs_data_get_string(it, "channel");
+			if (obs_data_has_user_value(it, "vdoHeight")) {
+				f.vdoHeight = (int)obs_data_get_int(it, "vdoHeight");
+				f.vdoFps = (int)obs_data_get_int(it, "vdoFps");
+				f.vdoKbps = (int)obs_data_get_int(it, "vdoKbps");
+				f.vdoCodec = obs_data_get_string(it, "vdoCodec");
+			}
 			friends.push_back(f);
 			obs_data_release(it);
 		}
@@ -277,6 +283,10 @@ void Config::save() const
 		obs_data_set_string(it, "source", f.source.c_str());
 		obs_data_set_string(it, "audioSource", f.audioSource.c_str());
 		obs_data_set_string(it, "channel", f.channel.c_str());
+		obs_data_set_int(it, "vdoHeight", f.vdoHeight);
+		obs_data_set_int(it, "vdoFps", f.vdoFps);
+		obs_data_set_int(it, "vdoKbps", f.vdoKbps);
+		obs_data_set_string(it, "vdoCodec", f.vdoCodec.c_str());
 		obs_data_array_push_back(arr, it);
 		obs_data_release(it);
 	}

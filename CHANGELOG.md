@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.2.16
+- Squad-mate dialog shows only the fields for the chosen kind (Twitch channel, VDO.Ninja stream ID + quality + link, OBS source, Discord window, NDI source).
+- Discord always saves: "Any Discord window" matches by executable and follows the pop-out when it appears; errors show in red.
+- VDO.Ninja quality per squad mate: resolution (720/1080/1440), frame rate, bitrate ceiling, codec. Default 1080p60, 12000 kbps, H.264. The friend's link and the plugin's viewer link follow the settings.
+
 ## 0.2.15
 - POV swap reacts in ~0.2-0.3 s instead of ~1 s: the plugin remembers where the damage log was last found and checks that spot on every poll (10 per second) at almost no CPU cost; the full search still runs only every 600 ms while you are alive. Confirmation is now 2 polls down / 4 polls up. Existing configs are migrated.
 - `CHANGELOG.md` added.

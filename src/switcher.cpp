@@ -28,25 +28,28 @@ static std::string lower(std::string s)
 	return s;
 }
 
-std::string Switcher::webUrl(const Friend &f, int vdoKbps)
+std::string Switcher::webUrl(const Friend &f)
 {
 	if (f.kind == FriendKind::VdoNinja)
-		// ask for the full picture: bitrate in kbps, 1080p60, H.264 (hardware decode in OBS's browser), no buffering
+		// the viewer asks for the friend's chosen quality; WebRTC settles lower by itself on a weak link
 		return "https://vdo.ninja/?view=" + urlEncode(f.channel) +
-		       "&solo&cleanoutput&autostart&noaudio=0&maxvideobitrate=" + std::to_string(vdoKbps) +
-		       "&codec=h264&scale=100&buffer=0&height=1080&framerate=60";
+		       "&solo&cleanoutput&autostart&noaudio=0&maxvideobitrate=" + std::to_string(f.vdoKbps) +
+		       "&codec=" + f.vdoCodec + "&scale=100&buffer=0&height=" + std::to_string(f.vdoHeight) +
+		       "&framerate=" + std::to_string(f.vdoFps);
 	std::string ch = lower(f.channel);
 	if (!ch.empty() && ch[0] == '@')
 		ch.erase(0, 1);
 	return "https://player.twitch.tv/?channel=" + urlEncode(ch) + "&parent=twitch.tv&muted=false&autoplay=true";
 }
 
-std::string Switcher::vdoPushUrl(const std::string &id, int vdoKbps)
+std::string Switcher::vdoPushUrl(const Friend &f)
 {
-	// screenshare at 1080p60 with a high bitrate ceiling and stereo game audio, no mic
-	return "https://vdo.ninja/?push=" + urlEncode(id) +
-	       "&screenshare&audiodevice=0&quality=0&stereo&maxvideobitrate=" + std::to_string(vdoKbps) +
-	       "&height=1080&width=1920&framerate=60&codec=h264&label=" + urlEncode(id);
+	// what the friend opens: share the game window/screen with system audio, no mic, at the chosen quality
+	int w = f.vdoHeight * 16 / 9;
+	return "https://vdo.ninja/?push=" + urlEncode(f.channel) +
+	       "&screenshare&audiodevice=0&quality=0&stereo&maxvideobitrate=" + std::to_string(f.vdoKbps) +
+	       "&height=" + std::to_string(f.vdoHeight) + "&width=" + std::to_string(w) +
+	       "&framerate=" + std::to_string(f.vdoFps) + "&codec=" + f.vdoCodec + "&label=" + urlEncode(f.channel);
 }
 
 std::string Switcher::overlayUrl(const Config &cfg, const std::string &friendName)
@@ -183,7 +186,8 @@ std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 		obs_data_t *st = obs_data_create();
 		obs_data_set_string(st, "window", f.channel.c_str());
 		obs_data_set_int(st, "method", 2);
-		obs_data_set_int(st, "priority", 1);
+		obs_data_set_int(st, "priority",
+				 f.channel.find("Discord.exe") != std::string::npos ? 2 : 1); // 2 = match by executable
 		obs_data_set_bool(st, "cursor", false);
 		obs_data_set_bool(st, "client_area", true);
 		std::string e = createInScene(cfg, "window_capture", base, st, true, false);

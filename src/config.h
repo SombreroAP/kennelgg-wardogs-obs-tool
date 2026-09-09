@@ -10,6 +10,8 @@ struct Friend {
 	std::string source;      // OBS source name (ObsSource / Discord / Ndi: the video source)
 	std::string audioSource; // Discord: the Application Audio Capture created for them
 	std::string channel;     // Twitch login, VDO.Ninja stream id, Discord window, or NDI source name
+	int vdoHeight = 1080, vdoFps = 60, vdoKbps = 12000; // VDO.Ninja quality (push and view links)
+	std::string vdoCodec = "h264";
 	bool isWeb() const { return kind == FriendKind::Twitch || kind == FriendKind::VdoNinja; }
 	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }
 };

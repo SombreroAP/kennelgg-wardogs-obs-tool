@@ -130,76 +130,148 @@ class FriendDialog : public QDialog {
 public:
 	Friend result;
 	FriendDialog(const Friend *existing, const std::vector<std::pair<std::string, std::string>> &sources,
-		     QWidget *parent)
+		     QWidget *parent, int defaultKbps)
 		: QDialog(parent)
 	{
 		if (existing)
 			result = *existing;
+		else
+			result.vdoKbps = defaultKbps;
 		setWindowTitle(existing ? "Edit squad mate" : "Add a squad mate");
-		auto *form = new QFormLayout(this);
+		form_ = new QFormLayout(this);
 		name_ = new QLineEdit(QString::fromStdString(result.name), this);
 		name_->setPlaceholderText("shown on the POV tag");
-		form->addRow("Name", name_);
+		form_->addRow("Name", name_);
 		kind_ = new QComboBox(this);
 		kind_->addItems({"Twitch stream (~2 s, nothing for them to set up)",
 				 "VDO.Ninja / WebRTC (~0.3 s, they open one link)", "OBS source I already have",
 				 "Discord Go Live (~0.5-1 s, they Go Live in the call)", "NDI on the LAN (DistroAV)"});
-		form->addRow("Comes in as", kind_);
-		channel_ = new QLineEdit(QString::fromStdString(result.channel), this);
-		chanLbl_ = new QLabel("Twitch channel", this);
-		form->addRow(chanLbl_, channel_);
-		pick_ = new QComboBox(this);
-		pickLbl_ = new QLabel("Discord window", this);
-		auto *pickRow = new QHBoxLayout();
-		pickRow->addWidget(pick_, 1);
-		auto *rescan = new QPushButton("Rescan", this);
-		pickRow->addWidget(rescan);
-		form->addRow(pickLbl_, pickRow);
-		connect(rescan, &QPushButton::clicked, this, [this]() { fillPick(); });
-		source_ = new QComboBox(this);
-		source_->setEditable(true);
-		for (auto &s : sources)
-			if (s.first != Config::webSourceName() && s.first != Config::overlaySourceName())
-				source_->addItem(QString::fromStdString(s.first));
-		source_->setCurrentText(QString::fromStdString(result.source));
-		form->addRow("OBS source", source_);
+		form_->addRow("Comes in as", kind_);
+
+		// Twitch
+		twitch_ = new QLineEdit(this);
+		twitch_->setPlaceholderText("channel name, e.g. sombrero");
+		form_->addRow("Twitch channel", twitch_);
+		// VDO.Ninja
+		streamId_ = new QLineEdit(this);
+		streamId_->setPlaceholderText("any word you both agree on, e.g. pup-pov");
+		form_->addRow("Stream ID", streamId_);
+		auto *q = new QHBoxLayout();
+		res_ = new QComboBox(this);
+		res_->addItems({"720p", "1080p", "1440p"});
+		fps_ = new QComboBox(this);
+		fps_->addItems({"30 fps", "60 fps"});
+		kbps_ = new QSpinBox(this);
+		kbps_->setRange(1000, 40000);
+		kbps_->setSingleStep(1000);
+		kbps_->setSuffix(" kbps max");
+		codec_ = new QComboBox(this);
+		codec_->addItems({"h264", "vp9", "av1"});
+		q->addWidget(res_);
+		q->addWidget(fps_);
+		q->addWidget(kbps_);
+		q->addWidget(codec_);
+		qualityRow_ = new QWidget(this);
+		qualityRow_->setLayout(q);
+		form_->addRow("Quality", qualityRow_);
 		auto *linkRow = new QHBoxLayout();
 		link_ = new QLineEdit(this);
 		link_->setReadOnly(true);
 		auto *copy = new QPushButton("Copy", this);
 		linkRow->addWidget(link_, 1);
 		linkRow->addWidget(copy);
-		form->addRow("Friend's link", linkRow);
+		linkWidget_ = new QWidget(this);
+		linkWidget_->setLayout(linkRow);
+		form_->addRow("Friend's link", linkWidget_);
+		// OBS source
+		source_ = new QComboBox(this);
+		source_->setEditable(true);
+		for (auto &s : sources)
+			if (s.first != Config::webSourceName() && s.first != Config::overlaySourceName())
+				source_->addItem(QString::fromStdString(s.first));
+		source_->setCurrentText(QString::fromStdString(result.source));
+		form_->addRow("OBS source", source_);
+		// Discord / NDI picker
+		pick_ = new QComboBox(this);
+		auto *pickRow = new QHBoxLayout();
+		pickRow->addWidget(pick_, 1);
+		auto *rescan = new QPushButton("Rescan", this);
+		pickRow->addWidget(rescan);
+		pickWidget_ = new QWidget(this);
+		pickWidget_->setLayout(pickRow);
+		pickLbl_ = new QLabel("Discord window", this);
+		form_->addRow(pickLbl_, pickWidget_);
+
 		hint_ = new QLabel(this);
 		hint_->setWordWrap(true);
-
-		form->addRow(hint_);
+		form_->addRow(hint_);
+		err_ = new QLabel(this);
+		err_->setWordWrap(true);
+		err_->setStyleSheet("color: #ce6050;");
+		form_->addRow(err_);
 		auto *bb = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
-		form->addRow(bb);
+		form_->addRow(bb);
 		connect(bb, &QDialogButtonBox::accepted, this, [this]() { save(); });
 		connect(bb, &QDialogButtonBox::rejected, this, &QDialog::reject);
 		connect(copy, &QPushButton::clicked, this,
 			[this]() { QApplication::clipboard()->setText(link_->text()); });
+		connect(rescan, &QPushButton::clicked, this, [this]() { fillPick(); });
 		connect(kind_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { refresh(); });
-		connect(channel_, &QLineEdit::textChanged, this, [this](const QString &) { refresh(); });
+		for (auto *le : {twitch_, streamId_})
+			connect(le, &QLineEdit::textChanged, this, [this](const QString &) { updateLink(); });
+		for (auto *cb : {res_, fps_, codec_})
+			connect(cb, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+				[this](int) { updateLink(); });
+		connect(kbps_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { updateLink(); });
+
+		// load
+		if (result.kind == FriendKind::Twitch)
+			twitch_->setText(QString::fromStdString(result.channel));
+		if (result.kind == FriendKind::VdoNinja)
+			streamId_->setText(QString::fromStdString(result.channel));
+		res_->setCurrentIndex(result.vdoHeight >= 1440 ? 2 : result.vdoHeight >= 1080 ? 1 : 0);
+		fps_->setCurrentIndex(result.vdoFps >= 60 ? 1 : 0);
+		kbps_->setValue(result.vdoKbps > 0 ? result.vdoKbps : defaultKbps);
+		codec_->setCurrentText(QString::fromStdString(result.vdoCodec.empty() ? "h264" : result.vdoCodec));
 		kind_->setCurrentIndex((int)result.kind);
 		refresh();
-		resize(620, 320);
+		resize(640, 420);
 	}
 
 private:
-	QLineEdit *name_, *channel_, *link_;
-	QComboBox *kind_, *source_, *pick_;
-	QLabel *chanLbl_, *hint_, *pickLbl_;
+	QFormLayout *form_;
+	QLineEdit *name_, *twitch_, *streamId_, *link_;
+	QComboBox *kind_, *source_, *pick_, *res_, *fps_, *codec_;
+	QSpinBox *kbps_;
+	QWidget *qualityRow_, *linkWidget_, *pickWidget_;
+	QLabel *pickLbl_, *hint_, *err_;
 	FriendKind kind() const { return (FriendKind)kind_->currentIndex(); }
+	Friend draft() const
+	{
+		Friend f = result;
+		f.name = name_->text().trimmed().toStdString();
+		f.kind = kind();
+		f.vdoHeight = res_->currentIndex() == 2 ? 1440 : res_->currentIndex() == 1 ? 1080 : 720;
+		f.vdoFps = fps_->currentIndex() == 1 ? 60 : 30;
+		f.vdoKbps = kbps_->value();
+		f.vdoCodec = codec_->currentText().toStdString();
+		if (f.kind == FriendKind::Twitch)
+			f.channel = twitch_->text().trimmed().toLower().remove('@').toStdString();
+		else if (f.kind == FriendKind::VdoNinja)
+			f.channel = streamId_->text().trimmed().toStdString();
+		else if (f.kind == FriendKind::ObsSource)
+			f.source = source_->currentText().trimmed().toStdString();
+		else
+			f.channel = pick_->currentData().toString().toStdString();
+		return f;
+	}
 	void fillPick()
 	{
 		pick_->clear();
 		FriendKind k = kind();
 		if (k == FriendKind::Discord) {
-			auto all = Switcher::listProperty("window_capture", "window");
 			int firstDiscord = -1;
-			for (auto &w : all) {
+			for (auto &w : Switcher::listProperty("window_capture", "window")) {
 				QString v = QString::fromStdString(w.second), n = QString::fromStdString(w.first);
 				bool discord = v.contains("discord", Qt::CaseInsensitive) ||
 					       n.contains("discord", Qt::CaseInsensitive);
@@ -207,15 +279,10 @@ private:
 					firstDiscord = pick_->count();
 				pick_->addItem((discord ? "Discord: " : "") + n, v);
 			}
-			if (firstDiscord >= 0)
-				pick_->setCurrentIndex(firstDiscord);
-			else if (pick_->count() == 0)
-				pick_->addItem("(no windows listed - is OBS's Window Capture available?)", "");
-			else
-				pick_->insertItem(
-					0, "(no Discord window found - pop their stream out in Discord, then Rescan)",
-					""),
-					pick_->setCurrentIndex(0);
+			// always offer the by-executable match: works before the pop-out exists and follows it when it appears
+			pick_->insertItem(0, "Any Discord window (matched by Discord.exe, recommended)",
+					  "Discord:Chrome_WidgetWin_1:Discord.exe");
+			pick_->setCurrentIndex(firstDiscord >= 0 ? firstDiscord + 1 : 0);
 		} else if (k == FriendKind::Ndi) {
 			for (auto &n : Switcher::listProperty("ndi_source", "ndi_source_name"))
 				pick_->addItem(QString::fromStdString(n.first), QString::fromStdString(n.second));
@@ -234,51 +301,73 @@ private:
 	void refresh()
 	{
 		FriendKind k = kind();
-		bool web = k == FriendKind::Twitch || k == FriendKind::VdoNinja,
-		     owns = k == FriendKind::Discord || k == FriendKind::Ndi;
-		channel_->setEnabled(web);
-		source_->setEnabled(k == FriendKind::ObsSource);
-		pick_->setEnabled(owns);
+		form_->setRowVisible(twitch_, k == FriendKind::Twitch);
+		form_->setRowVisible(streamId_, k == FriendKind::VdoNinja);
+		form_->setRowVisible(qualityRow_, k == FriendKind::VdoNinja);
+		form_->setRowVisible(linkWidget_, k == FriendKind::VdoNinja);
+		form_->setRowVisible(source_, k == FriendKind::ObsSource);
+		form_->setRowVisible(pickWidget_, k == FriendKind::Discord || k == FriendKind::Ndi);
 		pickLbl_->setText(k == FriendKind::Ndi ? "NDI source" : "Discord window");
-		if (owns)
+		if (k == FriendKind::Discord || k == FriendKind::Ndi)
 			fillPick();
-		chanLbl_->setText(k == FriendKind::VdoNinja ? "Stream ID" : "Twitch channel");
-		channel_->setPlaceholderText(k == FriendKind::VdoNinja ? "any word you both agree on, e.g. pup-pov"
-								       : "channel name, e.g. sombrero");
-		QString id = channel_->text().trimmed();
-		if (k == FriendKind::VdoNinja && !id.isEmpty())
-			link_->setText(QString::fromStdString(Switcher::vdoPushUrl(id.toStdString())));
-		else if (k == FriendKind::Twitch && !id.isEmpty())
-			link_->setText("https://twitch.tv/" + id.toLower().remove('@'));
-		else
-			link_->clear();
-		hint_->setText(
-			k == FriendKind::Twitch
-				? "Kennel adds a browser source named \"Kennel web\" playing this channel with its audio routed through OBS. They just need to be live; ask them to keep Twitch low-latency mode on. Their stream includes their mic."
-			: k == FriendKind::VdoNinja
-				? "WebRTC through vdo.ninja, usually under half a second, anywhere in the world. Send them the link: they open it in Chrome or Edge, pick their game window or screen and tick \"Share system audio\". No mic is sent."
-				: "Any source already in OBS: an NDI Source (DistroAV) for a friend on the LAN or over a VPN, a capture card, a second PC. Lowest latency. Its audio comes with it.");
+		err_->clear();
+		switch (k) {
+		case FriendKind::Twitch:
+			hint_->setText(
+				"A browser source named \"Kennel web\" plays this channel with its audio routed through OBS. They just need to be live; ask them to keep Twitch low-latency mode on. Their stream includes their mic.");
+			break;
+		case FriendKind::VdoNinja:
+			hint_->setText(
+				"Send them the link: they open it in Chrome or Edge, pick their game window or screen and tick \"Share system audio\". No mic is sent. Quality here is a ceiling; WebRTC settles lower by itself on a weak link. 1080p60 at 12000 is right for LAN or fibre, 4000-6000 for a weak upload.");
+			break;
+		case FriendKind::Discord:
+			hint_->setText(
+				"They press Go Live in the call. Open their stream in Discord and pop it out into its own window. \"Any Discord window\" follows the pop-out automatically; pick a specific window only if you have several. On Save a Window Capture and an Application Audio Capture of Discord are created in your scene. 720p without Nitro.");
+			break;
+		case FriendKind::Ndi:
+			hint_->setText(
+				"Lowest latency, on the LAN or over a VPN such as Tailscale. They run OBS with DistroAV's NDI output or NDI Screen Capture; pick their NDI source and it is created in your scene on Save.");
+			break;
+		default:
+			hint_->setText(
+				"Any source already in OBS: a capture card, a second PC, an NDI Source you set up yourself. Its audio comes with it.");
+		}
+		updateLink();
+	}
+	void updateLink()
+	{
+		Friend f = draft();
+		link_->setText(f.kind == FriendKind::VdoNinja && !f.channel.empty()
+				       ? QString::fromStdString(Switcher::vdoPushUrl(f))
+				       : QString());
 	}
 	void save()
 	{
-		result.name = name_->text().trimmed().toStdString();
-		result.kind = kind();
-		result.source = source_->currentText().trimmed().toStdString();
-		QString ch = channel_->text().trimmed();
-		if (result.kind == FriendKind::Twitch)
-			ch = ch.toLower().remove('@');
-		result.channel = ch.toStdString();
-		if (result.kind == FriendKind::ObsSource && result.source.empty()) {
-			hint_->setText("Pick or type the OBS source name.");
+		Friend f = draft();
+		if (f.kind == FriendKind::ObsSource && f.source.empty()) {
+			err_->setText("Pick or type the OBS source name.");
 			return;
 		}
-		if (result.kind != FriendKind::ObsSource && result.channel.empty()) {
-			hint_->setText(result.kind == FriendKind::Twitch ? "Type the Twitch channel name."
-									 : "Type a stream ID.");
+		if (f.kind == FriendKind::Twitch && f.channel.empty()) {
+			err_->setText("Type the Twitch channel name.");
 			return;
 		}
-		if (result.name.empty())
-			result.name = result.isWeb() ? result.channel : result.source;
+		if (f.kind == FriendKind::VdoNinja && f.channel.empty()) {
+			err_->setText("Type a stream ID (any word you both agree on).");
+			return;
+		}
+		if (f.kind == FriendKind::Ndi && f.channel.empty()) {
+			err_->setText(
+				"No NDI source picked. They need DistroAV's NDI output or NDI Screen Capture running on the same network.");
+			return;
+		}
+		if (f.kind == FriendKind::Discord && f.channel.empty())
+			f.channel = "Discord:Chrome_WidgetWin_1:Discord.exe";
+		if (f.name.empty())
+			f.name = f.kind == FriendKind::ObsSource ? f.source
+				 : f.kind == FriendKind::Discord ? "Discord"
+								 : f.channel;
+		result = f;
 		accept();
 	}
 };
@@ -1138,7 +1227,7 @@ void SettingsDialog::editFriend(int row)
 	Friend *existing = row >= 0 && row < (int)e_->cfg.friends.size() ? &e_->cfg.friends[row] : nullptr;
 	if (row >= 0 && !existing)
 		return;
-	FriendDialog dlg(existing, Switcher::inputs(), this);
+	FriendDialog dlg(existing, Switcher::inputs(), this, e_->cfg.vdoBitrateKbps);
 	if (dlg.exec() != QDialog::Accepted)
 		return;
 	Friend f = dlg.result;
