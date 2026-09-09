@@ -605,7 +605,7 @@ QWidget *SettingsDialog::buildDetectTab()
 	upFrames_->setValue(e_->cfg.upFrames);
 	frRow->addWidget(downFrames_);
 	frRow->addWidget(upFrames_);
-	frRow->addWidget(muted("polls to confirm down / up (5 per second: 3 / 5 = 0.6 s down, 1 s up)", g));
+	frRow->addWidget(muted("polls to confirm down / up (10 per second: 2 / 4 = 0.2 s down, 0.4 s up)", g));
 	frRow->addStretch(1);
 	f->addRow("Confirm frames", frRow);
 	auto *mdRow = new QHBoxLayout();

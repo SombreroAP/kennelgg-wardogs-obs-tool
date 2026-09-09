@@ -1,6 +1,7 @@
 #include "detector.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <thread>
 #include <graphics/image-file.h>
 #include <obs-module.h>
@@ -185,7 +186,24 @@ Detector::Hit Detector::search(const std::vector<float> &g, const std::vector<do
 	return best;
 }
 
-Match Detector::compare(const Frame &f)
+void Detector::remember(float scale, float xFrac, float yFrac)
+{
+	int best = -1;
+	float bd = 1e9f;
+	for (size_t i = 0; i < scaled_.size(); i++) {
+		float d = std::fabs(scaled_[i].scale - scale);
+		if (d < bd) {
+			bd = d;
+			best = (int)i;
+		}
+	}
+	memScale_ = best;
+	memXf_ = xFrac;
+	memYf_ = yFrac;
+	memX_ = memY_ = -1; // resolved against the frame size on first use
+}
+
+Match Detector::compare(const Frame &f, bool quickOnly)
 {
 	Match m;
 	if (scaled_.empty() || f.empty())
@@ -219,6 +237,31 @@ Match Detector::compare(const Frame &f)
 			return m;
 		}
 		lockScale_ = -1;
+	}
+	// remembered spot: the damage log sits in the same place every time you go down, so while
+	// alive a look there each poll catches it within one poll at almost no cost
+	if (memScale_ >= 0 && memScale_ < (int)scaled_.size()) {
+		if (memX_ < 0) {
+			memX_ = (int)std::lround(memXf_ * W);
+			memY_ = (int)std::lround(memYf_ * H);
+		}
+		const Scaled &s = scaled_[memScale_];
+		Hit h = refine(s, memX_, memY_, 3);
+		if (h.score >= threshold) {
+			lockScale_ = memScale_;
+			lockX_ = h.x;
+			lockY_ = h.y;
+			fill(s, h);
+			m.locked = true;
+			return m;
+		}
+		if (quickOnly) {
+			fill(s, h);
+			return m;
+		}
+	} else if (quickOnly) {
+		m.score = 0;
+		return m;
 	}
 
 	// full search: every size, full resolution, 2 px stride inside the band, then a 1 px refine
@@ -259,6 +302,11 @@ Match Detector::compare(const Frame &f)
 		lockX_ = hits[bi].x;
 		lockY_ = hits[bi].y;
 		m.locked = true;
+		memScale_ = bi;
+		memX_ = hits[bi].x;
+		memY_ = hits[bi].y;
+		memXf_ = (float)memX_ / W;
+		memYf_ = (float)memY_ / H;
 	}
 	return m;
 }

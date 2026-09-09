@@ -88,6 +88,9 @@ void Config::load()
 	DEFI(downFrames);
 	DEFI(upFrames);
 	DEFI(minDownMs);
+	DEFD(memScale);
+	DEFD(memX);
+	DEFD(memY);
 	DEFB(watchRevive);
 	DEFI(bridgePort);
 	DEFB(bridgeEnabled);
@@ -139,6 +142,9 @@ void Config::load()
 	GETI(downFrames);
 	GETI(upFrames);
 	GETI(minDownMs);
+	GETD(memScale);
+	GETD(memX);
+	GETD(memY);
 	GETB(watchRevive);
 	GETI(bridgePort);
 	GETB(bridgeEnabled);
@@ -193,6 +199,12 @@ void Config::load()
 		activeFriend = 0;
 	if (lookLabel.empty())
 		lookLabel = "POV";
+	// older configs carried the slower first defaults; move them to the responsive ones once
+	if (pollMs == 200 && downFrames == 3 && upFrames == 5) {
+		pollMs = 100;
+		downFrames = 2;
+		upFrames = 4;
+	}
 	obs_data_release(d);
 }
 
@@ -222,6 +234,9 @@ void Config::save() const
 	SETI(downFrames);
 	SETI(upFrames);
 	SETI(minDownMs);
+	SETD(memScale);
+	SETD(memX);
+	SETD(memY);
 	SETB(watchRevive);
 	SETI(bridgePort);
 	SETB(bridgeEnabled);

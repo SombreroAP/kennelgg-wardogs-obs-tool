@@ -63,8 +63,9 @@ struct Config {
 	bool autoDetect = true;
 	bool enabled = true;
 	double threshold = 0.85;
-	int pollMs = 200;
-	int downFrames = 3, upFrames = 5, minDownMs = 2000;
+	int pollMs = 100;
+	int downFrames = 2, upFrames = 4, minDownMs = 2000;
+	double memScale = 0, memX = 0, memY = 0; // where the damage log was last found (fast re-detect)
 	bool watchRevive =
 		true; // look for "REVIVING" on the friend's feed and switch back instantly when the damage log goes
 	double reviveThreshold = 0.80;

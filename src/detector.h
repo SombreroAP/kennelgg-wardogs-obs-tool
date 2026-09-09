@@ -34,8 +34,18 @@ public:
 	const std::vector<float> &templateGray() const { return tpl_; }
 	float templateWidthFrac() const { return widthFrac_; }
 
-	Match compare(const Frame &f);
+	/// quickOnly: only look where the template was last found (cheap); no full search.
+	Match compare(const Frame &f, bool quickOnly = false);
 	void unlock() { lockScale_ = -1; }
+	bool remembers() const { return memScale_ >= 0; }
+	/// Persisted "where it was last time": scale factor and position as fractions.
+	void remember(float scale, float xFrac, float yFrac);
+	float memScale() const
+	{
+		return memScale_ >= 0 && memScale_ < (int)scaled_.size() ? scaled_[memScale_].scale : 0;
+	}
+	float memX() const { return memXf_; }
+	float memY() const { return memYf_; }
 
 	/// Frame width the detector expects (what the source is rendered to).
 	static constexpr int FrameWidth = 800;
@@ -53,6 +63,8 @@ private:
 	float widthFrac_ = 0;
 	std::vector<Scaled> scaled_;
 	int lockScale_ = -1, lockX_ = 0, lockY_ = 0;
+	int memScale_ = -1, memX_ = 0, memY_ = 0;
+	float memXf_ = 0, memYf_ = 0;
 
 	struct Hit {
 		double score = -1;

@@ -203,6 +203,8 @@ void Engine::loadTemplates()
 		bfree(p);
 		cfg.customTemplateWidthFrac = 0;
 	}
+	if (cfg.memScale > 0)
+		detGame_.remember((float)cfg.memScale, (float)cfg.memX, (float)cfg.memY);
 	char *r = obs_module_file("templates/reviving.png");
 	if (r)
 		detRevive_.loadTemplatePng(r, 98.0f / 1875.0f);
@@ -593,14 +595,13 @@ void Engine::tick()
 	// The full-frame search is the expensive path and it runs exactly while you are alive (nothing to lock
 	// on to). Doing it on every third poll keeps it near 1-2 % of a core; once locked, every poll is cheap.
 	tickN_++;
-	if (!lastGame_.locked && !revivingRecent() && (tickN_ % 3) != 0)
-		return;
+	bool quick = !lastGame_.locked && !revivingRecent() && (tickN_ % 6) != 0;
 	busy_ = true;
 	bool wantRevive = applied_ && cfg.watchRevive && cfg.active();
 	std::string gameName = cfg.gameSource, friendName = wantRevive ? Config::sourceFor(*cfg.active()) : "";
 	bool preview = previewWanted_;
 
-	std::thread([this, gameName, friendName, wantRevive, preview]() {
+	std::thread([this, gameName, friendName, wantRevive, preview, quick]() {
 		Result r;
 		obs_source_t *src = obs_get_source_by_name(gameName.c_str());
 		if (src) {
@@ -608,7 +609,7 @@ void Engine::tick()
 			int w, h, ls;
 			if (capGame_.grab(src, Detector::FrameWidth, bgra, w, h, ls)) {
 				Frame f = Detector::fromBGRA(bgra.data(), w, h, ls);
-				r.game = detGame_.compare(f);
+				r.game = detGame_.compare(f, quick);
 				r.ok = true;
 				if (preview) {
 					r.bgra = std::move(bgra);
@@ -672,6 +673,12 @@ void Engine::onResult(Result r)
 		return;
 	}
 	lastWatchError_.clear();
+	if (r.game.locked && !lastGame_.locked && detGame_.remembers()) {
+		cfg.memScale = detGame_.memScale();
+		cfg.memX = detGame_.memX();
+		cfg.memY = detGame_.memY();
+		cfg.save();
+	}
 	lastGame_ = r.game;
 	lastRevive_ = r.revive;
 	if (r.revive.score >= cfg.reviveThreshold) {
