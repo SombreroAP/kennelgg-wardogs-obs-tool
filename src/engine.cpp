@@ -650,6 +650,8 @@ QString Engine::nearbyStatus() const
 {
 	if (!cfg.nearEnabled)
 		return "off";
+	if (!detected_ && !applied_)
+		return "N/A while you are up";
 	if (!nearbyAt_.isValid())
 		return nearbyEmptySince_.isValid() ? "nobody matched yet - use Test read on the Detect tab"
 						   : (bridge.clients() > 0 ? "read when you go down (nothing read yet)"
@@ -779,6 +781,8 @@ void Engine::pickClosest(const QString &why, bool decisive)
 	// Going down (not on screen yet): every reading is decisive, the nearest one wins outright.
 	// On screen: the "wait between swaps" slider is the only thing holding a swap back.
 	if (applied_ && !decisive) {
+		if (cfg.nearMaxM > 0 && d > cfg.nearMaxM)
+			return; // too far to be the one coming for you: stay on who is on screen
 		auto left = std::chrono::seconds(std::clamp(cfg.nearCooldownS, 1, 10)) - (clock_::now() - lastPick_);
 		if (left.count() > 0) {
 			if (clock_::now() - lastNearbyWarn_ > std::chrono::seconds(5)) {
@@ -1069,10 +1073,10 @@ void Engine::applyNow(bool on, const QString &why)
 	applying_ = true;
 	auto errors = sw.apply(cfg, on);
 	if (!on) {
-		// the look must never outlive the swap, whatever scene we are in now
-		int n = Switcher::hideEverywhere(Config::overlaySourceName());
+		// your own POV takes priority when you are up: every squad mate and the look overlay go, in every scene
+		int n = sw.hideAllFriends(cfg);
 		if (n > 0)
-			log(QString("Look overlay hidden (%1 item%2).").arg(n).arg(n == 1 ? "" : "s"));
+			log(QString("Squad mate feeds hidden (%1 item%2).").arg(n).arg(n == 1 ? "" : "s"));
 	}
 	applied_ = on;
 	lookPreview_ = false;

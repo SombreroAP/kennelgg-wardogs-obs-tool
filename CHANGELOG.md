@@ -2,6 +2,12 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.3.6
+- **Back up means your own POV, full stop.** On the way back every squad mate's video and audio is hidden in every scene, whatever state it was in. Warm and preloaded feeds now sit invisible rather than transparent (browser sources keep running while hidden), so nothing can be left showing.
+- The dock's Nearby line reads **N/A while you are up**.
+- The dock's **Closest** tick box and the Settings one are the same switch and stay in step; ticking it in the dock does everything ticking it in Settings does.
+- **Swap over only for someone ... m or closer** (Switch tab): once a squad mate is on screen, the feed only moves to a nearer one who is within this distance, 50 m by default; 0 means any distance. The pick when you go down is not limited.
+
 ## 0.3.5
 - **The closest squad mate is actually the one shown.** While you are going down, every NEARBY reading now picks the nearest squad mate outright. Before, a "15 m closer" rule meant to stop flapping was also blocking the first pick: someone at 4 m was not "15 m closer" than the one at 12 m, so the feed stayed on whoever was already selected. That rule is gone; once a squad mate is on screen, only the **Wait between swaps** slider holds a swap back, and the log says when it does and for how long.
 - **The NEARBY list is cleared the moment you are back up.** Who was near you while you were down is not relevant once you are alive, so the dock shows nothing until the next time.

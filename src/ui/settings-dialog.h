@@ -102,6 +102,7 @@ private:
 	// closest squad mate (the game's NEARBY list)
 	QCheckBox *nearOn_ = nullptr, *nearFollow_ = nullptr;
 	QSlider *nearCooldown_ = nullptr;
+	QSpinBox *nearMax_ = nullptr;
 	QLabel *nearCdLbl_ = nullptr;
 	QLabel *nearLbl_ = nullptr;
 	QLabel *twitchLbl_ = nullptr;

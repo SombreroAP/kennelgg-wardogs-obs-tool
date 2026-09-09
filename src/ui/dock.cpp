@@ -82,7 +82,7 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 			return;
 		e_->cfg.nearEnabled = on;
 		e_->cfg.save();
-		e_->pushAppConfig();
+		e_->reloadConfig(); // same as ticking it in Settings: pushes the names and areas to ClipHound
 		e_->log(on ? "Following the closest squad mate (NEARBY list)."
 			   : "Following the squad mate you picked.");
 		refresh();

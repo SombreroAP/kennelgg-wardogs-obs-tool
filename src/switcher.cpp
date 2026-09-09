@@ -472,7 +472,7 @@ void Switcher::armOne(const Config &cfg, const Friend &f)
 			obs_source_release(hf);
 		}
 		obs_source_set_muted(src, true);
-		obs_sceneitem_set_visible(item, true);
+		obs_sceneitem_set_visible(item, false); // browser sources keep running while hidden (shutdown off)
 	} else if (log)
 		log("Warm feed: '" + name + "' is not in the scene.");
 	if (!f.audioSource.empty()) {
@@ -480,7 +480,7 @@ void Switcher::armOne(const Config &cfg, const Friend &f)
 		obs_sceneitem_t *ai = obs_scene_find_source(scene, f.audioSource.c_str());
 		if (a && ai) {
 			obs_source_set_muted(a, true);
-			obs_sceneitem_set_visible(ai, true);
+			obs_sceneitem_set_visible(ai, false);
 		}
 		if (a)
 			obs_source_release(a);
@@ -488,6 +488,28 @@ void Switcher::armOne(const Config &cfg, const Friend &f)
 	if (src)
 		obs_source_release(src);
 	obs_source_release(ss);
+}
+
+/// Your own POV, and nothing else: every squad mate's video and audio hidden in every scene.
+int Switcher::hideAllFriends(const Config &cfg)
+{
+	int n = hideEverywhere(Config::webSourceName());
+	for (const auto &f : cfg.friends) {
+		if (f.isWeb())
+			n += hideEverywhere(std::string(Config::webSourceName()) + " - " + f.name);
+		else if (!f.source.empty())
+			n += hideEverywhere(f.source);
+		if (!f.audioSource.empty())
+			n += hideEverywhere(f.audioSource);
+		std::string nm = cfg.sourceFor(f);
+		obs_source_t *src = obs_get_source_by_name(nm.c_str());
+		if (src) {
+			obs_source_set_muted(src, true);
+			obs_source_release(src);
+		}
+	}
+	n += hideEverywhere(Config::overlaySourceName());
+	return n;
 }
 
 std::vector<std::string> Switcher::apply(const Config &cfg, bool on)

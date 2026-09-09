@@ -66,6 +66,7 @@ struct Config {
 	double nearX = 0.80, nearY = 0.79, nearW = 0.19,
 	       nearH = 0.14;   // where the NEARBY list is (fractions of the game source)
 	int nearMarginM = 15;  // someone must be this many metres closer to take over mid-swap
+	int nearMaxM = 50;     // once on screen, only swap over to someone this close or closer
 	int nearCooldownS = 4; // shortest gap between two swaps of the feed while down, 1-10 s
 	int nearTtlS = 20;     // a reading older than this is stale and ignored
 	bool appConfigDirty =

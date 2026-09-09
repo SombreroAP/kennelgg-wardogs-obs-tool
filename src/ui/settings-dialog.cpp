@@ -543,6 +543,13 @@ QWidget *SettingsDialog::buildSwitchTab()
 	nearFollow_ = new QCheckBox("Keep following the nearest one while you are down", gc);
 	nearFollow_->setChecked(e_->cfg.nearFollow);
 	fc->addRow(nearFollow_);
+	nearMax_ = new QSpinBox(gc);
+	nearMax_->setRange(0, 500);
+	nearMax_->setSuffix(" m or closer");
+	nearMax_->setSpecialValueText("any distance");
+	nearMax_->setValue(e_->cfg.nearMaxM);
+	fc->addRow("Swap over only for someone", nearMax_);
+	connect(nearMax_, &QSpinBox::editingFinished, this, [this]() { saveAndApply(); });
 	auto *cdRow = new QHBoxLayout();
 	nearCooldown_ = new QSlider(Qt::Horizontal, gc);
 	nearCooldown_->setRange(1, 10);
@@ -582,6 +589,11 @@ QWidget *SettingsDialog::buildSwitchTab()
 	connect(e_, &Engine::stateChanged, this, [this]() {
 		if (nearLbl_)
 			nearLbl_->setText(e_->nearbyStatus());
+		if (nearOn_ && nearOn_->isChecked() != e_->cfg.nearEnabled) {
+			nearOn_->blockSignals(true);
+			nearOn_->setChecked(e_->cfg.nearEnabled); // ticked from the dock
+			nearOn_->blockSignals(false);
+		}
 	});
 
 	auto *gl = new QGroupBox("Squad on this network", w);
@@ -1626,6 +1638,7 @@ void SettingsDialog::collect()
 	c.nearEnabled = nearOn_ ? nearOn_->isChecked() : c.nearEnabled;
 	c.nearFollow = nearFollow_ ? nearFollow_->isChecked() : c.nearFollow;
 	c.nearCooldownS = nearCooldown_ ? nearCooldown_->value() : c.nearCooldownS;
+	c.nearMaxM = nearMax_ ? nearMax_->value() : c.nearMaxM;
 	c.appFps = appFps_ ? appFps_->value() : c.appFps;
 }
 

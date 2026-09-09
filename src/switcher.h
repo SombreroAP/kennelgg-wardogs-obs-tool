@@ -23,6 +23,7 @@ public:
 	static std::vector<std::string> sceneNames();
 	/// Hide every scene item of this source in every scene (belt and braces for the way back).
 	static int hideEverywhere(const std::string &sourceName);
+	int hideAllFriends(const Config &cfg);
 	/// Choices a source kind offers for one of its list properties (e.g. window_capture "window").
 	static std::vector<std::pair<std::string, std::string>> listProperty(const char *kind,
 									     const char *prop); // name, value
