@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QImage>
 #include <QTimer>
+#include <QDateTime>
 #include "bridge.h"
 #include "capture.h"
 #include "clips.h"
@@ -34,8 +35,11 @@ public:
 	bool appConnected() const { return bridge.clients() > 0; }
 	void onReplaySaved() { clips.onReplaySaved(); }
 	void launchApp();
-	void closeApp();      // on OBS exit
-	void pushAppConfig(); // send the ClipHound settings to the app
+	void closeApp();          // on OBS exit
+	void stopApp();           // user pressed Stop
+	bool appRunning() const;  // process alive (even if not connected yet)
+	QString appState() const; // "connected" | "starting" | "crashed" | "stopped"
+	void pushAppConfig();     // send the ClipHound settings to the app
 	void twitchLogin();
 	void twitchLogout();
 	QJsonObject twitchStatus() const { return twitch_; }
@@ -106,6 +110,8 @@ private:
 	QString appStatus_;
 	QJsonObject twitch_;
 	qint64 appPid_ = 0;
+	QDateTime appStartedAt_;
+	bool appCrashReported_ = false;
 	Detector detGame_, detRevive_;
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
 	int downRun_ = 0, upRun_ = 0, tickN_ = 0;

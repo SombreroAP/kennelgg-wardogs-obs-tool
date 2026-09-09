@@ -155,6 +155,15 @@ void Engine::launchApp()
 	proc.setProcessEnvironment(env);
 	if (proc.startDetached(&pid)) {
 		appPid_ = pid;
+		appStartedAt_ = QDateTime::currentDateTime();
+		appCrashReported_ = false;
+		QTimer::singleShot(6000, this, [this]() {
+			if (bridge.clients() == 0 && !appRunning() && !appCrashReported_) {
+				appCrashReported_ = true;
+				log("ClipHound exited right after starting - open Settings → Logs and look at its log (config problem or missing file).");
+				emit stateChanged();
+			}
+		});
 		log(QString("Started ClipHound (pid %1): %2").arg(pid).arg(p));
 		return;
 	}
@@ -286,6 +295,55 @@ void Engine::twitchLogout()
 	QJsonObject o;
 	o["type"] = "twitch_logout";
 	bridge.sendJson(o);
+}
+
+bool Engine::appRunning() const
+{
+#ifdef _WIN32
+	if (appPid_ <= 0)
+		return false;
+	HANDLE h = OpenProcess(SYNCHRONIZE, FALSE, (DWORD)appPid_);
+	if (!h)
+		return false;
+	bool alive = WaitForSingleObject(h, 0) == WAIT_TIMEOUT;
+	CloseHandle(h);
+	return alive;
+#else
+	return appPid_ > 0;
+#endif
+}
+
+QString Engine::appState() const
+{
+	if (bridge.clients() > 0)
+		return "connected";
+	if (appRunning())
+		return "starting";
+	if (appPid_ > 0 && appStartedAt_.isValid() && appStartedAt_.secsTo(QDateTime::currentDateTime()) < 120)
+		return "crashed";
+	return "stopped";
+}
+
+void Engine::stopApp()
+{
+	if (bridge.clients() > 0) {
+		QJsonObject o;
+		o["type"] = "shutdown";
+		bridge.sendJson(o);
+	}
+#ifdef _WIN32
+	if (appPid_ > 0) {
+		HANDLE h = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, (DWORD)appPid_);
+		if (h) {
+			if (WaitForSingleObject(h, 1500) == WAIT_TIMEOUT)
+				TerminateProcess(h, 0);
+			CloseHandle(h);
+		}
+	}
+#endif
+	appPid_ = 0;
+	log("ClipHound stopped.");
+	emit stateChanged();
 }
 
 void Engine::closeApp()
@@ -426,6 +484,10 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		if (cfg.appConfigDirty) {
 			pushAppConfig(); // ours wins: the user edited while the app was away
 		} else {
+			if (v.value("player_name").toString().isEmpty() && !cfg.appPlayerName.empty()) {
+				pushAppConfig(); // the app came back with a fresh config: give it ours
+				return;
+			}
 			cfg.appPlayerName = v.value("player_name").toString().toStdString();
 			cfg.appLibrary = v.value("library").toString().toStdString();
 			cfg.appBroadcaster = v.value("broadcaster").toString().toStdString();

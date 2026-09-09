@@ -89,14 +89,14 @@ DRY = "--dry-run" in sys.argv
 
 
 def main():
-    cfg = yaml.safe_load(open("config.yaml", encoding="utf-8"))
+    cfg = load_config()
     bridge = None
     if cfg["capture"].get("backend", "obs") == "bridge" or cfg["obs"].get("mode") == "bridge":
         from bridge import Bridge
         bridge = Bridge({**(cfg.get("bridge") or {}), "fps": cfg["capture"]["fps"]})
     if bridge is not None:
         bridge.cfg = cfg
-        bridge.save_cfg = lambda c: yaml.safe_dump(c, open("config.yaml", "w", encoding="utf-8"), sort_keys=False, allow_unicode=True)
+        bridge.save_cfg = save_config
     if cfg["capture"].get("backend", "obs") == "bridge":
         from bridge import BridgeRoiCapture
         cap = BridgeRoiCapture(cfg["capture"], bridge)
@@ -188,6 +188,36 @@ def main():
                 except Exception:
                     pass
         time.sleep(max(0, period - (time.time() - t0)))
+
+
+def save_config(c):
+    """Atomic write: never leave a half-written config.yaml behind."""
+    tmp = "config.yaml.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        yaml.safe_dump(c, f, sort_keys=False, allow_unicode=True)
+    os.replace(tmp, "config.yaml")
+
+
+def load_config():
+    try:
+        with open("config.yaml", encoding="utf-8") as f:
+            c = yaml.safe_load(f)
+        if not isinstance(c, dict) or "detection" not in c:
+            raise ValueError("config.yaml is not a ClipHound config")
+        return c
+    except Exception as e:
+        print(f"[config] config.yaml is unreadable ({e}); starting from defaults")
+        try:
+            os.replace("config.yaml", time.strftime("config.broken-%Y%m%d-%H%M%S.yaml"))
+        except Exception:
+            pass
+        src = "config.default.yaml" if os.path.exists("config.default.yaml") else None
+        if src is None:
+            raise
+        import shutil
+        shutil.copy(src, "config.yaml")
+        with open("config.yaml", encoding="utf-8") as f:
+            return yaml.safe_load(f)
 
 
 def _safe(fn, *a):

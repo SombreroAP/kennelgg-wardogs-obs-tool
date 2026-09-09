@@ -4,6 +4,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QDialog>
+#include <QMenu>
 #include <QPlainTextEdit>
 #include <QApplication>
 #include <QClipboard>
@@ -78,12 +79,36 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 			l->setFont(f);
 		}
 	}
-	auto *clipRow = new QHBoxLayout();
-	clipNow_ = new QPushButton("Clip now", this);
-	clipRow->addWidget(clipNow_);
-	clipRow->addWidget(clip_, 1);
-	v->addLayout(clipRow);
-	connect(clipNow_, &QPushButton::clicked, this, [this]() { e_->clipNow("manual", {"manual"}, "dock"); });
+	// ClipHound control, styled like OBS's replay-buffer control: [Start/Stop ClipHound] [Save clip ▾]
+	auto *appRow = new QHBoxLayout();
+	appBtn_ = new QPushButton("Start ClipHound", this);
+	appRow->addWidget(appBtn_, 1);
+	saveBtn_ = new QToolButton(this);
+	saveBtn_->setText("Save clip");
+	saveBtn_->setToolTip("Save a clip now");
+	saveBtn_->setPopupMode(QToolButton::MenuButtonPopup);
+	auto *saveMenu = new QMenu(saveBtn_);
+	saveMenu->addAction("Save clip now", this, [this]() { e_->clipNow("manual", {"manual"}, "dock"); });
+	saveMenu->addAction("Save clip tagged 'highlight'", this,
+			    [this]() { e_->clipNow("highlight", {"highlight", "manual"}, "dock"); });
+	saveMenu->addAction("Save clip tagged 'funny'", this,
+			    [this]() { e_->clipNow("funny", {"funny", "manual"}, "dock"); });
+	saveMenu->addAction("Save clip tagged 'fail'", this,
+			    [this]() { e_->clipNow("fail", {"fail", "manual"}, "dock"); });
+	saveBtn_->setMenu(saveMenu);
+	connect(saveBtn_, &QToolButton::clicked, this, [this]() { e_->clipNow("manual", {"manual"}, "dock"); });
+	appRow->addWidget(saveBtn_);
+	v->addLayout(appRow);
+	connect(appBtn_, &QPushButton::clicked, this, [this]() {
+		QString st = e_->appState();
+		if (st == "connected" || st == "starting")
+			e_->stopApp();
+		else
+			e_->launchApp();
+		refresh();
+	});
+	clipNow_ = nullptr;
+	v->addWidget(clip_);
 	v->addWidget(app_);
 	events_ = new QListWidget(this);
 	events_->setMaximumHeight(120);
@@ -120,11 +145,24 @@ void Dock::refresh()
 	state_->setText(QString::fromStdString(e_->stateText()));
 	state_->setStyleSheet(e_->applied() ? "color: #ce6050;" : "");
 	pause_->setText(e_->cfg.enabled ? "Pause" : "Resume");
-	app_->setText(e_->appConnected()
-			      ? "ClipHound: " + (e_->appStatus().isEmpty() ? QString("connected") : e_->appStatus())
-		      : e_->cfg.bridgeEnabled
-			      ? QString("ClipHound: not connected (ws://127.0.0.1:%1)").arg(e_->cfg.bridgePort)
-			      : "ClipHound: bridge off");
+	QString st = e_->appState();
+	if (st == "connected") {
+		appBtn_->setText("Stop ClipHound");
+		appBtn_->setStyleSheet("QPushButton { border-left: 4px solid #4cbe5a; }");
+		app_->setText("ClipHound: " + (e_->appStatus().isEmpty() ? QString("connected") : e_->appStatus()));
+	} else if (st == "starting") {
+		appBtn_->setText("Stop ClipHound");
+		appBtn_->setStyleSheet("QPushButton { border-left: 4px solid #c99a3b; }");
+		app_->setText("ClipHound: starting...");
+	} else if (st == "crashed") {
+		appBtn_->setText("Start ClipHound");
+		appBtn_->setStyleSheet("QPushButton { border-left: 4px solid #ce6050; }");
+		app_->setText("ClipHound: exited right after starting - Settings → Logs");
+	} else {
+		appBtn_->setText("Start ClipHound");
+		appBtn_->setStyleSheet("");
+		app_->setText(e_->cfg.bridgeEnabled ? "ClipHound: not running" : "ClipHound: bridge off");
+	}
 	events_->clear();
 	QStringList ev = e_->recentEvents();
 	for (int i = ev.size() - 1; i >= 0 && ev.size() - i <= 8; i--)

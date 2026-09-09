@@ -5,6 +5,7 @@
 #include <QPushButton>
 #include <QProgressBar>
 #include <QListWidget>
+#include <QToolButton>
 #include <QPointer>
 #include <QDialog>
 #include "engine.h"
@@ -26,7 +27,8 @@ private:
 	QListWidget *events_;
 	QProgressBar *meter_;
 	QComboBox *active_;
-	QPushButton *show_, *back_, *pause_, *clipNow_;
+	QPushButton *show_, *back_, *pause_, *clipNow_, *appBtn_;
+	QToolButton *saveBtn_;
 	bool filling_ = false;
 	QPointer<QDialog> settings_;
 	QPointer<QWidget> wizard_;
