@@ -51,6 +51,8 @@ struct Config {
 	std::string appPlayerName, appLibrary, appBroadcaster;
 	bool appTwitchEnabled = false;
 	bool appEveryKill = false;
+	double feedX = 0.0, feedY = 0.42, feedW = 0.24,
+	       feedH = 0.16; // kill-feed area (fractions of the game source) sent to ClipHound
 	double appMultikillWindow = 30;
 	bool appConfigDirty =
 		false; // edited while the app was not connected; push on connect // tell ClipHound to quit when OBS closes (and end it if we started it)

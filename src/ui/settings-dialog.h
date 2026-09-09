@@ -84,6 +84,7 @@ private:
 	QLineEdit *appName_ = nullptr, *appLibrary_ = nullptr, *appBroadcaster_ = nullptr, *clipFolder_ = nullptr;
 	QCheckBox *appTwitch_ = nullptr, *appEveryKill_ = nullptr;
 	QDoubleSpinBox *appMulti_ = nullptr;
+	FramePreview *feedPick_ = nullptr;
 	QLabel *twitchLbl_ = nullptr;
 	QPushButton *twitchLogin_ = nullptr, *twitchLogout_ = nullptr;
 	void refreshAppTab();

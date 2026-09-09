@@ -282,6 +282,7 @@ void Engine::pushAppConfig()
 	set["broadcaster"] = QString::fromStdString(cfg.appBroadcaster);
 	set["twitch_enabled"] = cfg.appTwitchEnabled;
 	set["clip_every_kill"] = cfg.appEveryKill;
+	set["roi"] = QJsonArray{cfg.feedX, cfg.feedY, cfg.feedW, cfg.feedH};
 	set["multikill_window"] = cfg.appMultikillWindow;
 	QJsonObject o;
 	o["type"] = "app_config";
@@ -505,6 +506,13 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 			cfg.appBroadcaster = v.value("broadcaster").toString().toStdString();
 			cfg.appTwitchEnabled = v.value("twitch_enabled").toBool();
 			cfg.appEveryKill = v.value("clip_every_kill").toBool();
+			QJsonArray r = v.value("roi").toArray();
+			if (r.size() == 4 && r[2].toDouble() > 0.01) {
+				cfg.feedX = r[0].toDouble();
+				cfg.feedY = r[1].toDouble();
+				cfg.feedW = r[2].toDouble();
+				cfg.feedH = r[3].toDouble();
+			}
 			cfg.appMultikillWindow = v.value("multikill_window").toDouble(30);
 			cfg.save();
 			emit appConfigReceived();

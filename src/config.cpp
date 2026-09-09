@@ -106,6 +106,10 @@ void Config::load()
 	DEFS(appBroadcaster);
 	DEFB(appTwitchEnabled);
 	DEFB(appEveryKill);
+	DEFD(feedX);
+	DEFD(feedY);
+	DEFD(feedW);
+	DEFD(feedH);
 	DEFD(appMultikillWindow);
 	DEFB(appConfigDirty);
 	DEFS(clipNameTemplate);
@@ -163,6 +167,10 @@ void Config::load()
 	GETS(appBroadcaster);
 	GETB(appTwitchEnabled);
 	GETB(appEveryKill);
+	GETD(feedX);
+	GETD(feedY);
+	GETD(feedW);
+	GETD(feedH);
 	GETD(appMultikillWindow);
 	GETB(appConfigDirty);
 	GETS(clipNameTemplate);
@@ -269,6 +277,10 @@ void Config::save() const
 	SETS(appBroadcaster);
 	SETB(appTwitchEnabled);
 	SETB(appEveryKill);
+	SETD(feedX);
+	SETD(feedY);
+	SETD(feedW);
+	SETD(feedH);
 	SETD(appMultikillWindow);
 	SETB(appConfigDirty);
 	SETS(clipNameTemplate);
