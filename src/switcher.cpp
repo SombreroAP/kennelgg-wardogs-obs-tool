@@ -371,6 +371,35 @@ std::string Switcher::ensureHideFilter(obs_source_t *src)
 	return "";
 }
 
+int Switcher::hideEverywhere(const std::string &sourceName)
+{
+	struct Ctx {
+		const std::string *name;
+		int hidden = 0;
+	} ctx{&sourceName};
+	struct obs_frontend_source_list scenes = {};
+	obs_frontend_get_scenes(&scenes);
+	for (size_t i = 0; i < scenes.sources.num; i++) {
+		obs_scene_t *scene = obs_scene_from_source(scenes.sources.array[i]);
+		if (!scene)
+			continue;
+		obs_scene_enum_items(
+			scene,
+			[](obs_scene_t *, obs_sceneitem_t *item, void *data) {
+				auto *c = (Ctx *)data;
+				obs_source_t *src = obs_sceneitem_get_source(item);
+				if (src && *c->name == obs_source_get_name(src) && obs_sceneitem_visible(item)) {
+					obs_sceneitem_set_visible(item, false);
+					c->hidden++;
+				}
+				return true;
+			},
+			&ctx);
+	}
+	obs_frontend_source_list_free(&scenes);
+	return ctx.hidden;
+}
+
 std::string Switcher::updateLook(const Config &cfg, bool on)
 {
 	obs_source_t *ss = sceneSource(cfg);
@@ -387,9 +416,9 @@ std::string Switcher::updateLook(const Config &cfg, bool on)
 			obs_sceneitem_set_visible(item, true);
 		}
 	} else {
-		obs_sceneitem_t *item = obs_scene_find_source(scene, Config::overlaySourceName());
-		if (item)
-			obs_sceneitem_set_visible(item, false);
+		int n = hideEverywhere(Config::overlaySourceName());
+		if (log && n > 1)
+			log("Look overlay: hid " + std::to_string(n) + " scene items (it was in more than one place).");
 	}
 	obs_source_release(ss);
 	return err;
@@ -489,6 +518,8 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 					obs_source_release(hf);
 				}
 				obs_sceneitem_set_visible(item, on);
+				if (!on)
+					hideEverywhere(name);
 			}
 		}
 		if (src)

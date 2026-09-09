@@ -528,6 +528,12 @@ void Engine::applyNow(bool on, const QString &why)
 	}
 	applying_ = true;
 	auto errors = sw.apply(cfg, on);
+	if (!on) {
+		// the look must never outlive the swap, whatever scene we are in now
+		int n = Switcher::hideEverywhere(Config::overlaySourceName());
+		if (n > 0)
+			log(QString("Look overlay hidden (%1 item%2).").arg(n).arg(n == 1 ? "" : "s"));
+	}
 	applied_ = on;
 	lookPreview_ = false;
 	if (on)
