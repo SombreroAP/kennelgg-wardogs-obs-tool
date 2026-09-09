@@ -144,7 +144,9 @@ squad mate yourself. Only names you have configured are ever matched, so a stran
 cannot move your feed. While you are going down every reading picks the nearest one outright; once a
 squad mate is on screen, a swap to a nearer one waits for the **Wait between swaps** slider (1-10 s,
 4 by default) and only happens for someone within **Swap over only for someone ... m or closer**
-(50 m by default), so nothing flaps. The list is cleared the moment you are back up and the dock
+(50 m by default) while the one on screen is still in the list, so nothing flaps. Players who are not
+set up as a feed are never matched: with five in the squad and two streaming, the nearer streamer is
+shown however far they are, and if no streamer is in the list the selected squad mate stays. The list is cleared the moment you are back up and the dock
 reads "N/A while you are up". ClipHound must be running: ticking Closest without it asks to start it.
 
 Coming back up is absolute: every squad mate's video and audio is hidden in every scene, so your own

@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.3.8
+- **Only squad mates with a feed count, and the nearest of those wins.** Players near you who are not set up as a feed are never matched, so with five in the squad and two streaming the POV goes to whichever streamer is nearest, however far. The "... m or closer" range rule now only holds the feed on a squad mate who is still in the NEARBY list; if they have left it, any streaming squad mate in the list takes over. If no streaming squad mate is in the list at all, the squad mate already selected stays.
+
 ## 0.3.7
 - **Closest says so when ClipHound is not running.** Ticking Closest in the dock or in Settings without ClipHound running asks whether to start it (it reads the NEARBY list; nothing works without it). The dock's Nearby line turns red and says the same while it is off, and the Settings tick box is labelled "needs ClipHound running".
 

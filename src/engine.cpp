@@ -783,7 +783,11 @@ void Engine::pickClosest(const QString &why, bool decisive)
 	// Going down (not on screen yet): every reading is decisive, the nearest one wins outright.
 	// On screen: the "wait between swaps" slider is the only thing holding a swap back.
 	if (applied_ && !decisive) {
-		if (cfg.nearMaxM > 0 && d > cfg.nearMaxM)
+		// The range rule only protects a squad mate who is still in the list. If the one on
+		// screen has left it (dead, far away, not near you), any streaming squad mate in the list
+		// is better than them, however far - the ones closest to you may not be streaming at all.
+		int cur = nearbyDistanceOf(cfg.activeFriend);
+		if (cur >= 0 && cfg.nearMaxM > 0 && d > cfg.nearMaxM)
 			return; // too far to be the one coming for you: stay on who is on screen
 		auto left = std::chrono::seconds(std::clamp(cfg.nearCooldownS, 1, 10)) - (clock_::now() - lastPick_);
 		if (left.count() > 0) {
