@@ -21,7 +21,13 @@ Sombrero; sibling apps live next door (HotkeyBridge, InputOverlayBridge, povbrid
 
 ## Facts that set the constants (measured on the 7 Sep 2026 VODs, 1080p)
 - Kill feed: x 0–24 %, y 42–58 % of the frame; rows 24 px apart, ~9 px text; a row fades in
-  ~0.5 s and must be present every frame at 4 fps (feed blanks ~0.5 s between kills).
+  ~0.35 s and must be present every frame or two (the feed blanks ~0.5 s between kills).
+- Decisions are timed, not counted: `DECIDE_S` 0.75 s of reading (capped at 7 reads), `VANISH_S`
+  0.4 s for a row that goes away early, 2 reads if the row carries your own name. Default rate 10
+  fps, set from the plugin's ClipHound tab and applied live.
+- NEARBY panel: bottom right, ~x 80–99 %, y 79–93 %; one row per squad mate, right-aligned name
+  then a light chip with the metres (dark text on light, the opposite of everything else, which is
+  why `nearby._chip` finds it by eroding the bright mask).
 - Three teams: red (emblem hue ~0-5), green (69), blue (100). Team colour is the small icon
   before a killer / after a victim; squad = orange text + shield; own name is white.
   Distance `[68 m]` only appears on rows involving the streamer.

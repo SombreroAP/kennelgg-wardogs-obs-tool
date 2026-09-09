@@ -157,6 +157,9 @@ the replay clips. Clips fired while you are downed get a `downed` tag. The plugi
 start `ClipHound.bat` when OBS starts. Twitch clips still come from this app.
 
 CPU: the OCR is the heaviest part of the pair. Tesseract runs per feed row on a crop of the frame
-(the feed is 24 % x 16 % of 1080p) at `capture.fps`; at 3 fps that is roughly 5-15 % of one core on a
-modern desktop, i.e. 1-2 % of an 8-core machine, and nothing between rows. Lower `fps` to 2 if you
-want less; rows stay on screen for seconds so detection still catches them.
+(the feed is 24 % x 16 % of 1080p) at `capture.fps`, and only until a row is decided - about 0.75 s
+of reading whatever the rate. At the default 10 fps that is roughly 10-20 % of one core while a kill
+is being read and a few per cent between kills. Reading the NEARBY panel (when the plugin asks for
+it) is one tesseract call a second, or one every 0.4 s while you are down; names are only re-read
+when they change. Lower `fps` on the plugin's ClipHound tab if the CPU matters more than the second
+it saves.
