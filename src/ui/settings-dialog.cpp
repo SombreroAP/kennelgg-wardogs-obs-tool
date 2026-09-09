@@ -761,7 +761,7 @@ QWidget *SettingsDialog::buildClipsTab()
 	nameTpl_ = new QLineEdit(QString::fromStdString(e_->cfg.clipNameTemplate), g1);
 	f1->addRow("File name", nameTpl_);
 	f1->addRow(muted(
-		"Placeholders: {date} {time} {title} {tags} {source}. The replay file OBS writes is renamed to this in the same folder; every clip is also logged to clips.csv.",
+		"Placeholders: {title} {tags} {date} {time} {source}. Default puts what happened first, e.g. Double kill (2 players)_multikill_2026-09-09_07-36-14.mkv. Every clip is also logged to clips.csv.",
 		g1));
 	clipDowned_ =
 		new QCheckBox("Also save a clip whenever you get downed (the moment before is in the buffer)", g1);
@@ -1305,7 +1305,7 @@ void SettingsDialog::collect()
 		}
 	}
 	c.clipOnDowned = clipDowned_->isChecked();
-	c.clipNameTemplate = nameTpl_->text().trimmed().isEmpty() ? "{date}_{time}_{tags}"
+	c.clipNameTemplate = nameTpl_->text().trimmed().isEmpty() ? "{title}_{tags}_{date}_{time}"
 								  : nameTpl_->text().trimmed().toStdString();
 	c.clipFolder = clipFolder_ ? clipFolder_->text().trimmed().toStdString() : c.clipFolder;
 	c.bridgeEnabled = bridgeOn_->isChecked();

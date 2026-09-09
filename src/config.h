@@ -54,7 +54,7 @@ struct Config {
 	double appMultikillWindow = 30;
 	bool appConfigDirty =
 		false; // edited while the app was not connected; push on connect // tell ClipHound to quit when OBS closes (and end it if we started it)
-	std::string clipNameTemplate = "{date}_{time}_{tags}";
+	std::string clipNameTemplate = "{title}_{tags}_{date}_{time}";
 	bool autoStartReplay = true;
 	bool clipOnDowned = false;            // also clip when you get downed (the moment before is in the buffer)
 	bool clipUseReplay = true;            // save OBS's own replay buffer on a clip

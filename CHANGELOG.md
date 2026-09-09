@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.2.22
+- Clip file names put what happened first, then the date and time: `{title}_{tags}_{date}_{time}`. Existing configs on the old default are migrated; the template stays editable on the Clips tab.
+
 ## 0.2.21
 - Settings, setup wizard and Logs windows always open fully on screen (their title bar could sit above the screen edge and be impossible to grab).
 

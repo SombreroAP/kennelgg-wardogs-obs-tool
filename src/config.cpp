@@ -216,6 +216,8 @@ void Config::load()
 		upFrames = 2;
 	if (minDownMs == 2000)
 		minDownMs = 500;
+	if (clipNameTemplate == "{date}_{time}_{tags}")
+		clipNameTemplate = "{title}_{tags}_{date}_{time}"; // what happened first, then when
 	obs_data_release(d);
 }
 

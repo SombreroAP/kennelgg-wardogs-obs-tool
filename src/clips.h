@@ -19,7 +19,7 @@ public:
 	};
 	explicit Clips(QObject *parent = nullptr);
 
-	QString nameTemplate = "{date}_{time}_{tags}";
+	QString nameTemplate = "{title}_{tags}_{date}_{time}";
 	QString folder;              // move clips here when set // {date} {time} {title} {tags} {source}
 	bool autoStartReplay = true; // start the replay buffer when OBS loads / when a clip is asked for
 	bool useReplay = true;       // save OBS's replay buffer
