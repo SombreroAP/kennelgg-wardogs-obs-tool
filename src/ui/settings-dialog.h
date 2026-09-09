@@ -82,6 +82,10 @@ private:
 	QSpinBox *bridgePort_;
 	QLineEdit *appPath_, *nameTpl_;
 	QListWidget *clipList_;
+	QCheckBox *useReplay_ = nullptr;
+	QListWidget *hotkeyList_ = nullptr;
+	QLineEdit *hotkeyFilter_ = nullptr;
+	void fillHotkeys();
 	void fillSources();
 	void fillFriends();
 	void editFriend(int row);

@@ -44,7 +44,9 @@ struct Config {
 	bool launchApp = false;
 	std::string clipNameTemplate = "{date}_{time}_{tags}";
 	bool autoStartReplay = true;
-	bool clipOnDowned = false; // also clip when you get downed (the moment before is in the buffer)
+	bool clipOnDowned = false;            // also clip when you get downed (the moment before is in the buffer)
+	bool clipUseReplay = true;            // save OBS's own replay buffer on a clip
+	std::vector<std::string> clipHotkeys; // OBS hotkey names fired on every clip (e.g. Aitum Backtrack "save")
 
 	// detection
 	bool autoDetect = true;

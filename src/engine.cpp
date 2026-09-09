@@ -191,10 +191,14 @@ void Engine::start()
 		}
 	}
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
-	clips.autoStartReplay = cfg.autoStartReplay;
+	clips.autoStartReplay = cfg.autoStartReplay && cfg.clipUseReplay;
+	clips.useReplay = cfg.clipUseReplay;
+	clips.hotkeys.clear();
+	for (auto &h : cfg.clipHotkeys)
+		clips.hotkeys << QString::fromStdString(h);
 	if (cfg.bridgeEnabled)
 		bridge.listen((quint16)cfg.bridgePort);
-	if (cfg.autoStartReplay)
+	if (cfg.autoStartReplay && cfg.clipUseReplay)
 		clips.ensureReplayBuffer();
 	if (cfg.launchApp)
 		launchApp();
@@ -220,7 +224,11 @@ void Engine::stop()
 void Engine::reloadConfig()
 {
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
-	clips.autoStartReplay = cfg.autoStartReplay;
+	clips.autoStartReplay = cfg.autoStartReplay && cfg.clipUseReplay;
+	clips.useReplay = cfg.clipUseReplay;
+	clips.hotkeys.clear();
+	for (auto &h : cfg.clipHotkeys)
+		clips.hotkeys << QString::fromStdString(h);
 	if (cfg.bridgeEnabled && (!bridge.listening() || bridge.port() != cfg.bridgePort))
 		bridge.listen((quint16)cfg.bridgePort);
 	else if (!cfg.bridgeEnabled && bridge.listening())

@@ -19,7 +19,11 @@ public:
 
 	QString nameTemplate = "{date}_{time}_{tags}"; // {date} {time} {title} {tags} {source}
 	bool autoStartReplay = true; // start the replay buffer when OBS loads / when a clip is asked for
-	int minGapMs = 4000;         // ignore clip requests closer than this
+	bool useReplay = true;       // save OBS's replay buffer
+	QStringList hotkeys;         // OBS hotkeys to fire as well (Aitum Backtrack saves, anything else)
+	static QList<QPair<QString, QString>> allHotkeys(); // (name, description)
+	static bool fireHotkey(const QString &name);
+	int minGapMs = 4000; // ignore clip requests closer than this
 
 	/// Ask OBS to save the replay buffer; the rename happens when OBS reports the file.
 	QString request(const QString &title, const QStringList &tags, const QString &source);

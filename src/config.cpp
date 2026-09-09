@@ -95,6 +95,7 @@ void Config::load()
 	DEFS(clipNameTemplate);
 	DEFB(autoStartReplay);
 	DEFB(clipOnDowned);
+	DEFB(clipUseReplay);
 	DEFS(playerName);
 	DEFB(lanEnabled);
 	DEFI(lanPort);
@@ -134,6 +135,7 @@ void Config::load()
 	GETS(clipNameTemplate);
 	GETB(autoStartReplay);
 	GETB(clipOnDowned);
+	GETB(clipUseReplay);
 	GETS(playerName);
 	GETB(lanEnabled);
 	GETI(lanPort);
@@ -146,6 +148,7 @@ void Config::load()
 	GETD(boxW);
 	GETD(boxH);
 	muteWhileDowned = getStrings(d, "muteWhileDowned");
+	clipHotkeys = getStrings(d, "clipHotkeys");
 
 	friends.clear();
 	obs_data_array_t *arr = obs_data_get_array(d, "friends");
@@ -204,6 +207,7 @@ void Config::save() const
 	SETS(clipNameTemplate);
 	SETB(autoStartReplay);
 	SETB(clipOnDowned);
+	SETB(clipUseReplay);
 	SETS(playerName);
 	SETB(lanEnabled);
 	SETI(lanPort);
@@ -216,6 +220,7 @@ void Config::save() const
 	SETD(boxW);
 	SETD(boxH);
 	setStrings(d, "muteWhileDowned", muteWhileDowned);
+	setStrings(d, "clipHotkeys", clipHotkeys);
 	obs_data_array_t *arr = obs_data_array_create();
 	for (auto &f : friends) {
 		obs_data_t *it = obs_data_create();

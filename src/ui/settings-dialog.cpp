@@ -639,6 +639,9 @@ QWidget *SettingsDialog::buildClipsTab()
 	auto *v = new QVBoxLayout(w);
 	auto *g1 = new QGroupBox("Replay clips", w);
 	auto *f1 = new QFormLayout(g1);
+	useReplay_ = new QCheckBox("Save OBS's replay buffer on a clip", g1);
+	useReplay_->setChecked(e_->cfg.clipUseReplay);
+	f1->addRow(useReplay_);
 	autoReplay_ = new QCheckBox("Start OBS's replay buffer automatically (clips need it running)", g1);
 	autoReplay_->setChecked(e_->cfg.autoStartReplay);
 	f1->addRow(autoReplay_);
@@ -655,6 +658,23 @@ QWidget *SettingsDialog::buildClipsTab()
 		"Hotkey \"Kennel WARDOGS: save a clip now\" and the dock's Clip now button save one by hand. Replay length is OBS's Settings → Output → Replay Buffer.",
 		g1));
 	v->addWidget(g1);
+
+	auto *gh = new QGroupBox("Also fire OBS hotkeys on a clip (Aitum Backtrack, anything else)", w);
+	auto *vh = new QVBoxLayout(gh);
+	hotkeyFilter_ = new QLineEdit(gh);
+	hotkeyFilter_->setPlaceholderText("filter, e.g. backtrack");
+	vh->addWidget(hotkeyFilter_);
+	hotkeyList_ = new QListWidget(gh);
+	hotkeyList_->setMaximumHeight(140);
+	vh->addWidget(hotkeyList_);
+	vh->addWidget(muted(
+		"Tick the hotkeys OBS should press for you on every clip: with Aitum Backtrack that is its \"Save\" hotkey for the source you want (Backtrack names its own files, so the file-name template above does not apply to those). Untick the replay buffer above to clip with Backtrack alone.",
+		gh));
+	v->addWidget(gh);
+	connect(hotkeyFilter_, &QLineEdit::textChanged, this, [this](const QString &) { fillHotkeys(); });
+	connect(hotkeyList_, &QListWidget::itemChanged, this, [this](QListWidgetItem *) { saveAndApply(); });
+	connect(useReplay_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	fillHotkeys();
 
 	auto *g2 = new QGroupBox("Companion app (ClipHound)", w);
 	auto *f2 = new QFormLayout(g2);
@@ -749,6 +769,30 @@ QWidget *SettingsDialog::buildAboutTab()
 	v->addWidget(l);
 	v->addStretch(1);
 	return w;
+}
+
+void SettingsDialog::fillHotkeys()
+{
+	if (!hotkeyList_)
+		return;
+	hotkeyList_->blockSignals(true);
+	hotkeyList_->clear();
+	QString flt = hotkeyFilter_ ? hotkeyFilter_->text().trimmed().toLower() : QString();
+	for (auto &hk : Clips::allHotkeys()) {
+		if (hk.first.startsWith("kennel.") || hk.first.startsWith("OBSBasic.") ||
+		    hk.first.startsWith("libobs."))
+			continue;
+		bool on = std::find(e_->cfg.clipHotkeys.begin(), e_->cfg.clipHotkeys.end(), hk.first.toStdString()) !=
+			  e_->cfg.clipHotkeys.end();
+		QString label = hk.second.isEmpty() ? hk.first : hk.second + "   ·  " + hk.first;
+		if (!flt.isEmpty() && !label.toLower().contains(flt) && !on)
+			continue;
+		auto *it = new QListWidgetItem(label, hotkeyList_);
+		it->setData(Qt::UserRole, hk.first);
+		it->setFlags(it->flags() | Qt::ItemIsUserCheckable);
+		it->setCheckState(on ? Qt::Checked : Qt::Unchecked);
+	}
+	hotkeyList_->blockSignals(false);
 }
 
 void SettingsDialog::fillSources()
@@ -886,6 +930,20 @@ void SettingsDialog::collect()
 	c.autoDetect = auto_->isChecked();
 	c.watchRevive = revive_->isChecked();
 	c.autoStartReplay = autoReplay_->isChecked();
+	c.clipUseReplay = useReplay_ ? useReplay_->isChecked() : true;
+	if (hotkeyList_) {
+		// keep ticked hotkeys that are filtered out of view
+		for (int i = 0; i < hotkeyList_->count(); i++) {
+			auto *it = hotkeyList_->item(i);
+			std::string n = it->data(Qt::UserRole).toString().toStdString();
+			bool has = std::find(c.clipHotkeys.begin(), c.clipHotkeys.end(), n) != c.clipHotkeys.end();
+			if (it->checkState() == Qt::Checked && !has)
+				c.clipHotkeys.push_back(n);
+			else if (it->checkState() != Qt::Checked && has)
+				c.clipHotkeys.erase(std::remove(c.clipHotkeys.begin(), c.clipHotkeys.end(), n),
+						    c.clipHotkeys.end());
+		}
+	}
 	c.clipOnDowned = clipDowned_->isChecked();
 	c.clipNameTemplate = nameTpl_->text().trimmed().isEmpty() ? "{date}_{time}_{tags}"
 								  : nameTpl_->text().trimmed().toStdString();

@@ -5,6 +5,8 @@
 #include <QFileInfo>
 #include <QTextStream>
 #include <obs-module.h>
+#include <algorithm>
+#include <cstring>
 #include <obs-frontend-api.h>
 #include <plugin-support.h>
 
@@ -32,12 +34,67 @@ void Clips::ensureReplayBuffer()
 	}
 }
 
+QList<QPair<QString, QString>> Clips::allHotkeys()
+{
+	QList<QPair<QString, QString>> out;
+	obs_enum_hotkeys(
+		[](void *data, obs_hotkey_id, obs_hotkey_t *hk) {
+			auto *o = (QList<QPair<QString, QString>> *)data;
+			const char *n = obs_hotkey_get_name(hk), *d = obs_hotkey_get_description(hk);
+			if (n && *n)
+				o->append({QString::fromUtf8(n), QString::fromUtf8(d ? d : "")});
+			return true;
+		},
+		&out);
+	std::sort(out.begin(), out.end(), [](const QPair<QString, QString> &a, const QPair<QString, QString> &b) {
+		return a.second.toLower() < b.second.toLower();
+	});
+	return out;
+}
+
+bool Clips::fireHotkey(const QString &name)
+{
+	struct Ctx {
+		QByteArray name;
+		obs_hotkey_id id = OBS_INVALID_HOTKEY_ID;
+	} ctx{name.toUtf8()};
+	obs_enum_hotkeys(
+		[](void *data, obs_hotkey_id id, obs_hotkey_t *hk) {
+			auto *c = (Ctx *)data;
+			if (strcmp(obs_hotkey_get_name(hk), c->name.constData()) == 0) {
+				c->id = id;
+				return false;
+			}
+			return true;
+		},
+		&ctx);
+	if (ctx.id == OBS_INVALID_HOTKEY_ID)
+		return false;
+	obs_hotkey_trigger_routed_callback(ctx.id, true);
+	obs_hotkey_trigger_routed_callback(ctx.id, false);
+	return true;
+}
+
 QString Clips::request(const QString &title, const QStringList &tags, const QString &source)
 {
 	QDateTime now = QDateTime::currentDateTime();
 	if (lastRequest_.isValid() && lastRequest_.msecsTo(now) < minGapMs)
 		return "ignored: too soon after the last clip";
 	lastRequest_ = now;
+	QStringList missed;
+	for (const QString &hk : hotkeys)
+		if (!fireHotkey(hk))
+			missed << hk;
+	if (!missed.isEmpty())
+		emit logged("Clip hotkeys not found in OBS (plugin missing?): " + missed.join(", "));
+	else if (!hotkeys.isEmpty())
+		emit logged(QString("Fired %1 clip hotkey(s) for '%2'.")
+				    .arg(hotkeys.size())
+				    .arg(title.isEmpty() ? "(untitled)" : title));
+	if (!useReplay)
+		return hotkeys.isEmpty()
+			       ? "no clip method: turn on the replay buffer or pick a hotkey (Settings → Clips)"
+			       : "";
 	if (!obs_frontend_replay_buffer_active()) {
 		if (!autoStartReplay)
 			return "the replay buffer is not running (Settings → Output → Replay Buffer)";

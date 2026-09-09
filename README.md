@@ -78,6 +78,10 @@ The plugin saves OBS's replay buffer and renames the file with `{date} {time} {t
 - **clip on downed** (Clips tab);
 - **ClipHound** over the local bridge.
 
+**Aitum Backtrack** (or any other plugin with a hotkey): Settings → Clips → tick the OBS hotkeys to
+fire on every clip, e.g. Backtrack's *Save* for the source you want. Works alongside the replay
+buffer or instead of it (untick "Save OBS's replay buffer").
+
 ClipHound (Python, in `app/`, built into `ClipHound.exe` by CI) OCRs the kill feed. It connects to the plugin at
 `ws://127.0.0.1:47820`, subscribes to native-resolution crops of the game source, and sends
 `{"type":"clip","title":...,"tags":[...]}` on a notable row. The plugin replies with the saved
