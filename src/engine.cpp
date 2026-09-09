@@ -6,6 +6,8 @@
 #include <QJsonArray>
 #include <QProcess>
 #include <QFileInfo>
+#include <QDesktopServices>
+#include <QUrl>
 #include <QDateTime>
 #include <obs-module.h>
 #include <plugin-support.h>
@@ -116,17 +118,32 @@ void Engine::applyLan()
 
 void Engine::launchApp()
 {
-	if (cfg.appPath.empty())
-		return;
 	QString p = QString::fromStdString(cfg.appPath);
-	if (!QFileInfo::exists(p)) {
-		log("Companion app not found: " + p);
+	const QString def = "C:/ProgramData/Kennel WARDOGS/ClipHound/ClipHound.exe";
+	if (p.isEmpty() && QFileInfo::exists(def)) {
+		p = def;
+		cfg.appPath = def.toStdString();
+		cfg.save();
+	}
+	if (p.isEmpty()) {
+		log("ClipHound: no app path set and nothing at " + def + " (Settings → Clips → Browse).");
 		return;
 	}
-	if (QProcess::startDetached(p, {}, QFileInfo(p).absolutePath()))
-		log("Started companion app: " + QFileInfo(p).fileName());
+	if (!QFileInfo::exists(p)) {
+		log("ClipHound not found at " + p + " (Settings → Clips → Browse).");
+		return;
+	}
+	QString dir = QFileInfo(p).absolutePath();
+	qint64 pid = 0;
+	if (QProcess::startDetached(p, {}, dir, &pid)) {
+		log(QString("Started ClipHound (pid %1): %2").arg(pid).arg(p));
+		return;
+	}
+	// fall back to the shell (handles .bat/.cmd and anything Windows wants to elevate or associate)
+	if (QDesktopServices::openUrl(QUrl::fromLocalFile(p)))
+		log("Started ClipHound via the shell: " + p);
 	else
-		log("Could not start companion app: " + p);
+		log("Could not start ClipHound: " + p + " (try the Start-menu shortcut and send me the Logs).");
 }
 
 Engine::~Engine()
