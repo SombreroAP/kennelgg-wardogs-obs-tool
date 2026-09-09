@@ -49,7 +49,8 @@ themselves on first run; later they are under **Tools → Kennel.gg WARDOGS OBS 
 ## First run
 
 1. **Switch** tab: pick the source that shows WARDOGS or press **Create Game Capture**. **Add...**
-   squad mates. Desktop Audio is ticked in the mute list automatically; the mic is labelled.
+   squad mates, each with their **in-game name**. Nothing of yours is muted by default; tick
+   "Play the squad mate's game sound" and anything of yours to mute if you want theirs instead.
 2. Get downed once with the **Detect** tab open: the bar goes red (~0.9) and the stream cuts to
    the friend. Nothing to calibrate; capture your own template only if it never locks on.
 3. **Clips** tab: the replay buffer is started for you. Set the file-name template and, if you use
@@ -114,6 +115,20 @@ uint16 height, uint64 timestamp ms (little endian), then JPEG.
 | plugin | `nearby_now` - read the NEARBY panel now (sent the moment the damage log appears) |
 | app | `nearby {list:[{name, dist, match}]}` - who the game says is near you, nearest first |
 
+## Settings at a glance
+
+| Tab | What is there |
+|---|---|
+| Switch | game source and scene; squad mates (kind, in-game name, VDO.Ninja quality); **Show whoever is closest** with Wait between swaps and the 50 m range; squad-mate sound and what of yours to mute; LAN discovery and NDI share; Extras: keep warm, preload every feed |
+| Look | name tag, plate, camcorder frame, grain, vignette; preview |
+| Detect | live picture with the damage-log match, the header box and the blue **NEARBY box**; **Test read**; thresholds, confirm frames, the 2 s delay before showing and the delay before coming back |
+| Clips | replay buffer, file-name template, clip folder, Backtrack hotkeys and folder, clip on downed, ClipHound path and start/close with OBS |
+| ClipHound | your kill-feed name, clip library, clip every kill, multi-kill window, the kill-feed box and the reading rate, Twitch login |
+| Logs | the plugin's log and ClipHound's, Copy all |
+
+The dock has the state line, the squad-mate box with the **Closest** tick box, the Nearby line,
+Show / Back / Pause, Start ClipHound and Save clip.
+
 ## Show whoever is closest
 
 WARDOGS lists the squad mates near you in the bottom-right corner of the HUD, with a distance each,
@@ -128,7 +143,12 @@ dialog. The dock's squad-mate box then follows the closest one by itself; untick
 squad mate yourself. Only names you have configured are ever matched, so a stranger in the list
 cannot move your feed. While you are going down every reading picks the nearest one outright; once a
 squad mate is on screen, a swap to a nearer one waits for the **Wait between swaps** slider (1-10 s,
-4 by default), so nothing flaps. The list is cleared the moment you are back up.
+4 by default) and only happens for someone within **Swap over only for someone ... m or closer**
+(50 m by default), so nothing flaps. The list is cleared the moment you are back up and the dock
+reads "N/A while you are up". ClipHound must be running: ticking Closest without it asks to start it.
+
+Coming back up is absolute: every squad mate's video and audio is hidden in every scene, so your own
+POV is what the stream shows the moment you are revived.
 
 If it reads nobody, press **Test read** next to the box: it shows the crop the plugin is sending and
 the rows, names and metres ClipHound got out of it, which says whether the box is in the wrong place,
