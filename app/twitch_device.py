@@ -7,7 +7,7 @@ import time
 
 import requests
 
-KENNEL_TWITCH_CLIENT_ID = ""          # <- Kennel's public Twitch app client id
+KENNEL_TWITCH_CLIENT_ID = "bdtbcsrqxvjozcksvhm4eoy1ec0t3e"  # Kennel's public Twitch app (dev.twitch.tv, client type Public)
 SCOPES = "clips:edit"
 
 

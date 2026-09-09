@@ -169,6 +169,10 @@ class Bridge:
     def status(self, text: str):
         self.send({"type": "status", "text": text})
 
+    def event(self, text: str, kind: str = "kill"):
+        """Something happened in the kill feed (shown in the plugin's dock)."""
+        self.send({"type": "event", "kind": kind, "text": text})
+
     # ---- frames ----
     def latest(self):
         with self._lock:

@@ -15,6 +15,10 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <QJsonObject>
+#include <QStandardPaths>
+#include <QScrollBar>
+#include <QFile>
+#include <obs-frontend-api.h>
 #include <QFileInfo>
 #include <obs-module.h>
 #include <plugin-support.h>
@@ -290,6 +294,7 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	tabs->addTab(buildDetectTab(), "Detect");
 	tabs->addTab(buildClipsTab(), "Clips");
 	tabs->addTab(buildAppTab(), "ClipHound");
+	tabs->addTab(buildLogsTab(), "Logs");
 	tabs->addTab(buildAboutTab(), "Help");
 	building_ = false;
 	v->addWidget(tabs, 1);
@@ -867,6 +872,79 @@ void SettingsDialog::refreshAppTab()
 	}
 }
 
+static QString tailFile(const QString &path, int lines)
+{
+	QFile f(path);
+	if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+		return QString();
+	QStringList all = QString::fromUtf8(f.readAll()).split('\n');
+	if (all.size() > lines)
+		all = all.mid(all.size() - lines);
+	return all.join('\n');
+}
+
+QWidget *SettingsDialog::buildLogsTab()
+{
+	auto *w = new QWidget(this);
+	auto *v = new QVBoxLayout(w);
+	logView_ = new QPlainTextEdit(w);
+	logView_->setReadOnly(true);
+	logView_->setLineWrapMode(QPlainTextEdit::NoWrap);
+	v->addWidget(logView_, 1);
+	auto *row = new QHBoxLayout();
+	auto *copy = new QPushButton("Copy all", w);
+	auto *refresh = new QPushButton("Refresh", w);
+	auto *obsLogs = new QPushButton("Open OBS log folder", w);
+	auto *cfgFolder = new QPushButton("Open plugin config folder", w);
+	for (auto *b : {copy, refresh, obsLogs, cfgFolder})
+		row->addWidget(b);
+	row->addStretch(1);
+	v->addLayout(row);
+	v->addWidget(muted(
+		"Paste this to Sombrero when something misbehaves: it has the plugin's state, its recent log and the tail of ClipHound's log.",
+		w));
+	connect(copy, &QPushButton::clicked, this, [this, copy]() {
+		QApplication::clipboard()->setText(logView_->toPlainText());
+		copy->setText("Copied");
+	});
+	connect(refresh, &QPushButton::clicked, this, [this]() { refreshLogs(); });
+	connect(obsLogs, &QPushButton::clicked, this, []() {
+		QDesktopServices::openUrl(QUrl::fromLocalFile(
+			QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).section('/', 0, -2) +
+			"/obs-studio/logs"));
+	});
+	connect(cfgFolder, &QPushButton::clicked, this,
+		[]() { QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(Config::configDir()))); });
+	connect(e_, &Engine::logged, this, [this](const QString &) { refreshLogs(); });
+	refreshLogs();
+	return w;
+}
+
+void SettingsDialog::refreshLogs()
+{
+	if (!logView_)
+		return;
+	QString appDir = e_->cfg.appPath.empty() ? QString("C:/ProgramData/Kennel WARDOGS/ClipHound")
+						 : QFileInfo(QString::fromStdString(e_->cfg.appPath)).absolutePath();
+	QString body = QString("=== Kennel WARDOGS plugin %1 ===\n").arg(PLUGIN_VERSION);
+	body += QString("state: %1 | game source: %2 | squad mate: %3 | replay buffer: %4 | ClipHound: %5 | clip hotkeys: %6 | twitch: %7\n\n")
+			.arg(QString::fromStdString(e_->stateText()), QString::fromStdString(e_->cfg.gameSource),
+			     e_->cfg.active() ? QString::fromStdString(e_->cfg.active()->name) : "(none)",
+			     obs_frontend_replay_buffer_active() ? "running" : "NOT running",
+			     e_->appConnected() ? "connected" : "not connected",
+			     QString::number(e_->cfg.clipHotkeys.size()),
+			     e_->twitchStatus().value("state").toString() + " " +
+				     e_->twitchStatus().value("login").toString());
+	body += e_->recentLog().join('\n');
+	body += "\n\n=== ClipHound (" + appDir + "/cliphound.log, last 200 lines) ===\n";
+	QString ch = tailFile(appDir + "/cliphound.log", 200);
+	body += ch.isEmpty() ? "(no log file - is ClipHound running from that folder?)" : ch;
+	bool atEnd = logView_->verticalScrollBar()->value() >= logView_->verticalScrollBar()->maximum() - 4;
+	logView_->setPlainText(body);
+	if (atEnd)
+		logView_->verticalScrollBar()->setValue(logView_->verticalScrollBar()->maximum());
+}
+
 QWidget *SettingsDialog::buildAboutTab()
 {
 	auto *w = new QWidget(this);
@@ -905,7 +983,22 @@ void SettingsDialog::fillHotkeys()
 	hotkeyList_->blockSignals(true);
 	hotkeyList_->clear();
 	QString flt = hotkeyFilter_ ? hotkeyFilter_->text().trimmed().toLower() : QString();
-	for (auto &hk : Clips::allHotkeys()) {
+	auto all = Clips::allHotkeys();
+	auto rank = [](const QPair<QString, QString> &h) {
+		QString t = (h.first + " " + h.second).toLower();
+		if (t.contains("backtrack") && t.contains("save"))
+			return 0;
+		if (t.contains("backtrack"))
+			return 1;
+		if (t.contains("replay") || t.contains("clip"))
+			return 2;
+		return 3;
+	};
+	std::stable_sort(all.begin(), all.end(),
+			 [&](const QPair<QString, QString> &x, const QPair<QString, QString> &y) {
+				 return rank(x) < rank(y);
+			 });
+	for (auto &hk : all) {
 		if (hk.first.startsWith("kennel.") || hk.first.startsWith("OBSBasic.") ||
 		    hk.first.startsWith("libobs."))
 			continue;

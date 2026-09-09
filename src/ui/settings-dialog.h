@@ -10,6 +10,7 @@
 #include <QTableWidget>
 #include <QPushButton>
 #include <QProgressBar>
+#include <QPlainTextEdit>
 #include "engine.h"
 
 /// Shows the latest game frame with the found header and the capture box; drag to move the box.
@@ -75,6 +76,9 @@ private:
 	QWidget *buildAboutTab();
 	QWidget *buildClipsTab();
 	QWidget *buildAppTab();
+	QWidget *buildLogsTab();
+	QPlainTextEdit *logView_ = nullptr;
+	void refreshLogs();
 	QLineEdit *appName_ = nullptr, *appLibrary_ = nullptr, *appBroadcaster_ = nullptr, *clipFolder_ = nullptr;
 	QCheckBox *appTwitch_ = nullptr;
 	QLabel *twitchLbl_ = nullptr;

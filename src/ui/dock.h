@@ -4,6 +4,9 @@
 #include <QComboBox>
 #include <QPushButton>
 #include <QProgressBar>
+#include <QListWidget>
+#include <QPointer>
+#include <QDialog>
 #include "engine.h"
 
 /// The small always-visible panel: state, active squad mate, the two buttons, settings.
@@ -20,8 +23,11 @@ public slots:
 private:
 	Engine *e_;
 	QLabel *state_, *last_, *app_, *clip_;
+	QListWidget *events_;
 	QProgressBar *meter_;
 	QComboBox *active_;
 	QPushButton *show_, *back_, *pause_, *clipNow_;
 	bool filling_ = false;
+	QPointer<QDialog> settings_;
+	QPointer<QWidget> wizard_;
 };

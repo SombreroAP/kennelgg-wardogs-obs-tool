@@ -85,6 +85,11 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	v->addLayout(clipRow);
 	connect(clipNow_, &QPushButton::clicked, this, [this]() { e_->clipNow("manual", {"manual"}, "dock"); });
 	v->addWidget(app_);
+	events_ = new QListWidget(this);
+	events_->setMaximumHeight(120);
+	events_->setSelectionMode(QAbstractItemView::NoSelection);
+	events_->setFocusPolicy(Qt::NoFocus);
+	v->addWidget(events_);
 	last_ = new QLabel(this);
 	last_->setWordWrap(true);
 
@@ -120,6 +125,12 @@ void Dock::refresh()
 		      : e_->cfg.bridgeEnabled
 			      ? QString("ClipHound: not connected (ws://127.0.0.1:%1)").arg(e_->cfg.bridgePort)
 			      : "ClipHound: bridge off");
+	events_->clear();
+	QStringList ev = e_->recentEvents();
+	for (int i = ev.size() - 1; i >= 0 && ev.size() - i <= 8; i--)
+		events_->addItem(ev[i]);
+	if (events_->count() == 0)
+		events_->addItem("events from the kill feed and the POV swap appear here");
 	QString lp = e_->clips.lastPath();
 	clip_->setText(lp.isEmpty() ? "no clips yet" : "last: " + QFileInfo(lp).fileName());
 	show_->setEnabled(!e_->applied());
@@ -128,8 +139,14 @@ void Dock::refresh()
 
 void Dock::openWizard()
 {
+	if (wizard_) {
+		wizard_->raise();
+		wizard_->activateWindow();
+		return;
+	}
 	auto *w = new SetupWizard(e_, (QWidget *)obs_frontend_get_main_window());
 	w->setAttribute(Qt::WA_DeleteOnClose);
+	wizard_ = w;
 	w->show();
 }
 
@@ -198,7 +215,13 @@ void Dock::openLogs()
 
 void Dock::openSettings()
 {
+	if (settings_) {
+		settings_->raise();
+		settings_->activateWindow();
+		return;
+	}
 	auto *dlg = new SettingsDialog(e_, (QWidget *)obs_frontend_get_main_window());
 	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	settings_ = dlg;
 	dlg->show();
 }

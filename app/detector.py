@@ -133,6 +133,7 @@ class KillDetector:
                     events.append(ev)
         # rows that vanish before VOTES reads are HUD noise / blips, not kills - dropped
         self._rows = [r for r in self._rows if now - r.last < self.ROW_TTL_S]
+        self.last_new_events = events   # every decided feed row (the plugin's dock shows them)
         return self._apply_rules(events, now)
 
     def _decide(self, row: _Row) -> FeedEvent | None:

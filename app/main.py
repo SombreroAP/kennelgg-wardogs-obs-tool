@@ -132,6 +132,8 @@ def main():
     def fire(trig):
         tw, ob = state["tw"], state["ob"]
         print(f"\n*** {trig.kind.upper()}: {trig.title}   tags={trig.tags} ***\n")
+        if bridge is not None:
+            bridge.event(f"{trig.title}  [{', '.join(trig.tags)}]", "trigger")
         if tw:
             threading.Timer(cfg["twitch"]["clip_delay_s"], lambda: _safe(tw.create_clip, trig.title, trig.tags)).start()
         if ob:
@@ -163,6 +165,13 @@ def main():
             cv2.imwrite("debug/roi.png", roi)
         for trig in det.feed_frame(roi):
             fire(trig)
+        if bridge is not None and hasattr(det, "last_new_events"):
+            for ev in det.last_new_events:
+                try:
+                    who = f"{ev.killer} > {ev.victim}" + (f" {ev.distance_m}m" if getattr(ev, "distance_m", 0) else "")
+                    bridge.event(who, "kill")
+                except Exception:
+                    pass
         time.sleep(max(0, period - (time.time() - t0)))
 
 

@@ -56,6 +56,8 @@ public:
 	void wantPreview(bool on) { previewWanted_ = on; }
 	std::string stateText() const;
 	QStringList recentLog() const { return logLines_; }
+	QStringList recentEvents() const { return events_; }
+	void addEvent(const QString &text);
 
 	void start();
 	void stop();
@@ -114,4 +116,5 @@ private:
 	QImage lastFrame_;
 	std::string lastWatchError_;
 	QStringList logLines_;
+	QStringList events_;
 };

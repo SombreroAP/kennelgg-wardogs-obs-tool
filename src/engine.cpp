@@ -369,6 +369,15 @@ std::string Engine::stateText() const
 	return "Watching your POV";
 }
 
+void Engine::addEvent(const QString &text)
+{
+	events_ << QDateTime::currentDateTime().toString("HH:mm:ss") + "  " + text;
+	while (events_.size() > 30)
+		events_.removeFirst();
+	log("Event: " + text);
+	emit stateChanged();
+}
+
 void Engine::log(const QString &msg)
 {
 	obs_log(LOG_INFO, "%s", msg.toUtf8().constData());
@@ -422,6 +431,8 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		else if (st == "error")
 			log("Twitch login: " + o.value("error").toString());
 		emit twitchStatusChanged();
+	} else if (type == "event") {
+		addEvent(o.value("text").toString());
 	} else if (type == "status") {
 		appStatus_ = o.value("text").toString();
 		emit stateChanged();
@@ -661,6 +672,10 @@ void Engine::applyNow(bool on, const QString &why)
 	else
 		detRevive_.unlock();
 	sendPov(on ? "downed" : "up");
+	events_ << QDateTime::currentDateTime().toString("HH:mm:ss") +
+			   (on ? "  DOWNED - showing " + QString::fromStdString(cfg.active()->name) : "  back up");
+	while (events_.size() > 30)
+		events_.removeFirst();
 	if (on && cfg.clipOnDowned)
 		clips.request("downed", {"downed"}, "pov");
 	QString msg = (on ? QString("Showing %1's POV").arg(QString::fromStdString(cfg.active()->name))
