@@ -10,7 +10,8 @@ class _Tee:
         self.stream, self.f, self.at_line_start = stream, open(path, "a", encoding="utf-8", buffering=1), True
     def write(self, s):
         try:
-            self.stream.write(s)
+            if self.stream is not None:
+                self.stream.write(s)
         except Exception:
             pass
         try:
@@ -29,6 +30,8 @@ class _Tee:
         except Exception:
             pass
     def __getattr__(self, n):
+        if self.stream is None:
+            raise AttributeError(n)
         return getattr(self.stream, n)
 
 
@@ -51,10 +54,10 @@ if getattr(sys, "frozen", False):
             pytesseract.pytesseract.tesseract_cmd = _tess
         except ImportError:
             pass
-    if "--setup" in sys.argv or not os.path.exists("config.yaml"):
+    if not os.path.exists("config.yaml") and os.path.exists("config.default.yaml"):
         import shutil
-        if not os.path.exists("config.yaml") and os.path.exists("config.default.yaml"):
-            shutil.copy("config.default.yaml", "config.yaml")
+        shutil.copy("config.default.yaml", "config.yaml")   # settings come from the OBS plugin's ClipHound tab
+    if True:   # developer flags only; the installer and the plugin never pass these
         if "--token" in sys.argv:
             import get_token  # noqa: F401  (runs the Twitch login flow on import)
             raise SystemExit(0)
@@ -183,4 +186,11 @@ def _safe(fn, *a):
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        raise

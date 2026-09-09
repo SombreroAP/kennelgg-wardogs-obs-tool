@@ -46,7 +46,8 @@ Name: "plugin"; Description: "Kennel WARDOGS OBS plugin (POV swap, clips)"; Type
 Name: "app"; Description: "ClipHound - kill-feed OCR clipping app (auto-started by the plugin)"; Types: full
 
 [Tasks]
-Name: "distroav"; Description: "Download and install DistroAV 6.2.1 (NDI for OBS, GPL-2) so squad mates on the same network can share feeds. DistroAV will ask you to fetch the NDI Runtime from Vizrt."; Flags: unchecked
+Name: "distroav"; Description: "Download and install DistroAV 6.2.1 (NDI for OBS, GPL-2) so squad mates on the same network can share feeds"; Flags: unchecked
+Name: "ndiruntime"; Description: "Download and install the NDI 6 Runtime from Vizrt (required by DistroAV; you accept Vizrt's licence in its installer)"; Flags: unchecked
 
 [Dirs]
 Name: "{commonappdata}\Kennel WARDOGS\ClipHound"; Permissions: users-modify; Components: app
@@ -58,13 +59,10 @@ Source: "{#APPSRC}\config.default.yaml"; DestDir: "{commonappdata}\Kennel WARDOG
 
 [Icons]
 Name: "{commonprograms}\Kennel WARDOGS\ClipHound"; Filename: "{commonappdata}\Kennel WARDOGS\ClipHound\ClipHound.exe"; WorkingDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; Components: app
-Name: "{commonprograms}\Kennel WARDOGS\ClipHound setup"; Filename: "{commonappdata}\Kennel WARDOGS\ClipHound\ClipHound.exe"; Parameters: "--setup"; WorkingDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; Components: app
 
-[Run]
-Filename: "{commonappdata}\Kennel WARDOGS\ClipHound\ClipHound.exe"; Parameters: "--setup"; WorkingDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; Description: "Run ClipHound setup now (your in-game name, Twitch login)"; Flags: postinstall nowait skipifsilent unchecked; Components: app
 
 [Messages]
-WelcomeLabel2=This installs the Kennel.gg WARDOGS OBS plugin into OBS Studio's plugin folder and, optionally, the ClipHound clipping app (C:\ProgramData\Kennel WARDOGS\ClipHound), which the plugin starts with OBS.%n%nClose OBS before continuing. After installing, start OBS and open View > Docks > Kennel WARDOGS.
+WelcomeLabel2=This installs the Kennel.gg WARDOGS OBS plugin into OBS Studio's plugin folder and, optionally, the ClipHound clipping app, which the plugin starts and configures from inside OBS.%n%nClose OBS before continuing. After installing, start OBS and open View > Docks > Kennel WARDOGS.
 
 [Code]
 var
@@ -85,18 +83,26 @@ var
   ResultCode: Integer;
 begin
   Result := True;
-  if (CurPageID = wpReady) and WizardIsTaskSelected('distroav') then
+  if (CurPageID = wpReady) and (WizardIsTaskSelected('distroav') or WizardIsTaskSelected('ndiruntime')) then
   begin
     DlPage.Clear;
-    DlPage.Add('https://github.com/DistroAV/DistroAV/releases/download/6.2.1/distroav-6.2.1-windows-x64-Installer.exe', 'distroav-installer.exe', '');
+    if WizardIsTaskSelected('ndiruntime') then
+      DlPage.Add('https://ndi.link/NDIRedistV6', 'ndi-runtime-installer.exe', '');
+    if WizardIsTaskSelected('distroav') then
+      DlPage.Add('https://github.com/DistroAV/DistroAV/releases/download/6.2.1/distroav-6.2.1-windows-x64-Installer.exe', 'distroav-installer.exe', '');
     DlPage.Show;
     try
       try
         DlPage.Download;
-        if not Exec(ExpandConstant('{tmp}\distroav-installer.exe'), '', '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
-          MsgBox('DistroAV installer could not be started. Get it from https://distroav.org later.', mbInformation, MB_OK);
+        { runtime first, so DistroAV finds it and does not ask again }
+        if WizardIsTaskSelected('ndiruntime') then
+          if not Exec(ExpandConstant('{tmp}\ndi-runtime-installer.exe'), '', '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
+            MsgBox('The NDI Runtime installer could not be started. Get it from https://ndi.video later.', mbInformation, MB_OK);
+        if WizardIsTaskSelected('distroav') then
+          if not Exec(ExpandConstant('{tmp}\distroav-installer.exe'), '', '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
+            MsgBox('DistroAV installer could not be started. Get it from https://distroav.org later.', mbInformation, MB_OK);
       except
-        MsgBox('DistroAV download failed: ' + GetExceptionMessage + #13#10 + 'Get it from https://distroav.org later.', mbInformation, MB_OK);
+        MsgBox('Download failed: ' + GetExceptionMessage + #13#10 + 'DistroAV: https://distroav.org   NDI Runtime: https://ndi.video', mbInformation, MB_OK);
       end;
     finally
       DlPage.Hide;
