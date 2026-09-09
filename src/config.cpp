@@ -88,6 +88,8 @@ void Config::load()
 	DEFI(downFrames);
 	DEFI(upFrames);
 	DEFI(minDownMs);
+	DEFI(downDelayMs);
+	DEFI(upDelayMs);
 	DEFD(releaseDrop);
 	DEFD(memScale);
 	DEFD(memX);
@@ -143,6 +145,8 @@ void Config::load()
 	GETI(downFrames);
 	GETI(upFrames);
 	GETI(minDownMs);
+	GETI(downDelayMs);
+	GETI(upDelayMs);
 	GETD(releaseDrop);
 	GETD(memScale);
 	GETD(memX);
@@ -212,10 +216,10 @@ void Config::load()
 		pollMs = 100;
 		downFrames = 2;
 	}
-	if (upFrames == 4 || upFrames == 5)
-		upFrames = 2;
-	if (minDownMs == 2000)
-		minDownMs = 500;
+	if (upFrames >= 2 && upFrames <= 5)
+		upFrames = 1; // instant return
+	if (minDownMs == 2000 || minDownMs == 500)
+		minDownMs = 0;
 	if (clipNameTemplate == "{date}_{time}_{tags}")
 		clipNameTemplate = "{title}_{tags}_{date}_{time}"; // what happened first, then when
 	obs_data_release(d);
@@ -247,6 +251,8 @@ void Config::save() const
 	SETI(downFrames);
 	SETI(upFrames);
 	SETI(minDownMs);
+	SETI(downDelayMs);
+	SETI(upDelayMs);
 	SETD(releaseDrop);
 	SETD(memScale);
 	SETD(memX);

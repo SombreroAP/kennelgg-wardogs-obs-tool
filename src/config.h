@@ -66,7 +66,10 @@ struct Config {
 	bool enabled = true;
 	double threshold = 0.85;
 	int pollMs = 100;
-	int downFrames = 2, upFrames = 2, minDownMs = 500;
+	int downFrames = 2, upFrames = 1, minDownMs = 0;
+	int downDelayMs =
+		2000; // wait this long after the damage log appears before showing the squad mate (cancelled if it goes away)
+	int upDelayMs = 0; // wait this long after it disappears before coming back (0 = instant)
 	double releaseDrop =
 		0.08; // while downed the score is steady; a drop this big below its peak = the log is fading = revived
 	double memScale = 0, memX = 0, memY = 0; // where the damage log was last found (fast re-detect)

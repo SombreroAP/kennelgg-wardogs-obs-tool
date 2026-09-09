@@ -37,6 +37,16 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	downSince_ = lastReviveSeen_;
 	connect(&timer_, &QTimer::timeout, this, &Engine::tick);
 	connect(&frameTimer_, &QTimer::timeout, this, &Engine::frameTick);
+	downDelay_.setSingleShot(true);
+	upDelay_.setSingleShot(true);
+	connect(&downDelay_, &QTimer::timeout, this, [this]() {
+		if (detected_ && !applied_)
+			applyNow(true, QString("downed for %1 ms").arg(cfg.downDelayMs));
+	});
+	connect(&upDelay_, &QTimer::timeout, this, [this]() {
+		if (!detected_ && applied_)
+			applyNow(false, "damage log gone");
+	});
 	connect(&bridge, &Bridge::message, this, &Engine::onBridgeMessage);
 	connect(&bridge, &Bridge::clientConnected, this, [this]() {
 		appStatus_ = "connected";
@@ -729,13 +739,28 @@ void Engine::detect(const Match &m)
 	if (!detected_ && downRun_ >= cfg.downFrames) {
 		detected_ = true;
 		peakScore_ = m.score;
-		if (!applied_)
-			applyNow(true, QString("downed screen detected (%1)").arg(m.score, 0, 'f', 3));
+		upDelay_.stop();
+		if (!applied_) {
+			if (cfg.downDelayMs <= 0)
+				applyNow(true, QString("downed screen detected (%1)").arg(m.score, 0, 'f', 3));
+			else {
+				downDelay_.start(
+					cfg.downDelayMs); // cancelled if the log goes away first (a blip, or a quick revive)
+				log(QString("Downed - showing the squad mate in %1 ms unless you are revived first.")
+					    .arg(cfg.downDelayMs));
+			}
+		}
 	} else if (detected_ && upRun_ >= needUp && clock_::now() - downSince_ >= std::chrono::milliseconds(minDown)) {
 		detected_ = false;
-		if (applied_)
-			applyNow(false, fast ? "revived (friend's revive seen, damage log gone)"
-					     : QString("damage log gone (%1)").arg(m.score, 0, 'f', 3));
+		downDelay_.stop();
+		if (applied_) {
+			if (fast || cfg.upDelayMs <= 0)
+				applyNow(false, fast ? "revived (friend's revive seen, damage log gone)"
+						     : QString("damage log gone (%1)").arg(m.score, 0, 'f', 3));
+			else
+				upDelay_.start(cfg.upDelayMs);
+		} else
+			log("Damage log gone before the delay ended - no switch.");
 	}
 }
 

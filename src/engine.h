@@ -104,7 +104,7 @@ private:
 	void sendPov(const QString &state);
 	void detect(const Match &m);
 
-	QTimer timer_, frameTimer_;
+	QTimer timer_, frameTimer_, downDelay_, upDelay_;
 	std::atomic<bool> busy_{false}, stopping_{false}, frameBusy_{false};
 	Capture capGame_, capFriend_, capRoi_;
 	QString appStatus_;
