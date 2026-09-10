@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.3.9
+- **Settings window no longer opens squashed.** It came up with every control squeezed to a few pixels until you resized it by hand: the first paint used the geometry from before the window was sized. It now opens at a proper size and lays itself out again the instant it appears. Same for the setup wizard and the Logs window. Fonts sized in pixels by the OBS theme are handled too.
+
 ## 0.3.8
 - **Only squad mates with a feed count, and the nearest of those wins.** Players near you who are not set up as a feed are never matched, so with five in the squad and two streaming the POV goes to whichever streamer is nearest, however far. The "... m or closer" range rule now only holds the feed on a squad mate who is still in the NEARBY list; if they have left it, any streaming squad mate in the list takes over. If no streaming squad mate is in the list at all, the squad mate already selected stays.
 

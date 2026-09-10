@@ -5,6 +5,7 @@
 #include <QHBoxLayout>
 #include <QDialog>
 #include <QMenu>
+#include <QTimer>
 #include <QMessageBox>
 #include <QScreen>
 #include <QGuiApplication>
@@ -28,7 +29,9 @@ static void showOnScreen(QWidget *w)
 	QWidget *main = (QWidget *)obs_frontend_get_main_window();
 	QScreen *scr = main && main->screen() ? main->screen() : QGuiApplication::primaryScreen();
 	QRect avail = scr ? scr->availableGeometry() : QRect(0, 0, 1920, 1080);
-	QSize sz = w->size();
+	// a never-shown window reports a default 640x480, not what its layout needs: start from the
+	// layout's own size, at least a comfortable size, and only then clamp to the screen
+	QSize sz = w->sizeHint().expandedTo(QSize(1000, 820)).expandedTo(w->size());
 	sz.setWidth(std::min(sz.width(), avail.width() - 40));
 	sz.setHeight(std::min(sz.height(), avail.height() - 40));
 	QPoint c = main ? main->frameGeometry().center() : avail.center();
@@ -41,6 +44,16 @@ static void showOnScreen(QWidget *w)
 	w->show();
 	w->raise();
 	w->activateWindow();
+	// the first paint used geometry from before the resize (everything squeezed to a few pixels
+	// until the user resized the window by hand): run the layout again once the window is up
+	QTimer::singleShot(0, w, [w]() {
+		if (w->layout())
+			w->layout()->activate();
+		w->updateGeometry();
+		QSize s = w->size();
+		w->resize(s + QSize(1, 1));
+		w->resize(s);
+	});
 }
 
 Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
@@ -49,7 +62,10 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	v->setContentsMargins(8, 8, 8, 8);
 	state_ = new QLabel(this);
 	QFont f = state_->font();
-	f.setPointSizeF(f.pointSizeF() + 2);
+	if (f.pointSizeF() > 0)
+		f.setPointSizeF(f.pointSizeF() + 2);
+	else if (f.pixelSize() > 0)
+		f.setPixelSize(f.pixelSize() + 3);
 	f.setBold(true);
 	state_->setFont(f);
 	v->addWidget(state_);
@@ -62,7 +78,10 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	near_->setWordWrap(true);
 	{
 		QFont nf = near_->font();
-		nf.setPointSizeF(nf.pointSizeF() - 0.5);
+		if (nf.pointSizeF() > 0)
+			nf.setPointSizeF(nf.pointSizeF() - 0.5);
+		else if (nf.pixelSize() > 2)
+			nf.setPixelSize(nf.pixelSize() - 1);
 		near_->setFont(nf);
 	}
 	near_->hide();
@@ -144,7 +163,10 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 		l->setWordWrap(true);
 		{
 			QFont f = l->font();
-			f.setPointSizeF(f.pointSizeF() - 0.5);
+			if (f.pointSizeF() > 0)
+				f.setPointSizeF(f.pointSizeF() - 0.5);
+			else if (f.pixelSize() > 2)
+				f.setPixelSize(f.pixelSize() - 1);
 			l->setFont(f);
 		}
 	}

@@ -452,7 +452,10 @@ static QLabel *muted(const QString &t, QWidget *p)
 	l->setWordWrap(true);
 	{
 		QFont f = l->font();
-		f.setPointSizeF(f.pointSizeF() - 0.5);
+		if (f.pointSizeF() > 0)
+			f.setPointSizeF(f.pointSizeF() - 0.5);
+		else if (f.pixelSize() > 2)
+			f.setPixelSize(f.pixelSize() - 1);
 		l->setFont(f);
 	}
 	return l;
