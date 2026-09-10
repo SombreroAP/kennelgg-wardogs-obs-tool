@@ -28,6 +28,8 @@ public:
 	static int hideEverywhere(const std::string &sourceName);
 	int hideAllFriends(const Config &cfg);
 	/// Choices a source kind offers for one of its list properties (e.g. window_capture "window").
+	/// NDI senders already used by a source in this OBS.
+	static std::vector<std::string> ndiSourceNames();
 	static std::vector<std::pair<std::string, std::string>> listProperty(const char *kind,
 									     const char *prop); // name, value
 	static bool kindAvailable(const char *kind);

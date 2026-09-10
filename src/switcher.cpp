@@ -1,4 +1,5 @@
 #include "switcher.h"
+#include "ndi.h"
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <plugin-support.h>
@@ -105,6 +106,13 @@ std::vector<std::pair<std::string, std::string>> Switcher::inputs()
 
 std::vector<std::pair<std::string, std::string>> Switcher::listProperty(const char *kind, const char *prop)
 {
+	// DistroAV's finder keeps hold of whichever source asked for the list and signals it from its
+	// own thread; our probe is gone by then and OBS dies on the dangling handler. Use kennelNdi.
+	if (strncmp(kind, "ndi_", 4) == 0) {
+		obs_log(LOG_WARNING, "listProperty refused for %s - use kennelNdi::sources()", kind);
+		return {};
+	}
+
 	std::vector<std::pair<std::string, std::string>> out;
 	obs_source_t *tmp = obs_source_create_private(kind, "kennel-probe", nullptr);
 	if (!tmp)
@@ -123,6 +131,28 @@ std::vector<std::pair<std::string, std::string>> Switcher::listProperty(const ch
 	if (props)
 		obs_properties_destroy(props);
 	obs_source_release(tmp);
+	return out;
+}
+
+/// NDI senders already referenced by a source in this OBS. Reads what is set on them; it never
+/// creates one, so DistroAV's finder is not involved.
+std::vector<std::string> Switcher::ndiSourceNames()
+{
+	std::vector<std::string> out;
+	auto cb = [](void *param, obs_source_t *src) {
+		auto *v = (std::vector<std::string> *)param;
+		const char *id = obs_source_get_id(src);
+		if (id && strncmp(id, "ndi_", 4) == 0) {
+			obs_data_t *st = obs_source_get_settings(src);
+			const char *n = st ? obs_data_get_string(st, "ndi_source_name") : nullptr;
+			if (n && *n && std::find(v->begin(), v->end(), n) == v->end())
+				v->emplace_back(n);
+			if (st)
+				obs_data_release(st);
+		}
+		return true;
+	};
+	obs_enum_sources(cb, &out);
 	return out;
 }
 
@@ -540,6 +570,7 @@ int Switcher::hideAllFriends(const Config &cfg)
 void Switcher::shutdown()
 {
 	stopNdiShare();
+	kennelNdi::shutdown();
 	if (!dualScene_)
 		return;
 	obs_source_t *dualSrc = obs_scene_get_source(dualScene_);

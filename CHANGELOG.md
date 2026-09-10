@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.5.1
+- **OBS no longer crashes when you scan for a squad mate's NDI feed.** To list what is on the network the plugin used to make a hidden NDI source, ask it for its list and throw it away - but DistroAV's finder holds on to whichever source asked and signals it from its own thread, so it was signalling a source that no longer existed and took OBS down with it. The plugin now asks the NDI runtime for the list itself, keeping one finder for the session, and never makes a source to do it. Nothing to set up.
+- The NDI picker also lists senders already used elsewhere in your OBS, can be **typed into** for a mate whose PC is not on yet, and fills in on its own a second later as the network answers, instead of holding the window still while it looks.
+
 ## 0.5.0
 - **A bright sky no longer reads as alive.** The damage-log panel is see-through, so what is behind it changes how the header looks: aim at the sky, drive through smoke or take a muzzle flash and the wording washes out for a moment. The score dipped, and with a single poll enough to end the swap, your own POV came back while you were still on the floor. The match now runs on the picture with its local brightness taken out - the sky's brightness and its gradient go, the letter strokes stay - so the score barely moves when the background changes. Measured on the frame that was failing: a washed-out header that scored 0.75 before (under the threshold, so "alive") now scores 0.94, and a heavily blown-out one 0.83 where it used to score 0.57.
 - **And it holds through a washout anyway.** Once you are down the log counts as still there while it scores above the hold level (the threshold less 0.15 by default, on the Detect tab) *and* stays in the place it was found - so nothing elsewhere on screen can pin you down either. The hold is a bridge, not a latch: if the log has not scored a clean match for three seconds it lapses. Coming up now also takes two polls rather than one (existing settings are moved).

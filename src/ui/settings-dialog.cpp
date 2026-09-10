@@ -1,4 +1,5 @@
 #include "ui/settings-dialog.h"
+#include "ndi.h"
 #include <QJsonArray>
 #include <QTimer>
 #include <QApplication>
@@ -283,10 +284,19 @@ private:
 			f.channel = streamId_->text().trimmed().toStdString();
 		else if (f.kind == FriendKind::ObsSource)
 			f.source = source_->currentText().trimmed().toStdString();
-		else
-			f.channel = pick_->currentData().toString().toStdString();
+		else {
+			// the NDI picker can be typed into, for a sender that is not on the network yet
+			QString v = pick_->currentData().toString();
+			if (v.isEmpty() && pick_->isEditable()) {
+				v = pick_->currentText().trimmed();
+				if (v.startsWith('(')) // one of the "nothing found" lines
+					v.clear();
+			}
+			f.channel = v.toStdString();
+		}
 		return f;
 	}
+	bool ndiLooked_ = false;
 	void fillPick()
 	{
 		pick_->clear();
@@ -306,14 +316,36 @@ private:
 					  "Discord:Chrome_WidgetWin_1:Discord.exe");
 			pick_->setCurrentIndex(firstDiscord >= 0 ? firstDiscord + 1 : 0);
 		} else if (k == FriendKind::Ndi) {
-			for (auto &n : Switcher::listProperty("ndi_source", "ndi_source_name"))
-				pick_->addItem(QString::fromStdString(n.first), QString::fromStdString(n.second));
+			// Never ask a throwaway ndi_source for this list: DistroAV's finder signals the
+			// source that asked, after we have released it, and OBS goes down with it.
+			for (const auto &n : kennelNdi::sources(400))
+				pick_->addItem(QString::fromStdString(n), QString::fromStdString(n));
+			for (const auto &n : Switcher::ndiSourceNames()) { // ones already set up in this OBS
+				QString v = QString::fromStdString(n);
+				if (pick_->findData(v) < 0)
+					pick_->addItem(v + "  (in use here)", v);
+			}
 			if (pick_->count() == 0)
-				pick_->addItem(Switcher::kindAvailable("ndi_source")
-						       ? "(no NDI sources on the network yet)"
-						       : "(DistroAV is not installed)",
+				pick_->addItem(!Switcher::kindAvailable("ndi_source") ? "(DistroAV is not installed)"
+					       : kennelNdi::available()
+						       ? "(nothing sending NDI on the network yet)"
+						       : "(no NDI runtime - type the name, or install DistroAV's)",
 					       "");
-		}
+			pick_->setEditable(true); // a sender that is not up yet can still be typed in
+			if (!ndiLooked_) {
+				// the finder has only just started listening; look again in a moment
+				// rather than holding the window still while it does
+				ndiLooked_ = true;
+				QTimer::singleShot(1500, this, [this]() {
+					QString typed = pick_->currentText().trimmed();
+					bool own = pick_->currentData().toString().isEmpty() && !typed.isEmpty() &&
+						   !typed.startsWith('(');
+					if (kind() == FriendKind::Ndi && !own) // never wipe a typed-in name
+						fillPick();
+				});
+			}
+		} else
+			pick_->setEditable(false);
 		if (!result.channel.empty()) {
 			int i = pick_->findData(QString::fromStdString(result.channel));
 			if (i >= 0)
