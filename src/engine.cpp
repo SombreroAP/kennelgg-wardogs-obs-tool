@@ -308,6 +308,10 @@ void Engine::pushAppConfig()
 			names.append(QString::fromStdString(f.nearName()));
 	nb["names"] = names;
 	set["nearby"] = nb;
+	QJsonObject vh;
+	vh["enabled"] = cfg.dualAuto && cfg.dual() != nullptr;
+	vh["roi"] = QJsonArray{cfg.vehX, cfg.vehY, cfg.vehW, cfg.vehH};
+	set["vehicle"] = vh;
 	QJsonObject o;
 	o["type"] = "app_config";
 	o["set"] = set;
@@ -559,6 +563,8 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		emit twitchStatusChanged();
 	} else if (type == "nearby") {
 		onNearby(o);
+	} else if (type == "vehicle") {
+		onVehicle(o.value("seat").toString());
 	} else if (type == "nearby_test_result") {
 		QStringList texts;
 		for (auto v : o.value("texts").toArray())
@@ -1142,6 +1148,45 @@ void Engine::setDual(bool on, const QString &why)
 	log((on ? "Dual POV on: " + QString::fromStdString(cfg.dual()->name) + " in the small window"
 		: QString("Dual POV off")) +
 	    " - " + why + ".");
+	emit stateChanged();
+}
+
+/// ClipHound read the vehicle keybind list: a seat name, "vehicle" (in one, seat unclear) or "none".
+void Engine::onVehicle(const QString &seat)
+{
+	vehicleSeat_ = seat;
+	if (!cfg.dualAuto || !cfg.dual())
+		return;
+	if (seat == "none") {
+		if (dualOn_ && dualAutoOn_) {
+			dualAutoOn_ = false;
+			setDual(false, "out of the vehicle");
+		}
+		return;
+	}
+	if (seat != "vehicle" && seat.toStdString() != cfg.dualPreset) {
+		// the seat the game shows wins over the preset chosen by hand
+		struct P {
+			const char *id;
+			double x, y, w;
+		};
+		static const P presets[] = {{"tank-driver", 0.012, 0.19, 0.26},
+					    {"tank-gunner", 0.012, 0.19, 0.26},
+					    {"havoc-pilot", 0.012, 0.19, 0.26},
+					    {"havoc-gunner", 0.19, 0.075, 0.20}};
+		for (const auto &p : presets)
+			if (seat == p.id) {
+				cfg.dualPreset = p.id;
+				cfg.dualX = p.x;
+				cfg.dualY = p.y;
+				cfg.dualW = p.w;
+				cfg.save();
+			}
+	}
+	if (!dualOn_ || seat != "vehicle") {
+		dualAutoOn_ = true;
+		setDual(true, "in a vehicle: " + seat);
+	}
 	emit stateChanged();
 }
 

@@ -84,6 +84,11 @@ void Config::load()
 	DEFD(dualY);
 	DEFD(dualW);
 	DEFI(dualOpacity);
+	DEFB(dualAuto);
+	DEFD(vehX);
+	DEFD(vehY);
+	DEFD(vehW);
+	DEFD(vehH);
 	DEFB(lookName);
 	DEFB(lookPlate);
 	DEFB(lookCam);
@@ -166,6 +171,11 @@ void Config::load()
 	GETD(dualY);
 	GETD(dualW);
 	GETI(dualOpacity);
+	GETB(dualAuto);
+	GETD(vehX);
+	GETD(vehY);
+	GETD(vehW);
+	GETD(vehH);
 	GETB(lookName);
 	GETB(lookPlate);
 	GETB(lookCam);
@@ -305,6 +315,11 @@ void Config::save() const
 	SETD(dualY);
 	SETD(dualW);
 	SETI(dualOpacity);
+	SETB(dualAuto);
+	SETD(vehX);
+	SETD(vehY);
+	SETD(vehW);
+	SETD(vehH);
 	SETB(lookName);
 	SETB(lookPlate);
 	SETB(lookCam);

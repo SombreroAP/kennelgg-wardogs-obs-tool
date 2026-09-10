@@ -39,6 +39,8 @@ struct Config {
 	std::string dualPreset = "tank-driver"; // tank-driver | tank-gunner | havoc-pilot | havoc-gunner | custom
 	double dualX = 0.012, dualY = 0.19, dualW = 0.26; // fractions of the canvas; height keeps 16:9
 	int dualOpacity = 100;
+	bool dualAuto = false; // ClipHound reads the vehicle keybind list and turns the window on / off
+	double vehX = 0.86, vehY = 0.60, vehW = 0.14, vehH = 0.25; // where that list is (fractions)
 	static const char *dualSceneName() { return "Kennel dual"; }
 	static const char *dualFeedName() { return "Kennel dual feed"; }
 	const Friend *dual() const

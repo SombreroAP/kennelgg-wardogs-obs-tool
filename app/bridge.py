@@ -58,6 +58,7 @@ class Bridge:
         self.nearby_cfg = {"enabled": False, "roi": [0.80, 0.79, 0.19, 0.14], "names": [], "interval": 0.4}
         self.nearby_burst = 0.0
         self.nearby_test = False     # the plugin's Test read button: read once and report back
+        self.vehicle_cfg = {"enabled": False, "roi": [0.86, 0.60, 0.14, 0.25]}   # automatic Dual POV
         threading.Thread(target=self._run, daemon=True).start()
 
     # ---- connection ----
@@ -147,6 +148,12 @@ class Bridge:
             if "roi" in v and _roi_list(v["roi"]) and _roi_list(v["roi"])[2] > 0.01:
                 r = _roi_list(v["roi"])
                 c.setdefault("capture", {})["roi"] = {"x": r[0], "y": r[1], "w": r[2], "h": r[3]}
+            if isinstance(v.get("vehicle"), dict):
+                vc = v["vehicle"]
+                self.vehicle_cfg["enabled"] = bool(vc.get("enabled"))
+                roi = _roi_list(vc.get("roi"))
+                if roi and roi[2] > 0.01:
+                    self.vehicle_cfg["roi"] = roi
             if isinstance(v.get("nearby"), dict):
                 nb = v["nearby"]
                 self.nearby_cfg["enabled"] = bool(nb.get("enabled"))

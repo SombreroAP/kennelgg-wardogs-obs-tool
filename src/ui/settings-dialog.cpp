@@ -1356,10 +1356,26 @@ QWidget *SettingsDialog::buildDualTab()
 	op->addWidget(dualOpacity_, 1);
 	op->addWidget(opLbl);
 	f->addRow("Opacity", op);
+	dualAuto_ = new QCheckBox(
+		"Turn the window on by itself when I get in a vehicle, and off when I get out (needs ClipHound running)",
+		g);
+	f->addRow(dualAuto_);
+	f->addRow(muted(
+		"ClipHound reads the keybind list the game draws bottom-right in a vehicle - CYCLE WEAPON, DEPLOY SMOKE, COLLECTIVE LIFT and so on - which says which seat you are in, and the window comes up with that seat's placement. Drag the blue box round that list on the picture below if it is not already over it.",
+		g));
 	dualState_ = new QLabel(g);
 	dualState_->setWordWrap(true);
 	f->addRow("Now", dualState_);
 	v->addWidget(g);
+	auto *pr = new QHBoxLayout();
+	dragWin_ = new QRadioButton("the window (dashed)", w);
+	dragKeys_ = new QRadioButton("the keybind list (blue)", w);
+	dragWin_->setChecked(true);
+	pr->addWidget(new QLabel("Dragging on the picture sets:", w));
+	pr->addWidget(dragWin_);
+	pr->addWidget(dragKeys_);
+	pr->addStretch(1);
+	v->addLayout(pr);
 	dualPick_ = new FramePreview(w);
 	dualPick_->setMinimumHeight(220);
 	dualPick_->setPicker(
@@ -1396,12 +1412,32 @@ QWidget *SettingsDialog::buildDualTab()
 	opLbl->setText(QString("%1 %").arg(dualOpacity_->value()));
 	connect(dualPick_, &FramePreview::boxChanged, this, [this](QRectF r) {
 		Config &c = e_->cfg;
+		if (dragKeys_ && dragKeys_->isChecked()) {
+			c.vehX = r.x();
+			c.vehY = r.y();
+			c.vehW = r.width();
+			c.vehH = r.height();
+			c.save();
+			e_->pushAppConfig();
+			return;
+		}
 		c.dualX = r.x();
 		c.dualY = r.y();
 		c.dualW = r.width();
 		c.dualPreset = "custom";
 		dualToUi();
 		dualFromUi(false);
+	});
+	connect(dualAuto_, &QCheckBox::toggled, this, [this](bool on) {
+		if (building_)
+			return;
+		if (on && !e_->appConnected())
+			QMessageBox::information(
+				this, "Kennel WARDOGS",
+				"Automatic Dual POV needs ClipHound running - it reads the vehicle keybind list. Start it from the dock; the setting is kept.");
+		e_->cfg.dualAuto = on;
+		e_->cfg.save();
+		e_->pushAppConfig();
 	});
 	connect(e_, &Engine::frameUpdated, this, [this]() {
 		if (!dualPick_)
@@ -1410,13 +1446,19 @@ QWidget *SettingsDialog::buildDualTab()
 		double h = img.isNull() ? e_->cfg.dualW * 9 / 16
 					: e_->cfg.dualW * 9.0 / 16.0 * img.width() / img.height();
 		dualPick_->setFrame(img, Match(), 1.0, QRectF(e_->cfg.dualX, e_->cfg.dualY, e_->cfg.dualW, h));
+		dualPick_->setBox2(QRectF(e_->cfg.vehX, e_->cfg.vehY, e_->cfg.vehW, e_->cfg.vehH));
 	});
 	connect(e_, &Engine::stateChanged, this, [this]() {
 		if (dualState_)
 			dualState_->setText(
-				e_->dualOn() ? "window is up" +
-						       QString(e_->applied() ? " (stepped aside for the POV swap)" : "")
-					     : "off");
+				(e_->dualOn()
+					 ? "window is up" +
+						   QString(e_->applied() ? " (stepped aside for the POV swap)" : "")
+					 : QString("off")) +
+				(e_->cfg.dualAuto ? "   ·   vehicle seat read: " + (e_->vehicleSeat().isEmpty()
+											    ? QString("nothing yet")
+											    : e_->vehicleSeat())
+						  : QString("")));
 		if (dualFriend_ && dualFriend_->count() != (int)e_->cfg.friends.size() + 1)
 			dualToUi();
 	});
@@ -1440,6 +1482,7 @@ void SettingsDialog::dualToUi()
 	dualY_->setValue(c.dualY * 100);
 	dualW_->setValue(c.dualW * 100);
 	dualOpacity_->setValue(c.dualOpacity);
+	dualAuto_->setChecked(c.dualAuto);
 	dualState_->setText(e_->dualOn() ? "window is up" : "off");
 	building_ = was;
 }

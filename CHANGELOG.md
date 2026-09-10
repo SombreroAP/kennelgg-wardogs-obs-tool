@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.4.2
+- **Dual POV turns itself on in a vehicle** (Dual POV tab, "Turn the window on by itself..."). ClipHound reads the keybind list the game draws bottom-right while you are in a vehicle - CYCLE WEAPON is the tank gunner, DEPLOY SMOKE the tank driver, COLLECTIVE LIFT / DEPLOY FLARES the Havoc pilot, INTERACT and ZOOM alone the Havoc gunner's CAM view - and the window comes up with that seat's placement, then goes when the list goes. A seat is acted on after two readings in a row and "out" after three, so a covered corner does not flap it. One small OCR run a second, only while the option is on. The blue box on the Dual POV picture is where that list is; drag it if your HUD differs.
+
 ## 0.4.1
 - **NDI share no longer breaks other plugins' canvases.** It was tapped onto OBS's main video mix, which turned Aitum's vertical canvas black and stopped recordings that used it. The share now renders from a view of its own on the program output, so it only ever carries the main canvas and leaves every other canvas alone. It also starts a few seconds after OBS has finished loading, so other plugins set up first.
 

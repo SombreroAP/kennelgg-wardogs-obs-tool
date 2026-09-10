@@ -66,6 +66,7 @@ signals:
 public:
 	bool applied() const { return applied_; }
 	bool dualOn() const { return dualOn_; }
+	QString vehicleSeat() const { return vehicleSeat_; }
 	bool detected() const { return detected_; }
 	bool revivingRecent() const;
 	double reviveProgress() const { return reviveProgress_; }
@@ -122,6 +123,7 @@ private:
 	void frameTick();
 	void onBridgeMessage(const QJsonObject &o);
 	void onNearby(const QJsonObject &o);
+	void onVehicle(const QString &seat);
 	void clearNearby();
 	void pickClosest(const QString &why, bool decisive = false);
 	void switchTo(int idx, const QString &why);
@@ -141,7 +143,8 @@ private:
 	QDateTime appStartedAt_;
 	bool appCrashReported_ = false;
 	Detector detGame_, detRevive_;
-	bool dualOn_ = false, ndiDelayed_ = false;
+	bool dualOn_ = false, dualAutoOn_ = false, ndiDelayed_ = false;
+	QString vehicleSeat_;
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
 	int downRun_ = 0, upRun_ = 0, tickN_ = 0;
 	double peakScore_ = 0;

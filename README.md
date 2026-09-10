@@ -15,7 +15,8 @@ One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional co
   the squad mate who is actually next to you, not the one you picked before the match.
 - **Dual POV.** In a tank or a Havoc with a crew mate: your own POV stays up and theirs sits in a
   small window placed where that seat's HUD leaves room, with presets for tank driver, tank gunner,
-  Havoc pilot and Havoc gunner (CAM view), or drag it anywhere.
+  Havoc pilot and Havoc gunner (CAM view), or drag it anywhere. With ClipHound running it can turn
+  itself on when you get in and off when you get out, reading the seat off the vehicle keybind list.
 - **The look.** Optional name tag, camcorder frame, film grain and vignette over the friend's feed.
 - **No black screen.** Feeds are kept warm, and optionally every squad mate's feed is preloaded and
   playing behind the scenes so a Twitch stream is not starting up at the moment you go down.

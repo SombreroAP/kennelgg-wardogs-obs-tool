@@ -172,6 +172,8 @@ def main():
     if bridge is not None:
         from nearby import Watcher
         watcher = Watcher(bridge)
+        from vehicle import Watcher as VehicleWatcher
+        vehicle = VehicleWatcher(bridge)
     last_team_check = 0.0
     while True:
         t0 = time.time()
@@ -191,6 +193,7 @@ def main():
             if bridge is not None:
                 bridge.nearby_test = False
             watcher.maybe_read(cap.full_frame(), t0, force=test)
+            vehicle.maybe_read(cap.full_frame(), t0)
         roi = cap.grab()
         if cfg["capture"].get("debug_dump"):
             cv2.imwrite("debug/roi.png", roi)
