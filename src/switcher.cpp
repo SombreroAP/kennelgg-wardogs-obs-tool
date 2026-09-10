@@ -535,6 +535,33 @@ int Switcher::hideAllFriends(const Config &cfg)
 	return n;
 }
 
+/// OBS is closing: take the dual-POV window out of the scene and release its private scene and
+/// browser page while obs-browser is still loaded.
+void Switcher::shutdown()
+{
+	stopNdiShare();
+	if (!dualScene_)
+		return;
+	obs_source_t *dualSrc = obs_scene_get_source(dualScene_);
+	struct obs_frontend_source_list scenes = {};
+	obs_frontend_get_scenes(&scenes);
+	for (size_t i = 0; i < scenes.sources.num; i++) {
+		obs_scene_t *scene = obs_scene_from_source(scenes.sources.array[i]);
+		obs_sceneitem_t *it = scene ? obs_scene_find_source(scene, Config::dualSceneName()) : nullptr;
+		if (it)
+			obs_sceneitem_remove(it);
+	}
+	obs_frontend_source_list_free(&scenes);
+	(void)dualSrc;
+	obs_scene_release(dualScene_);
+	dualScene_ = nullptr;
+	obs_source_t *b = obs_get_source_by_name(Config::dualFeedName());
+	if (b) {
+		obs_source_remove(b);
+		obs_source_release(b);
+	}
+}
+
 std::string Switcher::applyDual(const Config &cfg, bool on)
 {
 	const Friend *f = cfg.dual();
@@ -557,15 +584,17 @@ std::string Switcher::applyDual(const Config &cfg, bool on)
 	// a private nested scene holds the feed at full size; the main scene shows that scene small.
 	// Private, so it never appears in the scene list and the "hide every squad mate" sweep does
 	// not reach inside it.
-	obs_source_t *dualSrc = obs_get_source_by_name(Config::dualSceneName());
-	obs_scene_t *dual = dualSrc ? obs_scene_from_source(dualSrc) : nullptr;
-	if (!dual) {
-		dual = obs_scene_create_private(Config::dualSceneName());
-		dualSrc = obs_scene_get_source(dual);
-		obs_source_get_ref(dualSrc);
+	// Private scenes cannot be looked up by name, so it is kept here for the life of the plugin and
+	// released in shutdown(); creating one per call leaked a browser page each time, and CEF then
+	// crashed when OBS closed with those pages still alive.
+	if (!dualScene_) {
+		dualScene_ = obs_scene_create_private(Config::dualSceneName());
 		if (log)
 			log("Added the dual-POV window '" + std::string(Config::dualSceneName()) + "'.");
 	}
+	obs_scene_t *dual = dualScene_;
+	obs_source_t *dualSrc = obs_scene_get_source(dual);
+	obs_source_get_ref(dualSrc);
 	std::string err;
 	std::string inner;
 	if (f->isWeb()) {

@@ -279,7 +279,10 @@ void Engine::start()
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
 	if (cfg.dualEnabled && cfg.dual())
-		setDual(true, "on at start-up (Dual POV tab)");
+		QTimer::singleShot(2500, this, [this]() { // after the browser module is fully up
+			if (!stopping_ && cfg.dualEnabled && cfg.dual())
+				setDual(true, "on at start-up (Dual POV tab)");
+		});
 	emit stateChanged();
 }
 
@@ -420,9 +423,11 @@ void Engine::stop()
 	closeApp();
 	timer_.stop();
 	frameTimer_.stop();
+	downDelay_.stop();
+	upDelay_.stop();
 	bridge.close();
 	lan.stop();
-	sw.stopNdiShare();
+	sw.shutdown(); // NDI output, the dual-POV scene and its browser page, before obs-browser unloads
 	for (int i = 0; i < 50 && busy_; i++)
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }

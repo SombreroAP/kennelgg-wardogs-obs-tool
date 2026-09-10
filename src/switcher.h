@@ -19,6 +19,7 @@ public:
 	void armOne(const Config &cfg, const Friend &f);
 	/// The dual-POV window: a squad mate's feed, small, over your own POV. Creates what it needs.
 	std::string applyDual(const Config &cfg, bool on);
+	void shutdown(); // on OBS exit, before modules unload
 	/// Look overlay on/off (also used for preview).
 	std::string updateLook(const Config &cfg, bool on);
 
@@ -47,6 +48,7 @@ public:
 	}
 
 private:
+	obs_scene_t *dualScene_ = nullptr; // the private nested scene behind the dual-POV window
 	obs_output_t *ndiOut_ = nullptr;
 	obs_view_t *ndiView_ = nullptr; // our own render of the program, so the share never taps the main mix
 	video_t *ndiVideo_ = nullptr;

@@ -2,7 +2,8 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
-## Unreleased
+## 0.4.3
+- **Crash when closing OBS with Dual POV on, fixed.** The window's private scene could not be found again by name, so every time it was applied a new scene and a new browser page were created and never released; with the window set to come on at start-up that happened on every launch, and OBS then crashed inside the browser engine on the way out. One scene is now kept and released properly before OBS unloads its modules, and the window comes on two and a half seconds after loading, once the browser module is up.
 - Detect tab wording: the damage log stays up the whole time you are downed except while the Escape menu is open; with the menu open the plugin comes back to your POV until you close it.
 
 ## 0.4.2
