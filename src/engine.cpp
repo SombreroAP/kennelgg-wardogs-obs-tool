@@ -7,38 +7,26 @@
 #include <QDir>
 #include <QProcess>
 #include <QRegularExpression>
-#ifdef _WIN32
-#include <windows.h>
-#endif
 #include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <thread>
 #include <QBuffer>
 #include <QJsonArray>
-#include <QProcess>
 #include <QFileInfo>
 #include <QDesktopServices>
 #include <QElapsedTimer>
 #include <QCoreApplication>
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
 #include <QUrl>
-#include <QDir>
-#include <QProcess>
-#include <QRegularExpression>
-#ifdef _WIN32
-#include <windows.h>
-#endif
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QJsonDocument>
-#include <QRegularExpression>
 #include <QDateTime>
+
+#ifdef _WIN32
+#define NOMINMAX // windows.h defines min and max as macros, which eats every std::min in this file
+#include <windows.h>
+#endif
+
 #include <obs-module.h>
 #include <plugin-support.h>
 
