@@ -98,6 +98,10 @@ public:
 	void applySearchWidth();
 	/// PNG of the game source as the plugin sees it. Returns the path, or a message starting with a capital.
 	QString saveFrame();
+	/// The game source at its own resolution, for saving or for learning the HUD.
+	QImage grabNative();
+	/// Cut a template from where the damage log is right now, so it matches this HUD exactly.
+	QString learnTemplate(const QImage &native, QRectF rect);
 	bool needsSetup() const { return cfg.gameSource.empty() || cfg.friends.empty(); }
 	/// Tick every desktop-audio input once, when nothing was chosen yet.
 	void autoPickAudio();

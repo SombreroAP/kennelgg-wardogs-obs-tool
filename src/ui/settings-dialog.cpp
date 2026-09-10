@@ -848,12 +848,16 @@ QWidget *SettingsDialog::buildDetectTab()
 		w));
 
 	auto *row = new QHBoxLayout();
-	auto *cap = new QPushButton("Capture my own header template from the box (while downed)", w);
+	auto *learn = new QPushButton("Learn my HUD (press while downed)", w);
+	learn->setToolTip(
+		"Cuts the damage-log header out of your own screen, so it matches exactly. The best thing to press if you are never detected as downed.");
+	auto *cap = new QPushButton("Capture from the box instead", w);
 	auto *builtin = new QPushButton("Use built-in template", w);
 	auto *saveFrame = new QPushButton("Save a frame...", w);
 	saveFrame->setToolTip(
 		"Writes a PNG of your game source as the plugin sees it. Do this while downed and send it to Sombrero if the damage log is never found.");
 	tplLbl_ = new QLabel(w);
+	row->addWidget(learn);
 	row->addWidget(cap);
 	row->addWidget(builtin);
 	row->addWidget(saveFrame);
@@ -872,6 +876,63 @@ QWidget *SettingsDialog::buildDetectTab()
 		e_->applySearchWidth();
 		e_->log(on ? "Damage-log search widened to the whole frame."
 			   : "Damage-log search back to the usual area.");
+	});
+	connect(learn, &QPushButton::clicked, this, [this]() {
+		Match m = e_->lastGame();
+		QImage img = e_->grabNative();
+		if (img.isNull()) {
+			QMessageBox::warning(this, "Kennel WARDOGS",
+					     "Could not render the game source. Pick it above first.");
+			return;
+		}
+		if (m.w <= 0 || m.score < 0.55) {
+			QMessageBox::warning(
+				this, "Kennel WARDOGS",
+				QString("Nothing that looks like the damage log is on screen right now (best %1).\n\n"
+					"Press this while you are DOWNED, with the damage log showing. If it still "
+					"finds nothing, tick \"Look over the whole frame\" and try again, or use "
+					"\"Save a frame...\" and send it to Sombrero.")
+					.arg(m.score < 0 ? 0 : m.score, 0, 'f', 2));
+			return;
+		}
+		QRectF r(m.x, m.y, m.w, m.h);
+		QRect px((int)(r.x() * img.width()), (int)(r.y() * img.height()), (int)(r.width() * img.width()),
+			 (int)(r.height() * img.height()));
+		px.adjust(-px.width() / 20 - 2, -px.height() / 5 - 2, px.width() / 20 + 2, px.height() / 5 + 2);
+		px &= QRect(0, 0, img.width(), img.height());
+		QDialog d(this);
+		d.setWindowTitle("Learn my HUD");
+		auto *v2 = new QVBoxLayout(&d);
+		auto *pic = new QLabel(&d);
+		pic->setAlignment(Qt::AlignCenter);
+		pic->setStyleSheet("background:#0b0e10; padding:8px;");
+		QImage crop = img.copy(px);
+		pic->setPixmap(QPixmap::fromImage(
+			crop.scaledToWidth(std::min(700, crop.width() * 3), Qt::FastTransformation)));
+		v2->addWidget(pic);
+		v2->addWidget(muted(QString("This is what the plugin found, scoring %1. If that is your \"VIEW DAMAGE "
+					    "LOG\" header, learn it: from then on it is matched against your own "
+					    "screen instead of somebody else's, and the score goes near 1.")
+					    .arg(m.score, 0, 'f', 2),
+				    &d));
+		auto *bb2 = new QDialogButtonBox(&d);
+		auto *ok = bb2->addButton("Learn this", QDialogButtonBox::AcceptRole);
+		bb2->addButton(QDialogButtonBox::Cancel);
+		v2->addWidget(bb2);
+		connect(bb2, &QDialogButtonBox::accepted, &d, &QDialog::accept);
+		connect(bb2, &QDialogButtonBox::rejected, &d, &QDialog::reject);
+		(void)ok;
+		d.resize(760, 320);
+		if (d.exec() != QDialog::Accepted)
+			return;
+		QString err = e_->learnTemplate(img, r);
+		if (!err.isEmpty())
+			QMessageBox::warning(this, "Kennel WARDOGS", err);
+		else
+			QMessageBox::information(
+				this, "Kennel WARDOGS",
+				"Learned. Get downed once more and watch the bar: it should go well past the "
+				"threshold now. Put the threshold back to 0.85 if you lowered it.");
 	});
 	connect(saveFrame, &QPushButton::clicked, this, [this]() {
 		QString r = e_->saveFrame();
@@ -898,7 +959,7 @@ QWidget *SettingsDialog::buildDetectTab()
 			 : e_->customTemplate() ? "Custom template"
 						: "Built-in template");
 	v->addWidget(muted(
-		"WARDOGS shows the damage log (\"B  VIEW DAMAGE LOG\" and the body silhouette) the whole time you are downed - it only goes away while the Escape menu is open - and hides it when you are revived. (With the menu open the plugin sees no log, so it comes back to your POV until you close it.) the plugin looks for that header anywhere on the right of your game source, at any HUD size, with a template cut from a real frame. Nothing to set up: get downed once and watch the bar go red (~0.9). Only if it never locks on: drag the dotted box tightly around the header while downed and press Capture.",
+		"WARDOGS shows the damage log (\"B  VIEW DAMAGE LOG\" and the body silhouette) the whole time you are downed - it only goes away while the Escape menu is open - and hides it when you are revived. (With the menu open the plugin sees no log, so it comes back to your POV until you close it.) The built-in template comes from one particular screen; the spacing between the key hint and the wording differs between HUDs, so if your bar peaks a little short of the threshold, press \"Learn my HUD\" while downed and it will use your own header from then on. the plugin looks for that header anywhere on the right of your game source, at any HUD size, with a template cut from a real frame. Nothing to set up: get downed once and watch the bar go red (~0.9). Only if it never locks on: drag the dotted box tightly around the header while downed and press Capture.",
 		w));
 
 	auto *g = new QGroupBox("Tuning", w);

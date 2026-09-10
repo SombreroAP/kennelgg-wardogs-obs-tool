@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.4.8
+- **Learn my HUD** (Detect tab), for a damage log that is never quite matched. Press it while downed: the plugin shows you what it found, and on your say-so cuts that header out of your own screen and uses it from then on, so the score goes near 1 instead of sitting just under the threshold. The built-in template was cut from one particular screen, and the gap between the **B** key hint and the wording is not the same on every HUD - which is exactly the near miss that made one tester drop the threshold to 0.6 and then be shown as downed permanently.
+
 ## 0.4.7
 - **When the damage log is never found.** The Detect tab has **Save a frame...**, which writes a PNG of your game source exactly as the plugin sees it; do that while downed and send it, and the HUD it cannot match can be looked at directly. The usual search area is also wider than it was (from 45 % across and 15 % down, was 60 % and 25 %), and **Look over the whole frame, at more sizes** tries everything from a third to twice the expected size for a HUD the normal search misses.
 - Dragging the match threshold below 0.75 now says, in red, that it will match almost anything - which is what a "downed all the time" reading means, not a fix for a log that is never found.

@@ -260,22 +260,69 @@ void Engine::applySearchWidth()
 	detGame_.unlock();
 }
 
-/// A PNG of the game source exactly as the plugin sees it, for working out why a HUD is not matched.
-QString Engine::saveFrame()
+QImage Engine::grabNative()
 {
 	if (cfg.gameSource.empty())
-		return "No game source is set (Detect or Switch tab).";
+		return QImage();
 	obs_source_t *src = obs_get_source_by_name(cfg.gameSource.c_str());
 	if (!src)
-		return "Cannot find the game source '" + QString::fromStdString(cfg.gameSource) + "'.";
+		return QImage();
 	int native = (int)obs_source_get_width(src);
 	std::vector<uint8_t> bgra;
 	int w = 0, h = 0, ls = 0;
 	bool ok = native > 0 && capRoi_.grab(src, native, bgra, w, h, ls);
 	obs_source_release(src);
 	if (!ok)
-		return "Could not render the game source (is it showing anything?).";
-	QImage img((const uchar *)bgra.data(), w, h, ls, QImage::Format_ARGB32);
+		return QImage();
+	return QImage((const uchar *)bgra.data(), w, h, ls, QImage::Format_ARGB32).copy();
+}
+
+/// Cut the template out of this frame at `rect` (fractions), so it is this HUD's own pixels: the
+/// key hint, the gap and the wording differ between HUDs, and a template from someone else's
+/// screen can only ever be a near miss.
+QString Engine::learnTemplate(const QImage &img, QRectF rect)
+{
+	if (img.isNull() || rect.width() <= 0)
+		return "No frame to learn from.";
+	int x = (int)std::lround(rect.x() * img.width()), y = (int)std::lround(rect.y() * img.height());
+	int w = (int)std::lround(rect.width() * img.width()), h = (int)std::lround(rect.height() * img.height());
+	int mx = std::max(2, w / 20), my = std::max(2, h / 5); // a little margin, the match box is tight
+	x = std::clamp(x - mx, 0, img.width() - 8);
+	y = std::clamp(y - my, 0, img.height() - 8);
+	w = std::min(w + 2 * mx, img.width() - x);
+	h = std::min(h + 2 * my, img.height() - y);
+	if (w < 16 || h < 6)
+		return "That is too small to learn from.";
+	std::vector<float> g((size_t)w * h);
+	for (int yy = 0; yy < h; yy++)
+		for (int xx = 0; xx < w; xx++) {
+			QRgb p = img.pixel(x + xx, y + yy);
+			g[(size_t)yy * w + xx] = 0.299f * qRed(p) + 0.587f * qGreen(p) + 0.114f * qBlue(p);
+		}
+	cfg.customTemplateWidthFrac = (double)w / img.width();
+	detGame_.setTemplate(g, w, h, (float)cfg.customTemplateWidthFrac);
+	std::ofstream out(Config::configFile("template.bin"), std::ios::binary);
+	out.write((const char *)&w, 4);
+	out.write((const char *)&h, 4);
+	out.write((const char *)g.data(), g.size() * sizeof(float));
+	cfg.memScale = cfg.memX = cfg.memY = 0;
+	cfg.save();
+	downRun_ = upRun_ = 0;
+	log(QString("Learned this HUD's damage log: %1x%2 px, %3 of the width.")
+		    .arg(w)
+		    .arg(h)
+		    .arg(cfg.customTemplateWidthFrac, 0, 'f', 3));
+	emit stateChanged();
+	return "";
+}
+
+/// A PNG of the game source exactly as the plugin sees it, for working out why a HUD is not matched.
+QString Engine::saveFrame()
+{
+	QImage img = grabNative();
+	if (img.isNull())
+		return "Could not render the game source '" + QString::fromStdString(cfg.gameSource) +
+		       "' (is a game source set, and showing something?).";
 	QString dir = QString::fromStdString(Config::configDir());
 	QDir().mkpath(dir);
 	QString path = dir + "/frame-" + QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss") + ".png";
