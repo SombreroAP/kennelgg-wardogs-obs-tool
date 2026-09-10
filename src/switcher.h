@@ -24,6 +24,12 @@ public:
 	std::string updateLook(const Config &cfg, bool on);
 
 	static std::vector<std::string> sceneNames();
+	/// Scene items in the plugin's scene, topmost first: name and source type.
+	std::vector<std::pair<std::string, std::string>> sceneItems(const Config &cfg);
+	/// Put the streamer's own camera and alerts back over the top of everything we add.
+	void raiseOnTop(const Config &cfg);
+	/// A first guess at what belongs on top: cameras, and anything that looks like alerts.
+	std::vector<std::string> guessOnTop(const Config &cfg);
 	/// Hide every scene item of this source in every scene (belt and braces for the way back).
 	static int hideEverywhere(const std::string &sourceName);
 	int hideAllFriends(const Config &cfg);

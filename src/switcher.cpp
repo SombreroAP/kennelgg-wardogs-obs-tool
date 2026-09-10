@@ -1,5 +1,6 @@
 #include "switcher.h"
 #include "ndi.h"
+#include <util/platform.h>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
 #include <plugin-support.h>
@@ -106,6 +107,15 @@ std::vector<std::pair<std::string, std::string>> Switcher::inputs()
 
 std::vector<std::pair<std::string, std::string>> Switcher::listProperty(const char *kind, const char *prop)
 {
+	// Cached for a few seconds: this creates a real source of that kind for a moment, and a second
+	// window capture of the same window makes the first one flicker while it is up.
+	static std::map<std::string, std::pair<uint64_t, std::vector<std::pair<std::string, std::string>>>> cache;
+	std::string key = std::string(kind) + "/" + prop;
+	uint64_t now = os_gettime_ns();
+	auto c = cache.find(key);
+	if (c != cache.end() && now - c->second.first < 5000000000ULL)
+		return c->second.second;
+
 	// DistroAV's finder keeps hold of whichever source asked for the list and signals it from its
 	// own thread; our probe is gone by then and OBS dies on the dangling handler. Use kennelNdi.
 	if (strncmp(kind, "ndi_", 4) == 0) {
@@ -131,6 +141,7 @@ std::vector<std::pair<std::string, std::string>> Switcher::listProperty(const ch
 	if (props)
 		obs_properties_destroy(props);
 	obs_source_release(tmp);
+	cache[key] = {now, out};
 	return out;
 }
 
@@ -165,6 +176,41 @@ bool Switcher::kindAvailable(const char *kind)
 	return false;
 }
 
+namespace {
+/// True if every key we are about to write already holds that value. Updating a window capture
+/// tears its capture down and starts it again - do that on every save and it flickers - and it is
+/// pointless when nothing changed.
+bool alreadySet(obs_source_t *src, obs_data_t *want)
+{
+	obs_data_t *have = obs_source_get_settings(src);
+	if (!have)
+		return false;
+	bool same = true;
+	for (obs_data_item_t *it = obs_data_first(want); it && same; obs_data_item_next(&it)) {
+		const char *k = obs_data_item_get_name(it);
+		switch (obs_data_item_gettype(it)) {
+		case OBS_DATA_STRING: {
+			const char *a = obs_data_item_get_string(it), *b = obs_data_get_string(have, k);
+			same = a && b && strcmp(a, b) == 0;
+			break;
+		}
+		case OBS_DATA_NUMBER:
+			same = obs_data_item_numtype(it) == OBS_DATA_NUM_INT
+				       ? obs_data_item_get_int(it) == obs_data_get_int(have, k)
+				       : obs_data_item_get_double(it) == obs_data_get_double(have, k);
+			break;
+		case OBS_DATA_BOOLEAN:
+			same = obs_data_item_get_bool(it) == obs_data_get_bool(have, k);
+			break;
+		default:
+			same = false;
+		}
+	}
+	obs_data_release(have);
+	return same;
+}
+} // namespace
+
 std::string Switcher::createInScene(const Config &cfg, const char *kind, const std::string &name, obs_data_t *settings,
 				    bool fullCanvas, bool visible, bool toBottom)
 {
@@ -176,7 +222,7 @@ std::string Switcher::createInScene(const Config &cfg, const char *kind, const s
 	obs_scene_t *scene = obs_scene_from_source(ss);
 	obs_source_t *src = obs_get_source_by_name(name.c_str());
 	if (src) {
-		if (settings)
+		if (settings && !alreadySet(src, settings))
 			obs_source_update(src, settings);
 	} else {
 		src = obs_source_create(kind, name.c_str(), settings, nullptr);
@@ -188,11 +234,15 @@ std::string Switcher::createInScene(const Config &cfg, const char *kind, const s
 			log("Added '" + name + "' to OBS.");
 	}
 	obs_sceneitem_t *item = obs_scene_find_source(scene, name.c_str());
+	bool fresh = !item;
 	if (!item)
 		item = obs_scene_add(scene, src);
 	if (item) {
-		obs_sceneitem_set_visible(item, visible);
-		if (fullCanvas) {
+		if (obs_sceneitem_visible(item) != visible)
+			obs_sceneitem_set_visible(item, visible);
+		// Only place it the first time. After that it is the streamer's to move, and re-applying
+		// the full-canvas transform on every save snapped it back under them.
+		if (fullCanvas && fresh) {
 			struct obs_video_info ovi;
 			obs_get_video_info(&ovi);
 			struct vec2 pos = {0, 0}, bounds = {(float)ovi.base_width, (float)ovi.base_height};
@@ -200,7 +250,7 @@ std::string Switcher::createInScene(const Config &cfg, const char *kind, const s
 			obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_INNER);
 			obs_sceneitem_set_bounds(item, &bounds);
 		}
-		if (toBottom)
+		if (toBottom && fresh)
 			obs_sceneitem_set_order(item, OBS_ORDER_MOVE_BOTTOM);
 	}
 	obs_source_release(src);
@@ -462,6 +512,66 @@ int Switcher::hideEverywhere(const std::string &sourceName)
 	return ctx.hidden;
 }
 
+/// Scene items in the plugin's scene, top of the stack first: name and source type.
+std::vector<std::pair<std::string, std::string>> Switcher::sceneItems(const Config &cfg)
+{
+	std::vector<std::pair<std::string, std::string>> out;
+	obs_source_t *ss = sceneSource(cfg);
+	if (!ss)
+		return out;
+	obs_scene_enum_items(
+		obs_scene_from_source(ss),
+		[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
+			auto *v = (std::vector<std::pair<std::string, std::string>> *)param;
+			obs_source_t *s = obs_sceneitem_get_source(item);
+			if (s && obs_source_get_name(s))
+				v->emplace_back(obs_source_get_name(s),
+						obs_source_get_id(s) ? obs_source_get_id(s) : "");
+			return true;
+		},
+		&out);
+	std::reverse(out.begin(), out.end()); // obs enumerates bottom-up
+	obs_source_release(ss);
+	return out;
+}
+
+/// The streamer's own face cam and alerts belong over the top of everything we put in the scene.
+/// Called after anything that adds a source or changes the order.
+void Switcher::raiseOnTop(const Config &cfg)
+{
+	if (cfg.onTop.empty())
+		return;
+	obs_source_t *ss = sceneSource(cfg);
+	if (!ss)
+		return;
+	obs_scene_t *scene = obs_scene_from_source(ss);
+	// last first, so the first one in the list ends up the topmost
+	for (auto it = cfg.onTop.rbegin(); it != cfg.onTop.rend(); ++it)
+		if (obs_sceneitem_t *item = obs_scene_find_source(scene, it->c_str()))
+			moveToTop(item);
+	obs_source_release(ss);
+}
+
+/// A first guess at what the streamer would want kept on top: their camera, and alert overlays.
+std::vector<std::string> Switcher::guessOnTop(const Config &cfg)
+{
+	std::vector<std::string> out;
+	for (const auto &[name, id] : sceneItems(cfg)) {
+		if (name.rfind("Kennel", 0) == 0) // our own sources are what it sits on top of
+			continue;
+		std::string n = name, i2 = id;
+		std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+		bool cam = i2 == "dshow_input" || i2 == "av_capture_input" || i2 == "av_capture_input_v2" ||
+			   i2 == "macos-avcapture" || i2 == "v4l2_input";
+		bool alert = n.find("alert") != std::string::npos || n.find("streamlabs") != std::string::npos ||
+			     n.find("streamelement") != std::string::npos ||
+			     n.find("stream element") != std::string::npos;
+		if (cam || alert)
+			out.push_back(name);
+	}
+	return out;
+}
+
 std::string Switcher::updateLook(const Config &cfg, bool on)
 {
 	obs_source_t *ss = sceneSource(cfg);
@@ -476,6 +586,7 @@ std::string Switcher::updateLook(const Config &cfg, bool on)
 		if (item) {
 			moveToTop(item);
 			obs_sceneitem_set_visible(item, true);
+			raiseOnTop(cfg);
 		}
 	} else {
 		int n = hideEverywhere(Config::overlaySourceName());
@@ -492,6 +603,7 @@ void Switcher::armWarm(const Config &cfg)
 		// every squad mate's feed loaded and playing behind the scenes, so a swap is instant
 		for (const auto &f : cfg.friends)
 			armOne(cfg, f);
+		raiseOnTop(cfg);
 		// the shared browser source is not used in this mode; make sure it is not left showing
 		hideEverywhere(Config::webSourceName());
 		return;
@@ -499,6 +611,7 @@ void Switcher::armWarm(const Config &cfg)
 	const Friend *f = cfg.active();
 	if (f)
 		armOne(cfg, *f);
+	raiseOnTop(cfg);
 	// per-squad-mate sources from a previous preloading session must not sit on top of the scene
 	for (const auto &other : cfg.friends)
 		if (other.isWeb())
@@ -687,6 +800,7 @@ std::string Switcher::applyDual(const Config &cfg, bool on)
 		obs_sceneitem_set_bounds(item, &bounds);
 		obs_sceneitem_set_visible(item, err.empty());
 		moveToTop(item);
+		raiseOnTop(cfg);
 	} else
 		err = "could not add the dual-POV window to the scene";
 	obs_source_release(dualSrc);
@@ -798,5 +912,6 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 		obs_source_release(src);
 	}
 	obs_source_release(ss);
+	raiseOnTop(cfg); // the streamer's camera and alerts stay over whatever we just showed
 	return errors;
 }

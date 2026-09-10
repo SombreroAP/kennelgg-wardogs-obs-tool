@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.5.2
+- **Your camera and your alerts stay on top.** A new **Always on top** box on the Switch tab: tick your face cam and your alert overlays and they are lifted back over the top every time the plugin shows a squad mate, brings up the Dual POV window, adds a source or puts the look overlay on - nothing of ours can cover them. The list is the stacking order, first is the topmost, and you can drag it around. Your camera and anything that looks like alerts are ticked for you the first time you open it.
+- **A squad mate's Discord feed no longer flickers.** Saving settings re-applied the window-capture settings to a source that already had them, and Windows tears the capture down and starts it again each time. The plugin now writes settings only when something has actually changed. Probing for the window list is also cached for a few seconds - it briefly makes a second capture of the same window, which is the other half of the flicker.
+- **Your own placement is left alone.** A squad mate's source was stretched back to the full canvas on every save, so if you had moved or resized it, it snapped back under you. It is only placed when it is first added; after that it is yours.
+
 ## 0.5.1
 - **OBS no longer crashes when you scan for a squad mate's NDI feed.** To list what is on the network the plugin used to make a hidden NDI source, ask it for its list and throw it away - but DistroAV's finder holds on to whichever source asked and signals it from its own thread, so it was signalling a source that no longer existed and took OBS down with it. The plugin now asks the NDI runtime for the list itself, keeping one finder for the session, and never makes a source to do it. Nothing to set up.
 - The NDI picker also lists senders already used elsewhere in your OBS, can be **typed into** for a mate whose PC is not on yet, and fills in on its own a second later as the network answers, instead of holding the window still while it looks.

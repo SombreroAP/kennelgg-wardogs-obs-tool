@@ -632,7 +632,8 @@ void Engine::reloadConfig()
 	timer_.setInterval(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
-	pushAppConfig(); // areas, names and rules the app reads
+	sw.raiseOnTop(cfg); // the camera and alerts list may have just changed
+	pushAppConfig();    // areas, names and rules the app reads
 	emit stateChanged();
 }
 

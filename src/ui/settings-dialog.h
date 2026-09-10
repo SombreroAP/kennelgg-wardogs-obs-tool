@@ -57,6 +57,7 @@ private:
 	// switch
 	QComboBox *scene_ = nullptr, *game_ = nullptr, *gameDetect_ = nullptr;
 	QTableWidget *friends_;
+	QListWidget *onTop_ = nullptr;
 	QListWidget *mute_ = nullptr;
 	QCheckBox *keepWarm_, *bringFront_;
 	QCheckBox *preload_ = nullptr, *friendAudio_ = nullptr;

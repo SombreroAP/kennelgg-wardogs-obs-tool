@@ -25,6 +25,10 @@ struct Config {
 	std::vector<Friend> friends;
 	int activeFriend = 0;
 	std::vector<std::string> muteWhileDowned;
+	/// Sources that stay above everything the plugin adds: the streamer's camera, their alerts.
+	/// First in the list is the topmost.
+	std::vector<std::string> onTop;
+	bool onTopV1 = false; // seeded once from what is in the scene
 	bool audioAutoPicked = false; // desktop audio was ticked automatically once
 	bool bringToFront = true;
 	bool keepWarm = true;

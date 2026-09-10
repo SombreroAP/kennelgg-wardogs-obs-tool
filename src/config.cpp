@@ -104,6 +104,7 @@ void Config::load()
 	DEFB(enabled);
 	DEFD(threshold);
 	DEFB(thresholdV2);
+	DEFB(onTopV1);
 	DEFD(holdDrop);
 	DEFB(holdV2);
 	DEFI(pollMs);
@@ -199,6 +200,7 @@ void Config::load()
 	GETB(enabled);
 	GETD(threshold);
 	GETB(thresholdV2);
+	GETB(onTopV1);
 	GETD(holdDrop);
 	GETB(holdV2);
 	GETI(pollMs);
@@ -258,6 +260,7 @@ void Config::load()
 	GETD(boxW);
 	GETD(boxH);
 	muteWhileDowned = getStrings(d, "muteWhileDowned");
+	onTop = getStrings(d, "onTop");
 	clipHotkeys = getStrings(d, "clipHotkeys");
 
 	friends.clear();
@@ -365,6 +368,7 @@ void Config::save() const
 	SETB(enabled);
 	SETD(threshold);
 	SETB(thresholdV2);
+	SETB(onTopV1);
 	SETD(holdDrop);
 	SETB(holdV2);
 	SETI(pollMs);
@@ -424,6 +428,7 @@ void Config::save() const
 	SETD(boxW);
 	SETD(boxH);
 	setStrings(d, "muteWhileDowned", muteWhileDowned);
+	setStrings(d, "onTop", onTop);
 	setStrings(d, "clipHotkeys", clipHotkeys);
 	obs_data_array_t *arr = obs_data_array_create();
 	for (auto &f : friends) {

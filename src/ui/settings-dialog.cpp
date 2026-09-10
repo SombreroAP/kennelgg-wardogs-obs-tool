@@ -1,5 +1,6 @@
 #include "ui/settings-dialog.h"
 #include "ndi.h"
+#include <algorithm>
 #include <QJsonArray>
 #include <QTimer>
 #include <QApplication>
@@ -719,6 +720,21 @@ QWidget *SettingsDialog::buildSwitchTab()
 	v->addWidget(g3, 1);
 	connect(mute_, &QListWidget::itemChanged, this, [this](QListWidgetItem *) { saveAndApply(); });
 	connect(friendAudio_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+
+	auto *gTop = new QGroupBox("Always on top", w);
+	auto *vTop = new QVBoxLayout(gTop);
+	auto *hTop = new QHBoxLayout();
+	onTop_ = new QListWidget(gTop);
+	hTop->addWidget(onTop_, 1);
+	hTop->addWidget(
+		muted("Tick your face cam and your alerts. They are lifted back over the top every time the plugin shows a squad mate, brings up the Dual POV window or adds a source, so nothing of ours ever covers your camera or an alert. The order here is the order they stack, first is the topmost - drag to change it. Your camera and anything that looks like alerts are ticked for you to begin with.",
+		      gTop),
+		1);
+	vTop->addLayout(hTop, 1);
+	v->addWidget(gTop, 1);
+	onTop_->setDragDropMode(QAbstractItemView::InternalMove);
+	connect(onTop_, &QListWidget::itemChanged, this, [this](QListWidgetItem *) { saveAndApply(); });
+	connect(onTop_->model(), &QAbstractItemModel::rowsMoved, this, [this]() { saveAndApply(); });
 
 	auto *g4 = new QGroupBox("Extras", w);
 	auto *v4 = new QVBoxLayout(g4);
@@ -1990,6 +2006,39 @@ void SettingsDialog::fillSources()
 			  e_->cfg.muteWhileDowned.end();
 		it->setCheckState(on ? Qt::Checked : Qt::Unchecked);
 	}
+	if (onTop_) {
+		onTop_->blockSignals(true);
+		onTop_->clear();
+		// once, so a new user's camera and alerts are covered without them having to think about it
+		if (!e_->cfg.onTopV1) {
+			e_->cfg.onTopV1 = true;
+			e_->cfg.onTop = e_->sw.guessOnTop(e_->cfg);
+			e_->cfg.save();
+		}
+		std::vector<std::pair<std::string, std::string>> items = e_->sw.sceneItems(e_->cfg);
+		auto add = [&](const std::string &name, const std::string &id, bool on) {
+			QString label = QString::fromStdString(name);
+			if (!id.empty())
+				label += "   ·  " + QString::fromStdString(id);
+			auto *it = new QListWidgetItem(label, onTop_);
+			it->setData(Qt::UserRole, QString::fromStdString(name));
+			it->setFlags(it->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsDragEnabled);
+			it->setCheckState(on ? Qt::Checked : Qt::Unchecked);
+		};
+		// ticked ones first, in their stacking order, then the rest of the scene
+		for (const auto &n : e_->cfg.onTop) {
+			auto f = std::find_if(items.begin(), items.end(), [&](const auto &p) { return p.first == n; });
+			add(n, f != items.end() ? f->second : std::string("not in this scene"), true);
+		}
+		for (const auto &[name, id] : items) {
+			if (std::find(e_->cfg.onTop.begin(), e_->cfg.onTop.end(), name) != e_->cfg.onTop.end())
+				continue;
+			if (name.rfind("Kennel", 0) == 0) // ours; it is what they sit on top of
+				continue;
+			add(name, id, false);
+		}
+		onTop_->blockSignals(false);
+	}
 	game_->blockSignals(false);
 	scene_->blockSignals(false);
 	mute_->blockSignals(false);
@@ -2055,6 +2104,12 @@ void SettingsDialog::collect()
 	Config &c = e_->cfg;
 	c.gameSource = game_->currentText().toStdString();
 	c.sceneName = scene_->currentText() == kLiveScene ? "" : scene_->currentText().toStdString();
+	if (onTop_) {
+		c.onTop.clear();
+		for (int i = 0; i < onTop_->count(); i++)
+			if (onTop_->item(i)->checkState() == Qt::Checked)
+				c.onTop.push_back(onTop_->item(i)->data(Qt::UserRole).toString().toStdString());
+	}
 	c.muteWhileDowned.clear();
 	for (int i = 0; i < mute_->count(); i++)
 		if (mute_->item(i)->checkState() == Qt::Checked)
