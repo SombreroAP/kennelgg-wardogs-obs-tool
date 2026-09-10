@@ -592,16 +592,14 @@ QWidget *SettingsDialog::buildSwitchTab()
 		if (on && !e_->appConnected()) {
 			auto r = QMessageBox::question(
 				this, "Kennel WARDOGS",
-				"Closest needs ClipHound running: it reads the NEARBY list in the corner of your game. It is not running now.\n\nStart it?",
-				QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::Yes);
-			if (r == QMessageBox::Cancel) {
-				nearOn_->blockSignals(true);
-				nearOn_->setChecked(false);
-				nearOn_->blockSignals(false);
-				return;
-			}
+				"Closest needs ClipHound running: it reads the NEARBY list in the corner of your game. It is not running, so Closest stays off.\n\nStart it now? Tick this again once the dock says ClipHound is connected.",
+				QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Yes);
+			nearOn_->blockSignals(true);
+			nearOn_->setChecked(false);
+			nearOn_->blockSignals(false);
 			if (r == QMessageBox::Yes)
 				e_->launchApp();
+			return;
 		}
 		saveAndApply();
 	});

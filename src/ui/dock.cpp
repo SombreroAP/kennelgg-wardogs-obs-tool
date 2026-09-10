@@ -107,19 +107,18 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 			m.setIcon(QMessageBox::Information);
 			m.setText("Closest needs ClipHound running.");
 			m.setInformativeText(
-				"ClipHound reads the NEARBY list in the corner of your game and tells the plugin who is nearest. It is not running, so nothing would be read.\n\nStart it now? (It also starts with OBS when \"Start ClipHound with OBS\" is ticked under Settings → Clips.)");
+				"ClipHound reads the NEARBY list in the corner of your game and tells the plugin who is nearest. It is not running, so Closest stays off.\n\nStart it now, then tick Closest again once the dock says it is connected. It also starts with OBS when \"Start ClipHound with OBS\" is ticked under Settings → Clips.");
 			auto *start = m.addButton("Start ClipHound", QMessageBox::AcceptRole);
-			m.addButton("Turn Closest on anyway", QMessageBox::ActionRole);
-			auto *cancel = m.addButton(QMessageBox::Cancel);
+			m.addButton(QMessageBox::Cancel);
 			m.exec();
-			if (m.clickedButton() == cancel) {
-				closest_->blockSignals(true);
-				closest_->setChecked(false);
-				closest_->blockSignals(false);
-				return;
-			}
+			// either way Closest stays off: it cannot work without ClipHound. Tick it again once
+			// the dock shows ClipHound connected.
+			closest_->blockSignals(true);
+			closest_->setChecked(false);
+			closest_->blockSignals(false);
 			if (m.clickedButton() == start)
 				e_->launchApp();
+			return;
 		}
 		e_->cfg.nearEnabled = on;
 		e_->cfg.save();
