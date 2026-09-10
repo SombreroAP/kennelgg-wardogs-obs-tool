@@ -104,6 +104,8 @@ void Config::load()
 	DEFB(enabled);
 	DEFD(threshold);
 	DEFB(thresholdV2);
+	DEFD(holdDrop);
+	DEFB(holdV2);
 	DEFI(pollMs);
 	DEFI(downFrames);
 	DEFI(upFrames);
@@ -197,6 +199,8 @@ void Config::load()
 	GETB(enabled);
 	GETD(threshold);
 	GETB(thresholdV2);
+	GETD(holdDrop);
+	GETB(holdV2);
 	GETI(pollMs);
 	GETI(downFrames);
 	GETI(upFrames);
@@ -300,6 +304,13 @@ void Config::load()
 		if (threshold >= 0.83 || threshold < 0.75)
 			threshold = 0.80;
 	}
+	// one poll with a bright sky behind the panel used to read as "alive": the log now has to fall
+	// well below the threshold, and stay there for two polls, before we say you are up
+	if (!holdV2) {
+		holdV2 = true;
+		if (upFrames < 2)
+			upFrames = 2;
+	}
 	// your own game audio is no longer muted by default: the squad mate's feed comes in silent
 	// and you turn its sound on if you want it (Settings -> Switch)
 	if (!audioDefaults2) {
@@ -354,6 +365,8 @@ void Config::save() const
 	SETB(enabled);
 	SETD(threshold);
 	SETB(thresholdV2);
+	SETD(holdDrop);
+	SETB(holdV2);
 	SETI(pollMs);
 	SETI(downFrames);
 	SETI(upFrames);

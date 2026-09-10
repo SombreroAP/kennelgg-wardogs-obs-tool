@@ -74,6 +74,8 @@ private:
 	QProgressBar *meter_;
 	QSlider *thr_ = nullptr;
 	QLabel *thrLbl_, *tplLbl_;
+	QSlider *hold_ = nullptr;
+	QLabel *holdLbl_ = nullptr;
 	QSpinBox *downFrames_, *upFrames_, *minDown_, *pollMs_;
 	QSpinBox *downDelay_ = nullptr, *upDelay_ = nullptr;
 	QCheckBox *auto_, *revive_;

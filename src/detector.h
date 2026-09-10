@@ -24,6 +24,10 @@ public:
 	/// Band of the frame to search, as fractions.
 	float fromX = 0.45f, toX = 1.0f, fromY = 0.15f, toY = 0.95f;
 	double threshold = 0.85;
+	/// While the log is up we keep saying "down" until the score falls below this. 0 = same as threshold.
+	/// A bright sky behind the translucent panel dips the score for a poll or two; without this the
+	/// swap flicks back to your own POV mid-bleedout.
+	double holdThreshold = 0;
 
 	/// Template as grayscale pixels, plus its width as a fraction of the frame it was cut from.
 	/// Widest size the template is tried at, as a multiple of its measured size. Raise it for a
@@ -54,6 +58,11 @@ public:
 	static constexpr int FrameWidth = 1000; // the header is ~10 px tall here; less and NCC is noise
 	static Frame fromBGRA(const uint8_t *bgra, int w, int h, int linesize);
 	static std::vector<float> blur3(const std::vector<float> &g, int w, int h);
+	/// Subtracts the local mean (box radius kHighPass): kills the sky's brightness and gradient and
+	/// leaves the letter strokes, so the score no longer depends on what is behind the HUD.
+	static std::vector<float> highpass(const std::vector<float> &g, int w, int h, int r);
+	static constexpr int kHighPass = 6;    // ~half the header's height at FrameWidth
+	static constexpr float kMinStd = 1.5f; // a patch flatter than this is sky, not text
 
 private:
 	struct Scaled {

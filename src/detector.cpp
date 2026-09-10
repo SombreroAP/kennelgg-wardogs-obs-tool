@@ -100,6 +100,31 @@ std::vector<float> Detector::blur3(const std::vector<float> &g, int W, int H)
 	return out;
 }
 
+/// image minus its local mean, box radius r, edges clamped
+std::vector<float> Detector::highpass(const std::vector<float> &g, int W, int H, int r)
+{
+	std::vector<double> ii((size_t)(W + 1) * (H + 1), 0.0);
+	int iw = W + 1;
+	for (int y = 1; y <= H; y++) {
+		double rs = 0;
+		for (int x = 1; x <= W; x++) {
+			rs += g[(size_t)(y - 1) * W + x - 1];
+			ii[(size_t)y * iw + x] = ii[(size_t)(y - 1) * iw + x] + rs;
+		}
+	}
+	std::vector<float> out(g.size());
+	for (int y = 0; y < H; y++) {
+		int y0 = std::max(0, y - r), y1 = std::min(H, y + r + 1);
+		for (int x = 0; x < W; x++) {
+			int x0 = std::max(0, x - r), x1 = std::min(W, x + r + 1);
+			double s2 = ii[(size_t)y1 * iw + x1] - ii[(size_t)y0 * iw + x1] - ii[(size_t)y1 * iw + x0] +
+				    ii[(size_t)y0 * iw + x0];
+			out[(size_t)y * W + x] = g[(size_t)y * W + x] - (float)(s2 / ((y1 - y0) * (x1 - x0)));
+		}
+	}
+	return out;
+}
+
 bool Detector::loadTemplatePng(const std::string &path, float widthFrac)
 {
 	gs_image_file_t img;
@@ -141,7 +166,7 @@ void Detector::setTemplate(const std::vector<float> &gray, int w, int h, float w
 		s.w = sw;
 		s.h = sh;
 		s.scale = sc;
-		s.t = blur3(resizeBilinear(gray, w, h, sw, sh), sw, sh);
+		s.t = highpass(blur3(resizeBilinear(gray, w, h, sw, sh), sw, sh), sw, sh, kHighPass);
 		normalise(s.t);
 		scaled_.push_back(std::move(s));
 	}
@@ -162,7 +187,9 @@ Detector::Hit Detector::search(const std::vector<float> &g, const std::vector<do
 			double ps = sum[d] - sum[b] - sum[c] + sum[a];
 			double pq = sq[d] - sq[b] - sq[c] + sq[a];
 			double var = pq - ps * ps / n;
-			if (var < 1e-3)
+			// after the high pass a flat patch (open sky) has almost no variance; without this floor
+			// the normalisation would amplify its noise into a match
+			if (var < (double)n * kMinStd * kMinStd)
 				continue;
 			double dot = 0;
 			for (int ty = 0; ty < th; ty++) {
@@ -209,7 +236,7 @@ Match Detector::compare(const Frame &f, bool quickOnly)
 	if (scaled_.empty() || f.empty())
 		return m;
 	int W = f.w, H = f.h;
-	std::vector<float> g = blur3(f.gray, W, H);
+	std::vector<float> g = highpass(blur3(f.gray, W, H), W, H, kHighPass);
 	std::vector<double> sum, sq;
 	integral(g, W, H, sum, sq);
 
@@ -229,11 +256,12 @@ Match Detector::compare(const Frame &f, bool quickOnly)
 	if (lockScale_ >= 0 && lockScale_ < (int)scaled_.size()) {
 		const Scaled &s = scaled_[lockScale_];
 		Hit h = refine(s, lockX_, lockY_, 4);
-		if (h.score >= threshold * 0.93) {
+		double keepLock = holdThreshold > 0 ? std::min(threshold * 0.93, holdThreshold) : threshold * 0.93;
+		if (h.score >= keepLock) {
 			lockX_ = h.x;
 			lockY_ = h.y;
 			fill(s, h);
-			m.locked = h.score >= threshold;
+			m.locked = h.score >= keepLock;
 			return m;
 		}
 		lockScale_ = -1;

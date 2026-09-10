@@ -959,7 +959,7 @@ QWidget *SettingsDialog::buildDetectTab()
 			 : e_->customTemplate() ? "Custom template"
 						: "Built-in template");
 	v->addWidget(muted(
-		"WARDOGS shows the damage log (\"B  VIEW DAMAGE LOG\" and the body silhouette) the whole time you are downed - it only goes away while the Escape menu is open - and hides it when you are revived. (With the menu open the plugin sees no log, so it comes back to your POV until you close it.) The built-in template comes from one particular screen; the spacing between the key hint and the wording differs between HUDs, so if your bar peaks a little short of the threshold, press \"Learn my HUD\" while downed and it will use your own header from then on. the plugin looks for that header anywhere on the right of your game source, at any HUD size, with a template cut from a real frame. Nothing to set up: get downed once and watch the bar go red (~0.9). Only if it never locks on: drag the dotted box tightly around the header while downed and press Capture.",
+		"WARDOGS shows the damage log (\"B  VIEW DAMAGE LOG\" and the body silhouette) the whole time you are downed - it only goes away while the Escape menu is open - and hides it when you are revived. (With the menu open the plugin sees no log, so it comes back to your POV until you close it.) The built-in template comes from one particular screen; the spacing between the key hint and the wording differs between HUDs, so if your bar peaks a little short of the threshold, press \"Learn my HUD\" while downed and it will use your own header from then on. the plugin looks for that header anywhere on the right of your game source, at any HUD size, with a template cut from a real frame. Nothing to set up: get downed once and watch the bar go red (~0.9). What is behind the see-through panel - sky, smoke, a muzzle flash - barely moves the score: the match runs on the picture with its local brightness taken out, and once you are down the log is held while it scores above the hold level in the place it was found. Only if it never locks on: drag the dotted box tightly around the header while downed and press Capture.",
 		w));
 
 	auto *g = new QGroupBox("Tuning", w);
@@ -973,6 +973,24 @@ QWidget *SettingsDialog::buildDetectTab()
 	thrRow->addWidget(thrLbl_);
 	thrRow->addWidget(muted("your header scores well clear of everything else; 0.80 is the default", g));
 	f->addRow("Match threshold", thrRow);
+	auto *holdRow = new QHBoxLayout();
+	hold_ = new QSlider(Qt::Horizontal, g);
+	hold_->setRange(0, 30);
+	hold_->setValue((int)std::lround(e_->cfg.holdDrop * 100));
+	holdLbl_ = new QLabel(QString::number(e_->cfg.threshold - e_->cfg.holdDrop, 'f', 2), g);
+	holdRow->addWidget(hold_, 1);
+	holdRow->addWidget(holdLbl_);
+	holdRow->addWidget(muted("once you are down the log counts as still there down to this score, in the\n"
+				 "place it was found - so a bright sky or smoke over the panel cannot say you are up",
+				 g));
+	f->addRow("Hold down to", holdRow);
+	auto holdSync = [this]() {
+		holdLbl_->setText(
+			QString::number(std::max(0.50, thr_->value() / 100.0 - hold_->value() / 100.0), 'f', 2));
+	};
+	connect(hold_, &QSlider::valueChanged, this, holdSync);
+	connect(thr_, &QSlider::valueChanged, this, holdSync);
+
 	auto *frRow = new QHBoxLayout();
 	downFrames_ = new QSpinBox(g);
 	downFrames_->setRange(1, 30);
@@ -2025,6 +2043,7 @@ void SettingsDialog::collect()
 	c.lookLabel = lookLabel_->text().trimmed().isEmpty() ? "POV" : lookLabel_->text().trimmed().toStdString();
 	c.grainAmount = grain_->value();
 	c.threshold = thr_->value() / 100.0;
+	c.holdDrop = hold_->value() / 100.0;
 	c.reviveThreshold = reviveThr_->value() / 100.0;
 	c.downFrames = downFrames_->value();
 	c.upFrames = upFrames_->value();

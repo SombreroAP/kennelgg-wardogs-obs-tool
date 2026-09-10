@@ -1,4 +1,5 @@
 #include "engine.h"
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <thread>
@@ -1218,10 +1219,22 @@ void Engine::detect(const Match &m)
 		return;
 	bool match = m.score >= cfg.threshold;
 	if (detected_) {
-		// the log is static while you are down; the moment it starts fading the score falls away from its peak
 		if (m.score > peakScore_)
 			peakScore_ = m.score;
-		if (m.score < peakScore_ - cfg.releaseDrop)
+		// Hold on. A bright sky behind the translucent panel, smoke or a muzzle flash washes the
+		// header out for a poll or two; the log itself has not moved. So while you are down the
+		// score only has to stay above the hold level, and the match has to still be in the place
+		// the log was found - noise elsewhere in the frame cannot keep you down.
+		double hold = std::max(0.50, cfg.threshold - std::max(0.0, cfg.holdDrop));
+		bool sameSpot = std::fabs(m.x - downX_) < 0.03f && std::fabs(m.y - downY_) < 0.03f;
+		if (m.score >= cfg.threshold && sameSpot)
+			fullSince_ = clock_::now();
+		// ...but only as a bridge: a washout lasts a moment. If the log has not scored a clean
+		// match for kHoldMs the hold lapses, so nothing on screen can pin you down for good.
+		bool bridging = clock_::now() - fullSince_ < std::chrono::milliseconds(kHoldMs);
+		match = sameSpot && m.score >= (bridging ? hold : cfg.threshold);
+		// the fading-away rule stays for the revive case, where switching back a poll sooner shows
+		if (match && revivingRecent() && m.score < peakScore_ - cfg.releaseDrop)
 			match = false;
 	}
 	if (match) {
@@ -1237,6 +1250,10 @@ void Engine::detect(const Match &m)
 	if (!detected_ && downRun_ >= cfg.downFrames) {
 		detected_ = true;
 		peakScore_ = m.score;
+		downX_ = m.x;
+		downY_ = m.y;
+		fullSince_ = clock_::now();
+		detGame_.holdThreshold = std::max(0.50, cfg.threshold - std::max(0.0, cfg.holdDrop));
 		upDelay_.stop();
 		askNearbyNow(); // fresh NEARBY reading while the delay runs
 		pickClosest("downed", true);
@@ -1252,6 +1269,7 @@ void Engine::detect(const Match &m)
 		}
 	} else if (detected_ && upRun_ >= needUp && clock_::now() - downSince_ >= std::chrono::milliseconds(minDown)) {
 		detected_ = false;
+		detGame_.holdThreshold = 0;
 		downDelay_.stop();
 		clearNearby();
 		if (applied_) {
@@ -1411,6 +1429,7 @@ void Engine::setEnabled(bool on)
 		applyNow(false, "paused");
 	downRun_ = upRun_ = 0;
 	detected_ = false;
+	detGame_.holdThreshold = 0;
 	log(on ? "Resumed." : "Paused - your own POV stays on.");
 	emit stateChanged();
 }

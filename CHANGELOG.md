@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.5.0
+- **A bright sky no longer reads as alive.** The damage-log panel is see-through, so what is behind it changes how the header looks: aim at the sky, drive through smoke or take a muzzle flash and the wording washes out for a moment. The score dipped, and with a single poll enough to end the swap, your own POV came back while you were still on the floor. The match now runs on the picture with its local brightness taken out - the sky's brightness and its gradient go, the letter strokes stay - so the score barely moves when the background changes. Measured on the frame that was failing: a washed-out header that scored 0.75 before (under the threshold, so "alive") now scores 0.94, and a heavily blown-out one 0.83 where it used to score 0.57.
+- **And it holds through a washout anyway.** Once you are down the log counts as still there while it scores above the hold level (the threshold less 0.15 by default, on the Detect tab) *and* stays in the place it was found - so nothing elsewhere on screen can pin you down either. The hold is a bridge, not a latch: if the log has not scored a clean match for three seconds it lapses. Coming up now also takes two polls rather than one (existing settings are moved).
+- The Detect tab has a **Hold down to** slider showing the score the log is held at.
+
 ## 0.4.9
 - **Detection works across resolutions.** The gap between the **B** key hint and "VIEW DAMAGE LOG" is a different fraction of the screen at 720p, 1080p, 1440p and 4K, so the old template - which spanned the hint, the gap and the wording - could only ever be a near miss on a resolution other than the one it was cut from. The built-in template is now the wording alone, which is the same shape everywhere and only changes size, and the game source is read at 1000 px across instead of 800 so that small text has enough pixels to match on. On the 1080p frame that was failing this scores 0.86 where everything else on screen scores 0.51; before it was 0.82 against 0.63.
 - The match threshold default moves from 0.85 to **0.80** to suit the new template, and existing settings are moved with it (including the ones dragged down below 0.75 to try to make the old template work).
