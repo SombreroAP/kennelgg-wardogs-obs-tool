@@ -836,7 +836,7 @@ QWidget *SettingsDialog::buildDetectTab()
 			 : e_->customTemplate() ? "Custom template"
 						: "Built-in template");
 	v->addWidget(muted(
-		"WARDOGS shows the damage log (\"B  VIEW DAMAGE LOG\" and the body silhouette) the whole time you are downed, map open or not, and hides it when you are revived. the plugin looks for that header anywhere on the right of your game source, at any HUD size, with a template cut from a real frame. Nothing to set up: get downed once and watch the bar go red (~0.9). Only if it never locks on: drag the dotted box tightly around the header while downed and press Capture.",
+		"WARDOGS shows the damage log (\"B  VIEW DAMAGE LOG\" and the body silhouette) the whole time you are downed - it only goes away while the Escape menu is open - and hides it when you are revived. (With the menu open the plugin sees no log, so it comes back to your POV until you close it.) the plugin looks for that header anywhere on the right of your game source, at any HUD size, with a template cut from a real frame. Nothing to set up: get downed once and watch the bar go red (~0.9). Only if it never locks on: drag the dotted box tightly around the header while downed and press Capture.",
 		w));
 
 	auto *g = new QGroupBox("Tuning", w);
