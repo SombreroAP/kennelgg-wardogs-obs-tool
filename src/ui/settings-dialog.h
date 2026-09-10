@@ -87,6 +87,15 @@ private:
 	QWidget *buildClipsTab();
 	QWidget *buildAppTab();
 	QWidget *buildLogsTab();
+	QWidget *buildDualTab();
+	QComboBox *dualFriend_ = nullptr, *dualPreset_ = nullptr;
+	QCheckBox *dualOn_ = nullptr;
+	QDoubleSpinBox *dualX_ = nullptr, *dualY_ = nullptr, *dualW_ = nullptr;
+	QSlider *dualOpacity_ = nullptr;
+	FramePreview *dualPick_ = nullptr;
+	QLabel *dualState_ = nullptr;
+	void dualToUi();
+	void dualFromUi(bool preset);
 	QPlainTextEdit *logView_ = nullptr;
 	void refreshLogs();
 	QLineEdit *appName_ = nullptr, *appLibrary_ = nullptr, *appBroadcaster_ = nullptr, *clipFolder_ = nullptr;

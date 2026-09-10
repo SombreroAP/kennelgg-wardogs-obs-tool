@@ -29,6 +29,7 @@ private:
 	QLabel *detector_;
 	QLabel *near_ = nullptr;
 	QCheckBox *closest_ = nullptr;
+	QPushButton *dual_ = nullptr;
 	QComboBox *active_;
 	QPushButton *show_, *back_, *pause_, *clipNow_, *appBtn_;
 	QToolButton *saveBtn_;

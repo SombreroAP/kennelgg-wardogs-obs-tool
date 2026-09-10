@@ -28,12 +28,18 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 static Engine *g_engine = nullptr;
 static Dock *g_dock = nullptr;
 static obs_hotkey_id g_hkToggle = OBS_INVALID_HOTKEY_ID, g_hkCapture = OBS_INVALID_HOTKEY_ID,
-		     g_hkClip = OBS_INVALID_HOTKEY_ID;
+		     g_hkClip = OBS_INVALID_HOTKEY_ID, g_hkDual = OBS_INVALID_HOTKEY_ID;
 
 static void hotkeyToggle(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
 {
 	if (pressed && g_engine)
 		QMetaObject::invokeMethod(g_engine, "toggle", Qt::QueuedConnection);
+}
+
+static void hotkeyDual(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
+{
+	if (pressed && g_engine)
+		QMetaObject::invokeMethod(g_engine, "toggleDual", Qt::QueuedConnection);
 }
 
 static void hotkeyCapture(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
@@ -75,6 +81,11 @@ static void loadHotkeys()
 		obs_hotkey_load(g_hkClip, a);
 		obs_data_array_release(a);
 	}
+	a = obs_data_get_array(d, "dual");
+	if (a) {
+		obs_hotkey_load(g_hkDual, a);
+		obs_data_array_release(a);
+	}
 	obs_data_release(d);
 }
 
@@ -86,6 +97,9 @@ static void saveHotkeys()
 	obs_data_array_release(a);
 	a = obs_hotkey_save(g_hkCapture);
 	obs_data_set_array(d, "capture", a);
+	obs_data_array_release(a);
+	a = obs_hotkey_save(g_hkDual);
+	obs_data_set_array(d, "dual", a);
 	obs_data_array_release(a);
 	a = obs_hotkey_save(g_hkClip);
 	obs_data_set_array(d, "clip", a);
@@ -137,6 +151,8 @@ bool obs_module_load(void)
 		"kennel.pov.capture", obs_module_text("KennelWardogs.Hotkey.Capture"), hotkeyCapture, nullptr);
 	g_hkClip = obs_hotkey_register_frontend("kennel.clip.now", obs_module_text("KennelWardogs.Hotkey.Clip"),
 						hotkeyClip, nullptr);
+	g_hkDual = obs_hotkey_register_frontend("kennel.dual.toggle", obs_module_text("KennelWardogs.Hotkey.Dual"),
+						hotkeyDual, nullptr);
 	loadHotkeys();
 	obs_frontend_add_event_callback(onFrontendEvent, nullptr);
 	obs_log(LOG_INFO, "Kennel.gg WARDOGS OBS Tools loaded (version %s)", PLUGIN_VERSION);
@@ -150,6 +166,8 @@ void obs_module_unload(void)
 		obs_hotkey_unregister(g_hkToggle);
 	if (g_hkCapture != OBS_INVALID_HOTKEY_ID)
 		obs_hotkey_unregister(g_hkCapture);
+	if (g_hkDual != OBS_INVALID_HOTKEY_ID)
+		obs_hotkey_unregister(g_hkDual);
 	if (g_hkClip != OBS_INVALID_HOTKEY_ID)
 		obs_hotkey_unregister(g_hkClip);
 	if (g_engine)

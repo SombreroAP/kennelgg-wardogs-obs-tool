@@ -411,6 +411,7 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	tabs->addTab(buildSwitchTab(), "Switch");
 	tabs->addTab(buildLookTab(), "Look");
 	tabs->addTab(buildDetectTab(), "Detect");
+	tabs->addTab(buildDualTab(), "Dual POV");
 	tabs->addTab(buildClipsTab(), "Clips");
 	tabs->addTab(buildAppTab(), "ClipHound");
 	tabs->addTab(buildLogsTab(), "Logs");
@@ -1293,6 +1294,179 @@ void SettingsDialog::showNearbyTest()
 	d->resize(820, 560);
 	d->show();
 	e_->nearbyTest();
+}
+
+namespace {
+struct DualPreset {
+	const char *id, *label;
+	double x, y, w;
+};
+// Measured on 1600x900 frames of the tank (driver and gunner), the Havoc pilot seat and the Havoc
+// gunner's CAM view. Top-left sits between the team chat and the kill feed and covers no HUD; the
+// CAM view is a framed picture, so the window goes inside the frame, clear of the compass.
+const DualPreset kDualPresets[] = {
+	{"tank-driver", "Tank - I drive, show my gunner", 0.012, 0.19, 0.26},
+	{"tank-gunner", "Tank - I am the gunner, show my driver", 0.012, 0.19, 0.26},
+	{"havoc-pilot", "Havoc - I fly, show my gunner", 0.012, 0.19, 0.26},
+	{"havoc-gunner", "Havoc - I am the gunner (CAM view), show my pilot", 0.19, 0.075, 0.20},
+	{"custom", "Custom - drag the box on the picture", 0, 0, 0},
+};
+} // namespace
+
+QWidget *SettingsDialog::buildDualTab()
+{
+	auto *w = new QWidget(this);
+	auto *v = new QVBoxLayout(w);
+	v->addWidget(muted(
+		"Two of you in a tank or a Havoc? Show your own POV as usual and put your crew mate's feed in a small window over it, placed where the game draws nothing. Pick who, pick the seat you are in, and the window goes where that seat's HUD leaves room. The window is picture only; the swap when you go down still takes the whole screen and the window steps aside for it. Hotkey: OBS Settings → Hotkeys → \"dual POV window on / off\".",
+		w));
+	auto *g = new QGroupBox("Dual POV", w);
+	auto *f = new QFormLayout(g);
+	dualOn_ = new QCheckBox("Show the dual POV window", g);
+	f->addRow(dualOn_);
+	dualFriend_ = new QComboBox(g);
+	f->addRow("Crew mate to show", dualFriend_);
+	dualPreset_ = new QComboBox(g);
+	for (const auto &p : kDualPresets)
+		dualPreset_->addItem(p.label, p.id);
+	f->addRow("Vehicle and seat", dualPreset_);
+	auto *pos = new QHBoxLayout();
+	dualX_ = new QDoubleSpinBox(g);
+	dualY_ = new QDoubleSpinBox(g);
+	dualW_ = new QDoubleSpinBox(g);
+	for (auto *sb : {dualX_, dualY_, dualW_}) {
+		sb->setRange(0, 100);
+		sb->setDecimals(1);
+		sb->setSuffix(" %");
+	}
+	dualW_->setRange(8, 60);
+	pos->addWidget(new QLabel("left", g));
+	pos->addWidget(dualX_);
+	pos->addWidget(new QLabel("top", g));
+	pos->addWidget(dualY_);
+	pos->addWidget(new QLabel("width", g));
+	pos->addWidget(dualW_);
+	pos->addWidget(muted("of the canvas; the height keeps 16:9", g));
+	pos->addStretch(1);
+	f->addRow("Window", pos);
+	auto *op = new QHBoxLayout();
+	dualOpacity_ = new QSlider(Qt::Horizontal, g);
+	dualOpacity_->setRange(10, 100);
+	auto *opLbl = new QLabel(g);
+	op->addWidget(dualOpacity_, 1);
+	op->addWidget(opLbl);
+	f->addRow("Opacity", op);
+	dualState_ = new QLabel(g);
+	dualState_->setWordWrap(true);
+	f->addRow("Now", dualState_);
+	v->addWidget(g);
+	dualPick_ = new FramePreview(w);
+	dualPick_->setMinimumHeight(220);
+	dualPick_->setPicker(
+		"The dashed box is the dual POV window over your game. Drag on the picture to place it (switches to Custom).");
+	v->addWidget(dualPick_, 1);
+	v->addWidget(muted(
+		"Their feed is whatever you set up for them on the Switch tab: Twitch, VDO.Ninja, Discord or NDI. A Twitch feed runs a couple of seconds behind you; VDO.Ninja or NDI is the one for a tight crew. If they are also the squad mate the POV swap uses, that keeps working.",
+		w));
+
+	dualToUi();
+	connect(dualOn_, &QCheckBox::toggled, this, [this](bool on) {
+		if (building_)
+			return;
+		dualFromUi(false);
+		e_->setDual(on, "Dual POV tab");
+	});
+	connect(dualFriend_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
+		if (!building_)
+			dualFromUi(false);
+	});
+	connect(dualPreset_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
+		if (!building_)
+			dualFromUi(true);
+	});
+	for (auto *sb : {dualX_, dualY_, dualW_})
+		connect(sb, &QDoubleSpinBox::editingFinished, this, [this]() {
+			dualPreset_->blockSignals(true);
+			dualPreset_->setCurrentIndex(dualPreset_->findData("custom"));
+			dualPreset_->blockSignals(false);
+			dualFromUi(false);
+		});
+	connect(dualOpacity_, &QSlider::valueChanged, this, [opLbl](int v) { opLbl->setText(QString("%1 %").arg(v)); });
+	connect(dualOpacity_, &QSlider::sliderReleased, this, [this]() { dualFromUi(false); });
+	opLbl->setText(QString("%1 %").arg(dualOpacity_->value()));
+	connect(dualPick_, &FramePreview::boxChanged, this, [this](QRectF r) {
+		Config &c = e_->cfg;
+		c.dualX = r.x();
+		c.dualY = r.y();
+		c.dualW = r.width();
+		c.dualPreset = "custom";
+		dualToUi();
+		dualFromUi(false);
+	});
+	connect(e_, &Engine::frameUpdated, this, [this]() {
+		if (!dualPick_)
+			return;
+		QImage img = e_->lastFrame();
+		double h = img.isNull() ? e_->cfg.dualW * 9 / 16
+					: e_->cfg.dualW * 9.0 / 16.0 * img.width() / img.height();
+		dualPick_->setFrame(img, Match(), 1.0, QRectF(e_->cfg.dualX, e_->cfg.dualY, e_->cfg.dualW, h));
+	});
+	connect(e_, &Engine::stateChanged, this, [this]() {
+		if (dualState_)
+			dualState_->setText(
+				e_->dualOn() ? "window is up" +
+						       QString(e_->applied() ? " (stepped aside for the POV swap)" : "")
+					     : "off");
+		if (dualFriend_ && dualFriend_->count() != (int)e_->cfg.friends.size() + 1)
+			dualToUi();
+	});
+	return w;
+}
+
+void SettingsDialog::dualToUi()
+{
+	const Config &c = e_->cfg;
+	bool was = building_;
+	building_ = true;
+	dualOn_->setChecked(e_->dualOn() || c.dualEnabled);
+	dualFriend_->clear();
+	dualFriend_->addItem("(none)", -1);
+	for (size_t i = 0; i < c.friends.size(); i++)
+		dualFriend_->addItem(QString::fromStdString(c.friends[i].name), (int)i);
+	dualFriend_->setCurrentIndex(std::max(0, dualFriend_->findData(c.dualFriend)));
+	int pi = dualPreset_->findData(QString::fromStdString(c.dualPreset));
+	dualPreset_->setCurrentIndex(pi < 0 ? 0 : pi);
+	dualX_->setValue(c.dualX * 100);
+	dualY_->setValue(c.dualY * 100);
+	dualW_->setValue(c.dualW * 100);
+	dualOpacity_->setValue(c.dualOpacity);
+	dualState_->setText(e_->dualOn() ? "window is up" : "off");
+	building_ = was;
+}
+
+void SettingsDialog::dualFromUi(bool preset)
+{
+	Config &c = e_->cfg;
+	c.dualEnabled = dualOn_->isChecked();
+	c.dualFriend = dualFriend_->currentData().toInt();
+	c.dualPreset = dualPreset_->currentData().toString().toStdString();
+	if (preset) {
+		for (const auto &p : kDualPresets)
+			if (c.dualPreset == p.id && p.w > 0) {
+				c.dualX = p.x;
+				c.dualY = p.y;
+				c.dualW = p.w;
+			}
+		dualToUi();
+	} else {
+		c.dualX = dualX_->value() / 100;
+		c.dualY = dualY_->value() / 100;
+		c.dualW = dualW_->value() / 100;
+	}
+	c.dualOpacity = dualOpacity_->value();
+	c.save();
+	if (e_->dualOn())
+		e_->setDual(true, "settings changed");
 }
 
 void SettingsDialog::updateAreas()

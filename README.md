@@ -13,6 +13,9 @@ One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional co
   plugin creates and places the OBS sources for you.
 - **The closest one.** With more than one feed, the game's NEARBY list decides which POV comes up:
   the squad mate who is actually next to you, not the one you picked before the match.
+- **Dual POV.** In a tank or a Havoc with a crew mate: your own POV stays up and theirs sits in a
+  small window placed where that seat's HUD leaves room, with presets for tank driver, tank gunner,
+  Havoc pilot and Havoc gunner (CAM view), or drag it anywhere.
 - **The look.** Optional name tag, camcorder frame, film grain and vignette over the friend's feed.
 - **No black screen.** Feeds are kept warm, and optionally every squad mate's feed is preloaded and
   playing behind the scenes so a Twitch stream is not starting up at the moment you go down.
@@ -120,6 +123,7 @@ uint16 height, uint64 timestamp ms (little endian), then JPEG.
 | Tab | What is there |
 |---|---|
 | Switch | game source and scene; squad mates (kind, in-game name, VDO.Ninja quality); **Show whoever is closest** with Wait between swaps and the 50 m range; squad-mate sound and what of yours to mute; LAN discovery and NDI share; Extras: keep warm, preload every feed |
+| Dual POV | on/off, crew mate, vehicle and seat preset or a dragged box, opacity |
 | Look | name tag, plate, camcorder frame, grain, vignette; preview |
 | Detect | live picture with the damage-log match, the header box and the blue **NEARBY box**; **Test read**; thresholds, confirm frames, the 2 s delay before showing and the delay before coming back |
 | Clips | replay buffer, file-name template, clip folder, Backtrack hotkeys and folder, clip on downed, ClipHound path and start/close with OBS |

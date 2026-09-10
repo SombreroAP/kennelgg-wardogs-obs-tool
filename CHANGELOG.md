@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.4.0
+- **Dual POV** (new tab). Two of you in a tank or a Havoc: your own POV stays on screen and your crew mate's feed sits in a small window over it, placed where the game draws nothing. Pick the crew mate, pick the vehicle and the seat you are in - tank driver, tank gunner, Havoc pilot, Havoc gunner in the CAM view - and the window goes where that seat's HUD leaves room (top-left between the team chat and the kill feed; inside the picture frame for the CAM view). Or Custom: drag the box on the live picture, or type left, top and width. Opacity slider. Picture only, no sound. A **Dual POV** button in the dock and a hotkey ("dual POV window on / off") turn it on and off; it comes back on with OBS if it was on. When you go down the window steps aside for the full-screen swap and returns after.
+
 ## 0.3.9
 - **Closest cannot be turned on without ClipHound running.** The dialog offers to start ClipHound; the tick box stays off until it is connected.
 - **Settings window no longer opens squashed.** It came up with every control squeezed to a few pixels until you resized it by hand: the first paint used the geometry from before the window was sized. It now opens at a proper size and lays itself out again the instant it appears. Same for the setup wizard and the Logs window. Fonts sized in pixels by the OBS theme are handled too.

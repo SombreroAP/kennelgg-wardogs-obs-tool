@@ -142,6 +142,11 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	connect(back_, &QPushButton::clicked, this, [this]() { e_->applyNow(false, "button"); });
 
 	auto *btns2 = new QHBoxLayout();
+	dual_ = new QPushButton("Dual POV", this);
+	dual_->setCheckable(true);
+	dual_->setToolTip("Your crew mate's feed in a small window over your POV (set up on the Dual POV tab).");
+	btns->addWidget(dual_);
+	connect(dual_, &QPushButton::clicked, this, [this](bool on) { e_->setDual(on, "dock"); });
 	pause_ = new QPushButton("Pause", this);
 	auto *settings = new QPushButton("Settings...", this);
 	auto *wiz = new QPushButton("Setup", this);
@@ -287,6 +292,12 @@ void Dock::refresh()
 			     ? "REPLAY BUFFER OFF (OBS Settings → Output)  ·  "
 			     : "";
 	clip_->setText(rb + (lp.isEmpty() ? "no clips yet" : "last: " + QFileInfo(lp).fileName()));
+	if (dual_) {
+		dual_->blockSignals(true);
+		dual_->setChecked(e_->dualOn());
+		dual_->blockSignals(false);
+		dual_->setStyleSheet(e_->dualOn() ? "QPushButton { border-left: 4px solid #4cbe5a; }" : "");
+	}
 	show_->setEnabled(!e_->applied());
 	back_->setEnabled(e_->applied());
 }

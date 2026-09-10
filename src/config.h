@@ -33,6 +33,19 @@ struct Config {
 	bool audioDefaults2 = false; // one-time move to "nothing of yours is muted by default"
 	int vdoBitrateKbps = 12000;  // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
 
+	// dual POV: a squad mate's feed in a small window over your own POV (tank / chopper crews)
+	bool dualEnabled = false;
+	int dualFriend = -1;                    // index into friends, -1 = none
+	std::string dualPreset = "tank-driver"; // tank-driver | tank-gunner | havoc-pilot | havoc-gunner | custom
+	double dualX = 0.012, dualY = 0.19, dualW = 0.26; // fractions of the canvas; height keeps 16:9
+	int dualOpacity = 100;
+	static const char *dualSceneName() { return "Kennel dual"; }
+	static const char *dualFeedName() { return "Kennel dual feed"; }
+	const Friend *dual() const
+	{
+		return dualFriend >= 0 && dualFriend < (int)friends.size() ? &friends[dualFriend] : nullptr;
+	}
+
 	// look overlay
 	bool lookName = true, lookPlate = true, lookCam = false, lookGrain = false, lookVignette = false;
 	std::string lookLabel = "POV";

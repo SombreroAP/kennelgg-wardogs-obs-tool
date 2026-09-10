@@ -269,6 +269,8 @@ void Engine::start()
 	timer_.start(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
+	if (cfg.dualEnabled && cfg.dual())
+		setDual(true, "on at start-up (Dual POV tab)");
 	emit stateChanged();
 }
 
@@ -1093,6 +1095,8 @@ void Engine::applyNow(bool on, const QString &why)
 		if (!detected_)
 			clearNearby();
 	}
+	if (dualOn_)
+		sw.applyDual(cfg, !on); // the small window makes way for the full-screen swap, and returns
 	sendPov(on ? "downed" : "up");
 	events_ << QDateTime::currentDateTime().toString("HH:mm:ss") +
 			   (on ? "  DOWNED - showing " + QString::fromStdString(cfg.active()->name) : "  back up");
@@ -1111,6 +1115,30 @@ void Engine::applyNow(bool on, const QString &why)
 	log(msg);
 	applying_ = false;
 	emit stateChanged();
+}
+
+void Engine::setDual(bool on, const QString &why)
+{
+	if (on && !cfg.dual()) {
+		log("Dual POV: pick a squad mate on the Dual POV tab first.");
+		return;
+	}
+	std::string e = sw.applyDual(cfg, on && !applied_);
+	if (!e.empty()) {
+		log("Dual POV: " + QString::fromStdString(e));
+		if (on)
+			return;
+	}
+	dualOn_ = on;
+	log((on ? "Dual POV on: " + QString::fromStdString(cfg.dual()->name) + " in the small window"
+		: QString("Dual POV off")) +
+	    " - " + why + ".");
+	emit stateChanged();
+}
+
+void Engine::toggleDual()
+{
+	setDual(!dualOn_, "hotkey");
 }
 
 void Engine::toggle()

@@ -17,6 +17,8 @@ public:
 	/// Warm mode: friend source present in the scene, transparent and muted.
 	void armWarm(const Config &cfg);
 	void armOne(const Config &cfg, const Friend &f);
+	/// The dual-POV window: a squad mate's feed, small, over your own POV. Creates what it needs.
+	std::string applyDual(const Config &cfg, bool on);
 	/// Look overlay on/off (also used for preview).
 	std::string updateLook(const Config &cfg, bool on);
 

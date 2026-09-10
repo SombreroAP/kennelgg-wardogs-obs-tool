@@ -512,6 +512,105 @@ int Switcher::hideAllFriends(const Config &cfg)
 	return n;
 }
 
+std::string Switcher::applyDual(const Config &cfg, bool on)
+{
+	const Friend *f = cfg.dual();
+	if (on && !f)
+		return "no squad mate chosen for the dual POV";
+	obs_source_t *ss = sceneSource(cfg);
+	if (!ss)
+		return "no scene";
+	obs_scene_t *scene = obs_scene_from_source(ss);
+	obs_sceneitem_t *item = obs_scene_find_source(scene, Config::dualSceneName());
+	if (!on) {
+		if (item)
+			obs_sceneitem_set_visible(item, false);
+		hideEverywhere(Config::dualSceneName());
+		obs_source_release(ss);
+		return "";
+	}
+	struct obs_video_info ovi;
+	obs_get_video_info(&ovi);
+	// a private nested scene holds the feed at full size; the main scene shows that scene small.
+	// Private, so it never appears in the scene list and the "hide every squad mate" sweep does
+	// not reach inside it.
+	obs_source_t *dualSrc = obs_get_source_by_name(Config::dualSceneName());
+	obs_scene_t *dual = dualSrc ? obs_scene_from_source(dualSrc) : nullptr;
+	if (!dual) {
+		dual = obs_scene_create_private(Config::dualSceneName());
+		dualSrc = obs_scene_get_source(dual);
+		obs_source_get_ref(dualSrc);
+		if (log)
+			log("Added the dual-POV window '" + std::string(Config::dualSceneName()) + "'.");
+	}
+	std::string err;
+	std::string inner;
+	if (f->isWeb()) {
+		inner = Config::dualFeedName();
+		err = ensureBrowserSource(dual, inner.c_str(), webUrl(*f), true);
+		obs_source_t *b = obs_get_source_by_name(inner.c_str());
+		if (b) {
+			obs_source_set_muted(b, true); // the window is picture only
+			obs_source_release(b);
+		}
+	} else {
+		inner = f->source;
+		obs_source_t *src = obs_get_source_by_name(inner.c_str());
+		if (!src)
+			err = "source '" + inner + "' not found";
+		else {
+			if (!obs_scene_find_source(dual, inner.c_str())) {
+				obs_sceneitem_t *it = obs_scene_add(dual, src);
+				struct vec2 pos = {0, 0}, bounds = {(float)ovi.base_width, (float)ovi.base_height};
+				obs_sceneitem_set_pos(it, &pos);
+				obs_sceneitem_set_bounds_type(it, OBS_BOUNDS_SCALE_INNER);
+				obs_sceneitem_set_bounds(it, &bounds);
+			}
+			obs_source_release(src);
+		}
+	}
+	// only the chosen feed is inside the window
+	obs_scene_enum_items(
+		dual,
+		[](obs_scene_t *, obs_sceneitem_t *it, void *want) {
+			obs_source_t *s = obs_sceneitem_get_source(it);
+			obs_sceneitem_set_visible(it, s && *(std::string *)want == obs_source_get_name(s));
+			return true;
+		},
+		&inner);
+	// opacity
+	{
+		obs_source_t *fl = obs_source_get_filter_by_name(dualSrc, "Kennel dual opacity");
+		obs_data_t *st = obs_data_create();
+		obs_data_set_double(st, "opacity", std::clamp(cfg.dualOpacity, 10, 100) / 100.0);
+		if (!fl) {
+			fl = obs_source_create_private("color_filter_v2", "Kennel dual opacity", st);
+			if (fl)
+				obs_source_filter_add(dualSrc, fl);
+		} else
+			obs_source_update(fl, st);
+		obs_data_release(st);
+		if (fl)
+			obs_source_release(fl);
+	}
+	if (!item)
+		item = obs_scene_add(scene, dualSrc);
+	if (item) {
+		float w = (float)(cfg.dualW * ovi.base_width), h = w * 9.0f / 16.0f;
+		struct vec2 pos = {(float)(cfg.dualX * ovi.base_width), (float)(cfg.dualY * ovi.base_height)},
+			    bounds = {w, h};
+		obs_sceneitem_set_pos(item, &pos);
+		obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_INNER);
+		obs_sceneitem_set_bounds(item, &bounds);
+		obs_sceneitem_set_visible(item, err.empty());
+		moveToTop(item);
+	} else
+		err = "could not add the dual-POV window to the scene";
+	obs_source_release(dualSrc);
+	obs_source_release(ss);
+	return err;
+}
+
 std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 {
 	std::vector<std::string> errors;
