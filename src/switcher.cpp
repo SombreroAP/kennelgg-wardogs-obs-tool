@@ -267,14 +267,29 @@ obs_data_t *Switcher::ndiSettings(const Friend &f)
 	obs_data_t *st = obs_data_create();
 	obs_data_set_string(st, "ndi_source_name", f.channel.c_str());
 	obs_data_set_int(st, "ndi_bw_mode", std::clamp(f.ndiBw, 0, 1));
-	// How the feed is timed on the way in. Frame sync hands OBS a frame on OBS's own clock and is
-	// the usual answer to judder; when it is not, the timing modes DistroAV offers are worth trying
-	// in turn, and "internal" is no smoothing at all - some senders judder less without it.
-	int sync = std::clamp(f.ndiSync, 0, 3);
-	obs_data_set_bool(st, "ndi_framesync", sync == 0);
-	if (sync != 0)
-		obs_data_set_int(st, "ndi_sync", sync == 1 ? 1 : sync == 2 ? 2 : 0);
-	obs_data_set_int(st, "latency", 0); // normal, not low: low turns the smoothing off again
+	// How the feed is timed on the way in. 0 leaves DistroAV's own settings alone, which is the
+	// default: 0.5.4 forced frame sync on every feed to smooth it, and on some setups the picture
+	// then never appears at all. Frame sync is worth trying by hand, but not behind your back.
+	switch (std::clamp(f.ndiSync, 0, 4)) {
+	case 1:
+		obs_data_set_bool(st, "ndi_framesync", true);
+		break;
+	case 2:
+		obs_data_set_bool(st, "ndi_framesync", false);
+		obs_data_set_int(st, "ndi_sync", 1); // network timestamps
+		break;
+	case 3:
+		obs_data_set_bool(st, "ndi_framesync", false);
+		obs_data_set_int(st, "ndi_sync", 2); // the sender's timecode
+		break;
+	case 4:
+		obs_data_set_bool(st, "ndi_framesync", false);
+		obs_data_set_int(st, "ndi_sync", 0); // internal: show frames as they land
+		break;
+	default:
+		obs_data_set_bool(st, "ndi_framesync", false); // undo what 0.5.4 wrote onto the source
+		break;
+	}
 	return st;
 }
 

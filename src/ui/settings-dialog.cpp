@@ -231,13 +231,15 @@ public:
 		ndiBw_->setCurrentIndex(result.ndiBw == 1 ? 1 : 0);
 		form_->addRow("Receive at", ndiBw_);
 		ndiSync_ = new QComboBox(this);
-		ndiSync_->addItem("frame sync  (recommended)", 0);
-		ndiSync_->addItem("network timestamps", 1);
-		ndiSync_->addItem("the sender's timecode", 2);
-		ndiSync_->addItem("none  (show frames as they land)", 3);
-		ndiSync_->setCurrentIndex(std::clamp(result.ndiSync, 0, 3));
-		ndiSync_->setToolTip("How their feed is timed on the way in. If it still judders, try these in "
-				     "turn - some senders are steadier on one than another.");
+		ndiSync_->addItem("leave DistroAV's own setting alone  (default)", 0);
+		ndiSync_->addItem("frame sync", 1);
+		ndiSync_->addItem("network timestamps", 2);
+		ndiSync_->addItem("the sender's timecode", 3);
+		ndiSync_->addItem("none  (show frames as they land)", 4);
+		ndiSync_->setCurrentIndex(std::clamp(result.ndiSync, 0, 4));
+		ndiSync_->setToolTip("How their feed is timed on the way in. Left alone by default. If a feed "
+				     "judders, try frame sync first, then the others - senders differ. If a feed "
+				     "shows nothing at all, put this back to the first line.");
 		form_->addRow("Timing", ndiSync_);
 
 		trim_ = new QCheckBox("Show the game only, not Discord's window", this);

@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.5.9
+- **A squad mate's NDI feed showing nothing at all, fixed.** 0.5.4 turned DistroAV's frame sync on for every NDI feed to smooth out judder. On some setups the picture then never arrives, which is worse than the judder it was meant to fix. The plugin no longer touches how a feed is timed: **Timing** in Edit... now starts at *leave DistroAV's own setting alone*, and 0.5.9 puts frame sync back off on feeds 0.5.4 to 0.5.8 turned it on for. Frame sync, timestamps, the sender's timecode and none are all still there to try by hand - which is where a setting like that belongs.
+- The forced "normal latency" write is gone with it. The only receive setting the plugin sets by itself is the one you choose in **Receive at**.
+
 ## 0.5.8
 - **Test the link to this squad mate**, next to the squad list on the Switch tab. It sends flat out to their OBS for four seconds, and their end reports what actually landed - so you get a real number for the path between the two PCs, not what the adapters claim. It then lists what each NDI size needs at your frame rate and tells you which one to set. "It is gigabit" is not a measurement: one port negotiated at 100 Mbit, a powerline adapter or a single Wi-Fi hop all look the same from the desk, and none of them carry a full-canvas NDI stream.
 - Both PCs need 0.5.8 with **Find squad mates on the LAN** ticked. The listening side uses the LAN port + 1 (47846 by default) and does nothing but count what it is sent and throw it away.

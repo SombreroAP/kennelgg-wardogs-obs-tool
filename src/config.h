@@ -15,7 +15,7 @@ struct Friend {
 	std::string gameName; // their name in the game's NEARBY list ("" = the name above)
 	bool trim = true;     // Discord: crop the window's flat borders away, leaving the game picture
 	int ndiBw = 0;        // NDI: 0 = full quality, 1 = low bandwidth (a small, gentler stream)
-	int ndiSync = 0;      // how the feed is timed: 0 frame sync, 1 timestamps, 2 source timecode, 3 internal
+	int ndiSync = 0;      // timing: 0 leave DistroAV alone, 1 frame sync, 2 timestamps, 3 timecode, 4 none
 	bool isWeb() const { return kind == FriendKind::Twitch || kind == FriendKind::VdoNinja; }
 	const std::string &nearName() const { return gameName.empty() ? name : gameName; }
 	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }
