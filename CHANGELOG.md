@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.6.3
+- **Check NDI reads NDI's own machine settings.** Two settings there switch discovery off completely, and are the usual reason a PC sees no feeds at all - its own included: a discovery server that is set but not answering, and a receive or send group that is not the one everybody else uses. NDI Access Manager writes them, and the report now says when either is set, with the file it read.
+- **Fix discovery**, next to Check NDI. On a network where NDI cannot discover anything, this writes your squad's addresses into NDI's own settings for that PC so it looks at them directly rather than waiting to find them - which is NDI's own documented answer to exactly this. It changes a setting outside OBS, so it asks first, and it says plainly when it cannot write the file.
+
 ## 0.6.2
 - **Check NDI**, next to the NDI share line on the Switch tab, and in the log whenever the share starts. It reports what is actually true on that PC rather than guessing: whether your feed is running, whether the NDI runtime could be loaded at all, every feed NDI can see on the network, and whether your own is among them.
 - **When your feed is running but nothing can see it, it names the likely reason.** On a gaming PC that is usually not the firewall but a second network adapter: NDI advertises on one interface, and Hyper-V, WSL, Docker, VirtualBox and VPN clients all add adapters that can win that choice while ordinary traffic still routes perfectly. The report lists every active adapter with its address so you can see which ones are in the way. With only one adapter it points at Windows Firewall instead.

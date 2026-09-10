@@ -129,6 +129,8 @@ public slots:
 	QString ndiStatus() const;
 	/// One line saying what is actually true about NDI here: running, discoverable, adapters.
 	QString ndiReport();
+	/// Put the squad's addresses into NDI's machine settings, for a network where discovery fails.
+	QString addSquadToNdiConfig();
 
 signals:
 	void stateChanged();

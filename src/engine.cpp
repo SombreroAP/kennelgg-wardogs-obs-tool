@@ -1,6 +1,10 @@
 #include "engine.h"
 #include "ndi.h"
 #include <QNetworkInterface>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QDir>
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -168,6 +172,42 @@ void Engine::checkNdiShare()
 	lan.setSelf(playerName(), Lan::hostName(), sw.ndiSharing() ? ndiShareName() : "", PLUGIN_VERSION);
 }
 
+/// NDI keeps its machine-wide settings in a JSON file that NDI Access Manager writes. Two of them
+/// switch discovery off entirely and are the usual reason a machine sees no feeds at all, its own
+/// included: a discovery server that is set but not answering, and a receive group that is not the
+/// one everybody else is sending to.
+static QString ndiConfigNote()
+{
+	QStringList paths;
+	QByteArray pd = qgetenv("PROGRAMDATA");
+	if (!pd.isEmpty()) {
+		paths << QString::fromLocal8Bit(pd) + "/NDI/ndi-config.v1.json";
+		paths << QString::fromLocal8Bit(pd) + "/NewTek/NDI/ndi-config.v1.json";
+	}
+	for (const QString &p : paths) {
+		QFile f(p);
+		if (!f.exists() || !f.open(QIODevice::ReadOnly))
+			continue;
+		QJsonObject o = QJsonDocument::fromJson(f.readAll()).object();
+		QStringList odd;
+		QJsonObject net = o.value("ndi").toObject().value("networks").toObject();
+		QString disc = net.value("discovery").toString();
+		if (!disc.isEmpty())
+			odd << "a discovery server is set (" + disc +
+					") - if it is not answering, this machine finds nothing at all";
+		QJsonObject groups = o.value("ndi").toObject().value("groups").toObject();
+		QString recv = groups.value("recv").toString(), send = groups.value("send").toString();
+		if (!recv.isEmpty() && recv.compare("public", Qt::CaseInsensitive) != 0)
+			odd << "it only receives the group \"" + recv + "\"";
+		if (!send.isEmpty() && send.compare("public", Qt::CaseInsensitive) != 0)
+			odd << "it only sends to the group \"" + send + "\"";
+		if (!odd.isEmpty())
+			return "NDI Access Manager on this PC: " + odd.join("; ") + " (" + p + ")";
+		return "NDI Access Manager settings look normal";
+	}
+	return QString();
+}
+
 /// Everything we can actually establish about NDI on this PC, in one line. Guessing at causes was
 /// making things worse: a report says what is true and lets the cause follow from it.
 QString Engine::ndiReport()
@@ -183,6 +223,9 @@ QString Engine::ndiReport()
 			"(this says nothing about whether squad mates can see you)";
 		return "NDI check: " + bits.join("; ") + ".";
 	}
+	QString cfgNote = ndiConfigNote();
+	if (!cfgNote.isEmpty())
+		bits << cfgNote;
 	std::vector<std::string> seen = kennelNdi::sources(1500);
 	QStringList names;
 	for (const auto &n : seen)
@@ -216,6 +259,51 @@ QString Engine::ndiReport()
 			bits << "check Windows Firewall is allowing OBS on a Private network";
 	}
 	return "NDI check: " + bits.join("; ") + ".";
+}
+
+/// Writes the squad's addresses into NDI's own machine settings, so a receiver looks at them
+/// directly instead of waiting to discover them. This is NDI's documented answer to a network where
+/// discovery does not work, and it is the only thing here that changes a setting outside OBS - so it
+/// is behind a button and a question, never automatic.
+QString Engine::addSquadToNdiConfig()
+{
+	QStringList ips;
+	for (const auto &kv : lan.peers())
+		if (!kv.second.addr.isEmpty() && !ips.contains(kv.second.addr))
+			ips << kv.second.addr;
+	if (ips.isEmpty())
+		return "No squad mates have been seen on the LAN yet, so there are no addresses to add.";
+	QByteArray pd = qgetenv("PROGRAMDATA");
+	if (pd.isEmpty())
+		return "Could not find the ProgramData folder.";
+	QString dir = QString::fromLocal8Bit(pd) + "/NDI";
+	QString path = dir + "/ndi-config.v1.json";
+	QJsonObject root;
+	QFile in(path);
+	if (in.open(QIODevice::ReadOnly))
+		root = QJsonDocument::fromJson(in.readAll()).object();
+	in.close();
+	QJsonObject ndi = root.value("ndi").toObject();
+	QJsonObject nets = ndi.value("networks").toObject();
+	QStringList have = nets.value("ips").toString().split(',', Qt::SkipEmptyParts);
+	for (const QString &ip : ips)
+		if (!have.contains(ip))
+			have << ip;
+	nets["ips"] = have.join(",");
+	ndi["networks"] = nets;
+	root["ndi"] = ndi;
+	QDir().mkpath(dir);
+	QFile out(path);
+	if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate))
+		return "Could not write " + path +
+		       " - it needs an OBS started as administrator, or edit it by hand in NDI Access Manager.";
+	out.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+	out.close();
+	log("NDI: added " + have.join(", ") + " to " + path + " - restart OBS on both PCs.");
+	return "Added " + have.join(", ") +
+	       " to NDI's settings on this PC.\n\nRestart OBS (on both PCs, "
+	       "with the same done on theirs) and their feed should appear in the source list even though "
+	       "discovery is not working.";
 }
 
 QString Engine::ndiStatus() const

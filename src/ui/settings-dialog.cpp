@@ -759,7 +759,23 @@ QWidget *SettingsDialog::buildSwitchTab()
 			     "on the network, and - when it cannot see your own feed - which of your network "
 			     "adapters is likely to be the reason.");
 	nsRow->addWidget(ndiCheck);
+	auto *ndiFix = new QPushButton("Fix discovery", gl);
+	ndiFix->setToolTip("For a network where NDI cannot discover anything: writes your squad's addresses "
+			   "into NDI's own settings so it looks at them directly. Changes a setting outside "
+			   "OBS, so it asks first.");
+	nsRow->addWidget(ndiFix);
 	fl->addRow("NDI share", nsRow);
+	connect(ndiFix, &QPushButton::clicked, this, [this]() {
+		if (QMessageBox::question(
+			    this, "Kennel WARDOGS",
+			    "This writes the addresses of the squad mates on your LAN into NDI's own settings "
+			    "for this PC (ProgramData\\NDI\\ndi-config.v1.json), so NDI looks at them directly "
+			    "instead of waiting to discover them. It is NDI's own answer to a network where "
+			    "discovery does not work, and it affects every NDI program on this PC, not just "
+			    "OBS.\n\nDo it?") != QMessageBox::Yes)
+			return;
+		QMessageBox::information(this, "Kennel WARDOGS", e_->addSquadToNdiConfig());
+	});
 	connect(ndiCheck, &QPushButton::clicked, this, [this]() {
 		QString r = e_->ndiReport();
 		e_->log(r);
