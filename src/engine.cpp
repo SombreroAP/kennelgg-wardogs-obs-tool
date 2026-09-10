@@ -139,7 +139,8 @@ void Engine::applyLan()
 		auto start = [this]() {
 			if (!cfg.ndiShare || stopping_)
 				return;
-			std::string e = sw.startNdiShare(ndiShareName().toStdString());
+			std::string e =
+				sw.startNdiShare(ndiShareName().toStdString(), cfg.ndiShareHeight, cfg.ndiShareFps);
 			if (!e.empty())
 				log("NDI share: " + QString::fromStdString(e));
 		};
@@ -378,6 +379,7 @@ void Engine::start()
 	if (cfg.launchApp)
 		launchApp();
 	applyLan();
+	sw.tuneNdiSources(cfg); // frame sync on the squad mates' feeds we already have
 	timer_.start(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
@@ -633,7 +635,8 @@ void Engine::reloadConfig()
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
 	sw.raiseOnTop(cfg); // the camera and alerts list may have just changed
-	pushAppConfig();    // areas, names and rules the app reads
+	sw.tuneNdiSources(cfg);
+	pushAppConfig(); // areas, names and rules the app reads
 	emit stateChanged();
 }
 

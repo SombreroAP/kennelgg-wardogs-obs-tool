@@ -14,6 +14,7 @@ struct Friend {
 	std::string vdoCodec = "h264";
 	std::string gameName; // their name in the game's NEARBY list ("" = the name above)
 	bool trim = true;     // Discord: crop the window's flat borders away, leaving the game picture
+	int ndiBw = 0;        // NDI: 0 = full quality, 1 = low bandwidth (a small, gentler stream)
 	bool isWeb() const { return kind == FriendKind::Twitch || kind == FriendKind::VdoNinja; }
 	const std::string &nearName() const { return gameName.empty() ? name : gameName; }
 	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }
@@ -31,6 +32,9 @@ struct Config {
 	std::vector<std::string> onTop;
 	bool onTopV1 = false;            // seeded once from what is in the scene
 	std::string lookPos = "ml";      // where the POV tag sits: tl tc ml mc bl br
+	int ndiShareHeight = 720;        // what we send over NDI: 0 = the full canvas
+	int ndiShareFps = 30;            // 0 = the same rate as OBS
+	bool ndiShareV1 = false;         // one-time move to a sent size that a shared network can carry
 	bool lookPosV1 = false;          // one-time move off the bottom-left corner
 	bool audioAutoPicked = false; // desktop audio was ticked automatically once
 	bool bringToFront = true;

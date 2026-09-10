@@ -2,6 +2,13 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.5.4
+- **NDI feeds are much steadier.** Three things, all on by default:
+  - **What you send is now scaled.** NDI's picture is barely compressed, so sharing a full canvas at 60 is around 200 Mbit - more than a shared or half-duplex network carries steadily, which is what makes a squad mate's feed judder and drop. The share now goes out at **720p 30** by default, about a tenth of that and still plenty to revive from. **Share at** on the Switch tab raises it to 900p, 1080p or the full canvas. Your own stream and recording are untouched: the share is rendered from a view of its own.
+  - **Frame sync on what you receive.** Squad mates' NDI feeds are now handed to OBS on OBS's clock instead of whenever the network delivers them, which is the setting that turns a juddering feed into a steady one. It is applied to feeds you already have, once, at start-up.
+  - **Receive at** in Edit... per squad mate: full quality, or low bandwidth for a feed that still will not settle - the same thing as setting it by hand on the source, but it sticks.
+- If it is still rough: NDI wants wired gigabit. Wi-Fi, powerline and a switch shared with a games console will all drop frames at these rates whatever the settings say.
+
 ## 0.5.3
 - **A squad mate's Discord share shows their game, not their Discord window.** Their screen share arrives inside Discord's own window - flat grey down the sides, black letterboxing around the picture. The plugin now renders a frame of their feed, walks in from each edge while the whole row or column is still one flat colour, and crops the scene item to what is left. It runs each time their feed goes up, so it follows the window being resized, and never takes more than a third off any side. Turn it off per squad mate with **Borders** in Edit....
 - **The POV tag has moved off the map.** It sat bottom-left, over the game's minimap and the score along the bottom. It now sits halfway up the left-hand side, clear of both, and there is an **at** box next to the name tag on the Look tab to put it middle, top left, top centre, bottom left or bottom right instead. Existing setups are moved once.

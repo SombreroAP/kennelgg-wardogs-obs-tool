@@ -225,6 +225,12 @@ public:
 		pickLbl_ = new QLabel("Discord window", this);
 		form_->addRow(pickLbl_, pickWidget_);
 
+		ndiBw_ = new QComboBox(this);
+		ndiBw_->addItem("full quality", 0);
+		ndiBw_->addItem("low bandwidth  (small picture, steadier on a busy network)", 1);
+		ndiBw_->setCurrentIndex(result.ndiBw == 1 ? 1 : 0);
+		form_->addRow("Receive at", ndiBw_);
+
 		trim_ = new QCheckBox("Show the game only, not Discord's window", this);
 		trim_->setChecked(result.trim);
 		trim_->setToolTip("Crops the flat grey and black edges of their Discord window away, each time "
@@ -275,6 +281,7 @@ private:
 	QWidget *qualityRow_, *linkWidget_, *pickWidget_;
 	QLabel *pickLbl_, *hint_, *err_;
 	QCheckBox *trim_ = nullptr;
+	QComboBox *ndiBw_ = nullptr;
 	FriendKind kind() const { return (FriendKind)kind_->currentIndex(); }
 	Friend draft() const
 	{
@@ -282,6 +289,7 @@ private:
 		f.name = name_->text().trimmed().toStdString();
 		f.gameName = gameName_->text().trimmed().toStdString();
 		f.trim = trim_->isChecked();
+		f.ndiBw = ndiBw_->currentData().toInt();
 		f.kind = kind();
 		f.vdoHeight = res_->currentIndex() == 2 ? 1440 : res_->currentIndex() == 1 ? 1080 : 720;
 		f.vdoFps = fps_->currentIndex() == 1 ? 60 : 30;
@@ -371,6 +379,7 @@ private:
 		form_->setRowVisible(source_, k == FriendKind::ObsSource);
 		form_->setRowVisible(pickWidget_, k == FriendKind::Discord || k == FriendKind::Ndi);
 		form_->setRowVisible(trim_, k == FriendKind::Discord);
+		form_->setRowVisible(ndiBw_, k == FriendKind::Ndi);
 		pickLbl_->setText(k == FriendKind::Ndi ? "NDI source" : "Discord window");
 		if (k == FriendKind::Discord || k == FriendKind::Ndi)
 			fillPick();
@@ -678,6 +687,23 @@ QWidget *SettingsDialog::buildSwitchTab()
 		lr->addWidget(c);
 	lr->addStretch(1);
 	fl->addRow(lr);
+	auto *qr = new QHBoxLayout();
+	ndiQuality_ = new QComboBox(gl);
+	for (auto &p : {std::pair<const char *, int>{"720p 30", 720},
+			{"900p 30", 900},
+			{"1080p 30", 1080},
+			{"the full canvas, full rate", 0}})
+		ndiQuality_->addItem(p.first, p.second);
+	int qi = ndiQuality_->findData(e_->cfg.ndiShareHeight);
+	ndiQuality_->setCurrentIndex(qi >= 0 ? qi : 0);
+	qr->addWidget(ndiQuality_);
+	qr->addWidget(muted("What your squad mates receive. NDI sends a barely-compressed picture, so the full "
+			    "canvas at 60 is around 200 Mbit and judders on anything but a quiet wired network - "
+			    "720p 30 is a tenth of that and is plenty to revive from. Your own stream and "
+			    "recording are not affected in any way.",
+			    gl),
+		      1);
+	fl->addRow("Share at", qr);
 	peers_ = new QListWidget(gl);
 	peers_->setMaximumHeight(90);
 	fl->addRow("Seen", peers_);
@@ -686,6 +712,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 	v->addWidget(gl);
 	lanOn_->setChecked(e_->cfg.lanEnabled);
 	ndiShare_->setChecked(e_->cfg.ndiShare);
+	connect(ndiQuality_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
 	autoAdd_->setChecked(e_->cfg.autoAddPeers);
 	for (auto *c : {lanOn_, ndiShare_, autoAdd_})
 		connect(c, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
@@ -2149,6 +2176,10 @@ void SettingsDialog::collect()
 	c.preloadFeeds = preload_ ? preload_->isChecked() : c.preloadFeeds;
 	c.friendAudio = friendAudio_ ? friendAudio_->isChecked() : c.friendAudio;
 	c.lookName = lookName_->isChecked();
+	if (ndiQuality_) {
+		c.ndiShareHeight = ndiQuality_->currentData().toInt();
+		c.ndiShareFps = c.ndiShareHeight == 0 ? 0 : 30;
+	}
 	c.lookPlate = lookPlate_->isChecked();
 	if (lookPos_)
 		c.lookPos = lookPos_->currentData().toString().toStdString();

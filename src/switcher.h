@@ -48,9 +48,13 @@ public:
 	/// Sources a squad mate needs, created and placed. Fills f.source / f.audioSource.
 	std::string createFriendSources(const Config &cfg, Friend &f);
 	std::string createGameCapture(Config &cfg);
+	/// Receiving settings for a squad mate's NDI feed (frame sync on, their bandwidth choice).
+	static obs_data_t *ndiSettings(const Friend &f); // caller releases
+	/// Apply those to the NDI feeds already in OBS.
+	void tuneNdiSources(const Config &cfg);
 	/// Publish the program feed over NDI (DistroAV's output type) on mixer track 6, with every microphone
 	/// input taken off that track so squad mates get game audio only. Returns "" or an error.
-	std::string startNdiShare(const std::string &ndiName);
+	std::string startNdiShare(const std::string &ndiName, int shareHeight, int shareFps);
 	void stopNdiShare();
 	static bool outputKindAvailable(const char *kind);
 	static std::string ndiFullName(const std::string &host, const std::string &ndiName)
@@ -59,8 +63,9 @@ public:
 	}
 
 private:
-	Capture trimCap_;                  // renders a frame of a feed to find its borders
-	obs_scene_t *dualScene_ = nullptr; // the private nested scene behind the dual-POV window
+	int shareHeight_ = 0, shareFps_ = 0; // what the NDI share is scaled to
+	Capture trimCap_;                    // renders a frame of a feed to find its borders
+	obs_scene_t *dualScene_ = nullptr;   // the private nested scene behind the dual-POV window
 	obs_output_t *ndiOut_ = nullptr;
 	obs_view_t *ndiView_ = nullptr; // our own render of the program, so the share never taps the main mix
 	video_t *ndiVideo_ = nullptr;

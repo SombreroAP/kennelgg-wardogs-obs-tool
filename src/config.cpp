@@ -106,6 +106,9 @@ void Config::load()
 	DEFB(thresholdV2);
 	DEFB(onTopV1);
 	DEFS(lookPos);
+	DEFI(ndiShareHeight);
+	DEFI(ndiShareFps);
+	DEFB(ndiShareV1);
 	DEFB(lookPosV1);
 	DEFD(holdDrop);
 	DEFB(holdV2);
@@ -204,6 +207,9 @@ void Config::load()
 	GETB(thresholdV2);
 	GETB(onTopV1);
 	GETS(lookPos);
+	GETI(ndiShareHeight);
+	GETI(ndiShareFps);
+	GETB(ndiShareV1);
 	GETB(lookPosV1);
 	GETD(holdDrop);
 	GETB(holdV2);
@@ -282,6 +288,7 @@ void Config::load()
 			f.gameName = obs_data_get_string(it, "gameName");
 			obs_data_set_default_bool(it, "trim", true);
 			f.trim = obs_data_get_bool(it, "trim");
+			f.ndiBw = (int)obs_data_get_int(it, "ndiBw");
 			if (obs_data_has_user_value(it, "vdoHeight")) {
 				f.vdoHeight = (int)obs_data_get_int(it, "vdoHeight");
 				f.vdoFps = (int)obs_data_get_int(it, "vdoFps");
@@ -319,6 +326,12 @@ void Config::load()
 		holdV2 = true;
 		if (upFrames < 2)
 			upFrames = 2;
+	}
+	// a full-canvas 60 fps NDI stream is 200 Mbit and stutters on anything but a quiet wired LAN
+	if (!ndiShareV1) {
+		ndiShareV1 = true;
+		ndiShareHeight = 720;
+		ndiShareFps = 30;
 	}
 	// the tag sat bottom-left, over the game's map and score; halfway up the left is clear of both
 	if (!lookPosV1) {
@@ -381,6 +394,9 @@ void Config::save() const
 	SETB(thresholdV2);
 	SETB(onTopV1);
 	SETS(lookPos);
+	SETI(ndiShareHeight);
+	SETI(ndiShareFps);
+	SETB(ndiShareV1);
 	SETB(lookPosV1);
 	SETD(holdDrop);
 	SETB(holdV2);
@@ -453,6 +469,7 @@ void Config::save() const
 		obs_data_set_string(it, "channel", f.channel.c_str());
 		obs_data_set_string(it, "gameName", f.gameName.c_str());
 		obs_data_set_bool(it, "trim", f.trim);
+		obs_data_set_int(it, "ndiBw", f.ndiBw);
 		obs_data_set_int(it, "vdoHeight", f.vdoHeight);
 		obs_data_set_int(it, "vdoFps", f.vdoFps);
 		obs_data_set_int(it, "vdoKbps", f.vdoKbps);

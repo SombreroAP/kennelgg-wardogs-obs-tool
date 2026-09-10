@@ -259,6 +259,37 @@ std::string Switcher::createInScene(const Config &cfg, const char *kind, const s
 	return item ? "" : "could not add '" + name + "' to the scene";
 }
 
+/// How a squad mate's NDI feed should be received. Frame sync is the important one: it hands OBS a
+/// frame on OBS's own clock instead of whenever the network delivers one, which is what turns a
+/// feed that judders and drops on a busy LAN into a steady one.
+obs_data_t *Switcher::ndiSettings(const Friend &f)
+{
+	obs_data_t *st = obs_data_create();
+	obs_data_set_string(st, "ndi_source_name", f.channel.c_str());
+	obs_data_set_int(st, "ndi_bw_mode", std::clamp(f.ndiBw, 0, 1));
+	obs_data_set_bool(st, "ndi_framesync", true);
+	obs_data_set_int(st, "latency", 0); // normal, not low: low turns the smoothing off again
+	return st;
+}
+
+/// Put those settings on the NDI feeds that already exist, once, without touching anything else -
+/// updating an ndi_source restarts the receiver, so only when something actually differs.
+void Switcher::tuneNdiSources(const Config &cfg)
+{
+	for (const auto &f : cfg.friends) {
+		if (f.kind != FriendKind::Ndi || f.source.empty())
+			continue;
+		obs_source_t *src = obs_get_source_by_name(f.source.c_str());
+		if (!src)
+			continue;
+		obs_data_t *st = ndiSettings(f);
+		if (!alreadySet(src, st))
+			obs_source_update(src, st);
+		obs_data_release(st);
+		obs_source_release(src);
+	}
+}
+
 std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 {
 	std::string base = "Kennel · " + (f.name.empty() ? std::string("squad mate") : f.name);
@@ -290,9 +321,7 @@ std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 	if (f.kind == FriendKind::Ndi) {
 		if (!kindAvailable("ndi_source"))
 			return "the NDI source type is missing: install DistroAV (obs-ndi) first";
-		obs_data_t *st = obs_data_create();
-		obs_data_set_string(st, "ndi_source_name", f.channel.c_str());
-		obs_data_set_int(st, "ndi_bw_mode", 0);
+		obs_data_t *st = ndiSettings(f);
 		std::string e = createInScene(cfg, "ndi_source", base, st, true, false);
 		obs_data_release(st);
 		if (!e.empty())
@@ -324,8 +353,11 @@ bool Switcher::outputKindAvailable(const char *kind)
 	return false;
 }
 
-std::string Switcher::startNdiShare(const std::string &ndiName)
+std::string Switcher::startNdiShare(const std::string &ndiName, int shareHeight, int shareFps)
 {
+	bool sizeChanged = shareHeight_ != shareHeight || shareFps_ != shareFps;
+	shareHeight_ = shareHeight;
+	shareFps_ = shareFps;
 	if (!outputKindAvailable("ndi_output"))
 		return "DistroAV (obs-ndi) is not installed, so the game feed cannot be shared over NDI";
 	const uint32_t track6 = 1u << 5;
@@ -345,7 +377,7 @@ std::string Switcher::startNdiShare(const std::string &ndiName)
 		obs_data_t *cur = obs_output_get_settings(ndiOut_);
 		std::string curName = obs_data_get_string(cur, "ndi_name");
 		obs_data_release(cur);
-		if (curName == ndiName && obs_output_active(ndiOut_))
+		if (curName == ndiName && obs_output_active(ndiOut_) && !sizeChanged)
 			return "";
 		stopNdiShare();
 	}
@@ -363,6 +395,19 @@ std::string Switcher::startNdiShare(const std::string &ndiName)
 	// and only ever carries the main canvas.
 	struct obs_video_info ovi;
 	obs_get_video_info(&ovi);
+	// Send a smaller, slower picture than the canvas. NDI's full-quality stream is uncompressed-ish:
+	// 1440p60 is around 200 Mbit, which is more than a shared or half-duplex LAN carries steadily,
+	// and that is what makes a squad mate's feed judder and drop. 720p30 is a tenth of it and is
+	// plenty to revive from. Our own view is what renders it, so this costs the stream nothing.
+	if (shareHeight_ > 0 && ovi.base_height > 0 && (uint32_t)shareHeight_ < ovi.base_height) {
+		ovi.output_height = (uint32_t)shareHeight_;
+		ovi.output_width = (uint32_t)(((uint64_t)ovi.base_width * shareHeight_ / ovi.base_height + 1) & ~1u);
+		ovi.scale_type = OBS_SCALE_BICUBIC;
+	}
+	if (shareFps_ > 0 && ovi.fps_den > 0 && (double)ovi.fps_num / ovi.fps_den > shareFps_ + 0.5) {
+		ovi.fps_num = (uint32_t)shareFps_;
+		ovi.fps_den = 1;
+	}
 	ndiView_ = obs_view_create();
 	obs_source_t *program = obs_get_output_source(0);
 	obs_view_set_source(ndiView_, 0, program);
@@ -383,7 +428,9 @@ std::string Switcher::startNdiShare(const std::string &ndiName)
 	}
 	(void)track6;
 	if (log)
-		log("Sharing your feed over NDI as \"" + ndiName + "\" (game audio only, track 6).");
+		log("Sharing your feed over NDI as \"" + ndiName + "\" at " + std::to_string(ovi.output_width) + "x" +
+		    std::to_string(ovi.output_height) + " " +
+		    std::to_string(ovi.fps_den ? ovi.fps_num / ovi.fps_den : 0) + " fps (game audio only).");
 	return "";
 }
 
