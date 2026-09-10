@@ -74,6 +74,15 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	detector_->setTextFormat(Qt::RichText);
 	v->addWidget(detector_);
 
+	update_ = new QLabel(this);
+	update_->setWordWrap(true);
+	update_->setTextFormat(Qt::RichText);
+	update_->setOpenExternalLinks(true);
+	update_->setStyleSheet("color: #c99a3b;");
+	update_->hide();
+	v->addWidget(update_);
+	connect(e_, &Engine::updateChecked, this, &Dock::refresh);
+
 	near_ = new QLabel(this);
 	near_->setWordWrap(true);
 	{
@@ -286,6 +295,19 @@ void Dock::refresh()
 		active_->setToolTip(e_->cfg.nearEnabled
 					    ? "Set automatically to whoever is closest; untick Closest to choose."
 					    : "");
+	}
+	if (update_) {
+		bool has = e_->updateAvailable();
+		update_->setVisible(has);
+		if (has) {
+			QString t = "Version " + e_->newVersion().toHtmlEscaped() + " is out (you have " +
+				    QString(PLUGIN_VERSION) + ")";
+			if (!e_->newVersionUrl().isEmpty())
+				t += "  <a style=\"color:#c99a3b\" href=\"" + e_->newVersionUrl().toHtmlEscaped() +
+				     "\">download</a>";
+			update_->setText(t);
+			update_->setToolTip(e_->newVersionNotes());
+		}
 	}
 	QString lp = e_->clips.lastPath();
 	QString rb = (e_->cfg.clipUseReplay && !obs_frontend_replay_buffer_active())

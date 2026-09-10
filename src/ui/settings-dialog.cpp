@@ -1651,6 +1651,48 @@ QWidget *SettingsDialog::buildAboutTab()
 {
 	auto *w = new QWidget(this);
 	auto *v = new QVBoxLayout(w);
+	auto *ver = new QGroupBox("This build", w);
+	auto *vf = new QFormLayout(ver);
+	auto *vl = new QLabel(QString("<b>Version %1</b>&nbsp; &nbsp;built for OBS 30+, Windows").arg(PLUGIN_VERSION),
+			      ver);
+	vl->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	vf->addRow(vl);
+	auto *ur = new QHBoxLayout();
+	updateLbl_ = new QLabel(e_->updateState().isEmpty() ? "not checked yet" : e_->updateState(), ver);
+	updateLbl_->setWordWrap(true);
+	updateLbl_->setTextFormat(Qt::RichText);
+	updateLbl_->setOpenExternalLinks(true);
+	auto *checkBtn = new QPushButton("Check now", ver);
+	ur->addWidget(updateLbl_, 1);
+	ur->addWidget(checkBtn);
+	vf->addRow("Newer build", ur);
+	updateAuto_ = new QCheckBox("Check for a newer build when OBS starts", ver);
+	updateAuto_->setChecked(e_->cfg.updateCheck);
+	vf->addRow(updateAuto_);
+	vf->addRow(muted(
+		"The check asks kennel.gg for a small file saying what the latest build is. Nothing about you is sent, there is no account, and it never installs anything: when there is a newer build the dock says so and links to the download.",
+		ver));
+	v->addWidget(ver);
+	connect(checkBtn, &QPushButton::clicked, this, [this]() { e_->checkForUpdate(true); });
+	connect(updateAuto_, &QCheckBox::toggled, this, [this](bool on) {
+		if (building_)
+			return;
+		e_->cfg.updateCheck = on;
+		e_->cfg.save();
+	});
+	auto showUpdate = [this]() {
+		if (!updateLbl_)
+			return;
+		QString t = e_->updateState().isEmpty() ? "not checked yet" : e_->updateState();
+		if (e_->updateAvailable() && !e_->newVersionUrl().isEmpty())
+			t += "  &nbsp;<a href=\"" + e_->newVersionUrl().toHtmlEscaped() + "\">get it</a>";
+		if (e_->updateAvailable() && !e_->newVersionNotes().isEmpty())
+			t += "<br>" + e_->newVersionNotes().toHtmlEscaped();
+		updateLbl_->setText(t);
+	};
+	showUpdate();
+	connect(e_, &Engine::updateChecked, this, showUpdate);
+
 	auto *l = new QLabel(w);
 	l->setWordWrap(true);
 	l->setTextInteractionFlags(Qt::TextSelectableByMouse);

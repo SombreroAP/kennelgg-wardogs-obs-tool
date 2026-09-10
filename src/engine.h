@@ -8,6 +8,7 @@
 #include <QImage>
 #include <QTimer>
 #include <QDateTime>
+#include <QNetworkAccessManager>
 #include "bridge.h"
 #include "capture.h"
 #include "clips.h"
@@ -55,12 +56,21 @@ public:
 	/// Index of the configured squad mate the game says is nearest, or -1. Fills metres if given.
 	int closestFriend(int *metres = nullptr, QString *problem = nullptr) const;
 	void nearbyTest(); // ask ClipHound to read the NEARBY area once and say what it saw
+	/// Ask kennel.gg whether there is a newer build. Nothing is sent but the request itself.
+	void checkForUpdate(bool manual);
+	QString updateState() const { return updateState_; }
+	QString newVersion() const { return newVersion_; }
+	QString newVersionUrl() const { return newUrl_; }
+	QString newVersionNotes() const { return newNotes_; }
+	bool updateAvailable() const;
+	static bool isNewer(const QString &a, const QString &b); // is a newer than b
 	void twitchLogin();
 	void twitchLogout();
 	QJsonObject twitchStatus() const { return twitch_; }
 signals:
 	void twitchStatusChanged();
 	void appConfigReceived();
+	void updateChecked();
 	void nearbyTested(const QJsonObject &result);
 
 public:
@@ -145,6 +155,8 @@ private:
 	Detector detGame_, detRevive_;
 	bool dualOn_ = false, dualAutoOn_ = false, ndiDelayed_ = false;
 	QString vehicleSeat_;
+	QNetworkAccessManager *net_ = nullptr;
+	QString updateState_, newVersion_, newUrl_, newNotes_;
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
 	int downRun_ = 0, upRun_ = 0, tickN_ = 0;
 	double peakScore_ = 0;

@@ -131,6 +131,7 @@ uint16 height, uint64 timestamp ms (little endian), then JPEG.
 | Clips | replay buffer, file-name template, clip folder, Backtrack hotkeys and folder, clip on downed, ClipHound path and start/close with OBS |
 | ClipHound | your kill-feed name, clip library, clip every kill, multi-kill window, the kill-feed box and the reading rate, Twitch login |
 | Logs | the plugin's log and ClipHound's, Copy all |
+| Help | the version you are running, the check for a newer build, and what everything does |
 
 The dock has the state line, the squad-mate box with the **Closest** tick box, the Nearby line,
 Show / Back / Pause, Start ClipHound and Save clip.

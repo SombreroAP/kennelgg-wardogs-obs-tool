@@ -49,6 +49,11 @@ struct Config {
 		return dualFriend >= 0 && dualFriend < (int)friends.size() ? &friends[dualFriend] : nullptr;
 	}
 
+	// update check: a small JSON on kennel.gg, no account and no telemetry
+	bool updateCheck = true;
+	std::string updateUrl = "https://kennel.gg/obs-tools/latest.json";
+	std::string updateSkip; // a version the user asked not to be told about again
+
 	// look overlay
 	bool lookName = true, lookPlate = true, lookCam = false, lookGrain = false, lookVignette = false;
 	std::string lookLabel = "POV";

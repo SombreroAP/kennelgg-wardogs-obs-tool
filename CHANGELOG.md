@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.4.6
+- **The Help tab shows which version you are running**, and whether a newer one is out.
+- **You are told when there is a newer build.** On start-up the plugin asks kennel.gg for a small file saying what the latest build is; if yours is older, the dock shows a line with a download link and the Help tab says the same. Nothing about you is sent, there is no account, and it never installs anything by itself. Turn the check off on the Help tab.
+
 ## 0.4.5
 - Dual POV tab: **Leave the window up when I get out of the vehicle**, off by default. Off, the window goes by itself when you get out; on, it stays until you turn it off.
 

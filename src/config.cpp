@@ -90,6 +90,9 @@ void Config::load()
 	DEFD(vehY);
 	DEFD(vehW);
 	DEFD(vehH);
+	DEFB(updateCheck);
+	DEFS(updateUrl);
+	DEFS(updateSkip);
 	DEFB(lookName);
 	DEFB(lookPlate);
 	DEFB(lookCam);
@@ -178,6 +181,9 @@ void Config::load()
 	GETD(vehY);
 	GETD(vehW);
 	GETD(vehH);
+	GETB(updateCheck);
+	GETS(updateUrl);
+	GETS(updateSkip);
 	GETB(lookName);
 	GETB(lookPlate);
 	GETB(lookCam);
@@ -323,6 +329,9 @@ void Config::save() const
 	SETD(vehY);
 	SETD(vehW);
 	SETD(vehH);
+	SETB(updateCheck);
+	SETS(updateUrl);
+	SETS(updateSkip);
 	SETB(lookName);
 	SETB(lookPlate);
 	SETB(lookCam);

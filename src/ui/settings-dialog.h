@@ -84,6 +84,8 @@ private:
 	QWidget *buildLookTab();
 	QWidget *buildDetectTab();
 	QWidget *buildAboutTab();
+	QLabel *updateLbl_ = nullptr;
+	QCheckBox *updateAuto_ = nullptr;
 	QWidget *buildClipsTab();
 	QWidget *buildAppTab();
 	QWidget *buildLogsTab();

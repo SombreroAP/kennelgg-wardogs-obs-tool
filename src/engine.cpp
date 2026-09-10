@@ -16,6 +16,10 @@
 #include <windows.h>
 #endif
 #include <QUrl>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QJsonDocument>
+#include <QRegularExpression>
 #include <QDateTime>
 #include <obs-module.h>
 #include <plugin-support.h>
@@ -278,6 +282,10 @@ void Engine::start()
 	timer_.start(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
+	QTimer::singleShot(15000, this, [this]() {
+		if (!stopping_)
+			checkForUpdate(false); // once per OBS start, well after everything is up
+	});
 	if (cfg.dualEnabled && cfg.dual())
 		QTimer::singleShot(2500, this, [this]() { // after the browser module is fully up
 			if (!stopping_ && cfg.dualEnabled && cfg.dual())
@@ -323,6 +331,75 @@ void Engine::pushAppConfig()
 	bridge.sendJson(o);
 	cfg.appConfigDirty = false;
 	cfg.save();
+}
+
+// ----- is there a newer build? -----
+
+/// "0.4.10" is newer than "0.4.9": compare the numbers, not the text.
+bool Engine::isNewer(const QString &a, const QString &b)
+{
+	QStringList x = a.split('.'), y = b.split('.');
+	for (int i = 0; i < std::max(x.size(), y.size()); i++) {
+		int ax = i < x.size() ? x[i].section(QRegularExpression("[^0-9]"), 0, 0).toInt() : 0;
+		int by = i < y.size() ? y[i].section(QRegularExpression("[^0-9]"), 0, 0).toInt() : 0;
+		if (ax != by)
+			return ax > by;
+	}
+	return false;
+}
+
+bool Engine::updateAvailable() const
+{
+	return !newVersion_.isEmpty() && isNewer(newVersion_, PLUGIN_VERSION) &&
+	       newVersion_.toStdString() != cfg.updateSkip;
+}
+
+void Engine::checkForUpdate(bool manual)
+{
+	if (!manual && !cfg.updateCheck)
+		return;
+	QString url = QString::fromStdString(cfg.updateUrl);
+	if (url.isEmpty()) {
+		updateState_ = "no update address set";
+		emit updateChecked();
+		return;
+	}
+	if (!net_)
+		net_ = new QNetworkAccessManager(this);
+	updateState_ = "checking...";
+	emit updateChecked();
+	QNetworkRequest req{QUrl(url)};
+	req.setHeader(QNetworkRequest::UserAgentHeader, QString("KennelWardogsOBS/%1").arg(PLUGIN_VERSION));
+	req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+	QNetworkReply *r = net_->get(req);
+	QTimer::singleShot(8000, r, [r]() {
+		if (r->isRunning())
+			r->abort();
+	});
+	connect(r, &QNetworkReply::finished, this, [this, r, manual]() {
+		r->deleteLater();
+		if (r->error() != QNetworkReply::NoError) {
+			updateState_ = "could not check (" + r->errorString() + ")";
+			if (manual)
+				log("Update check: " + updateState_);
+			emit updateChecked();
+			return;
+		}
+		QJsonObject o = QJsonDocument::fromJson(r->readAll()).object();
+		newVersion_ = o.value("version").toString();
+		newUrl_ = o.value("url").toString();
+		newNotes_ = o.value("notes").toString();
+		if (newVersion_.isEmpty())
+			updateState_ = "nothing published to check against yet";
+		else if (isNewer(newVersion_, PLUGIN_VERSION)) {
+			updateState_ = newVersion_ + " is out (you have " + QString(PLUGIN_VERSION) + ")";
+			log("A newer build is out: " + newVersion_ + (newNotes_.isEmpty() ? "" : " - " + newNotes_) +
+			    (newUrl_.isEmpty() ? "" : "  " + newUrl_));
+		} else
+			updateState_ = "up to date (" + QString(PLUGIN_VERSION) + ")";
+		emit updateChecked();
+		emit stateChanged();
+	});
 }
 
 void Engine::twitchLogin()

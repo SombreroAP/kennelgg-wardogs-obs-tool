@@ -28,6 +28,7 @@ private:
 	QListWidget *events_;
 	QLabel *detector_;
 	QLabel *near_ = nullptr;
+	QLabel *update_ = nullptr;
 	QCheckBox *closest_ = nullptr;
 	QPushButton *dual_ = nullptr;
 	QComboBox *active_;
