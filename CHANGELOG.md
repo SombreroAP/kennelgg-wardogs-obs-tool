@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.4.5
+- Dual POV tab: **Leave the window up when I get out of the vehicle**, off by default. Off, the window goes by itself when you get out; on, it stays until you turn it off.
+
 ## 0.4.4
 - **Dual POV goes when you get out of the vehicle, however it was turned on.** While the window is up, ClipHound watches the vehicle keybind corner and three reads with nothing there hide it - from the dock button and the hotkey too, not only when it came on by itself. Turning it on by itself still needs the tick box.
 

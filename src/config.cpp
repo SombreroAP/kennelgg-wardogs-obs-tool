@@ -85,6 +85,7 @@ void Config::load()
 	DEFD(dualW);
 	DEFI(dualOpacity);
 	DEFB(dualAuto);
+	DEFB(dualKeep);
 	DEFD(vehX);
 	DEFD(vehY);
 	DEFD(vehW);
@@ -172,6 +173,7 @@ void Config::load()
 	GETD(dualW);
 	GETI(dualOpacity);
 	GETB(dualAuto);
+	GETB(dualKeep);
 	GETD(vehX);
 	GETD(vehY);
 	GETD(vehW);
@@ -316,6 +318,7 @@ void Config::save() const
 	SETD(dualW);
 	SETI(dualOpacity);
 	SETB(dualAuto);
+	SETB(dualKeep);
 	SETD(vehX);
 	SETD(vehY);
 	SETD(vehW);

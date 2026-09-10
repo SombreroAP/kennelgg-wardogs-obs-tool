@@ -1360,6 +1360,15 @@ QWidget *SettingsDialog::buildDualTab()
 		"Turn the window on by itself when I get in a vehicle (needs ClipHound running; it goes off when you get out either way)",
 		g);
 	f->addRow(dualAuto_);
+	dualKeep_ = new QCheckBox("Leave the window up when I get out of the vehicle (off: it goes by itself)", g);
+	f->addRow(dualKeep_);
+	connect(dualKeep_, &QCheckBox::toggled, this, [this](bool on) {
+		if (building_)
+			return;
+		e_->cfg.dualKeep = on;
+		e_->cfg.save();
+		e_->pushAppConfig();
+	});
 	f->addRow(muted(
 		"ClipHound reads the keybind list the game draws bottom-right in a vehicle - CYCLE WEAPON, DEPLOY SMOKE, COLLECTIVE LIFT and so on - which says which seat you are in, and the window comes up with that seat's placement. Drag the blue box round that list on the picture below if it is not already over it.",
 		g));
@@ -1483,6 +1492,7 @@ void SettingsDialog::dualToUi()
 	dualW_->setValue(c.dualW * 100);
 	dualOpacity_->setValue(c.dualOpacity);
 	dualAuto_->setChecked(c.dualAuto);
+	dualKeep_->setChecked(c.dualKeep);
 	dualState_->setText(e_->dualOn() ? "window is up" : "off");
 	building_ = was;
 }

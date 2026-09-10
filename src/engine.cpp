@@ -314,7 +314,7 @@ void Engine::pushAppConfig()
 	QJsonObject vh;
 	// read the vehicle corner whenever the window could be turned on by it, or is up and must go
 	// when you get out - whichever way it was turned on
-	vh["enabled"] = cfg.dual() != nullptr && (cfg.dualAuto || dualOn_);
+	vh["enabled"] = cfg.dual() != nullptr && (cfg.dualAuto || (dualOn_ && !cfg.dualKeep));
 	vh["roi"] = QJsonArray{cfg.vehX, cfg.vehY, cfg.vehW, cfg.vehH};
 	set["vehicle"] = vh;
 	QJsonObject o;
@@ -1166,8 +1166,8 @@ void Engine::onVehicle(const QString &seat)
 	if (!cfg.dual())
 		return;
 	if (seat == "none") {
-		// out of the vehicle: the window goes, however it was turned on
-		if (dualOn_) {
+		// out of the vehicle: the window goes, however it was turned on - unless asked to stay
+		if (dualOn_ && !cfg.dualKeep) {
 			dualAutoOn_ = false;
 			setDual(false, "out of the vehicle");
 		}
