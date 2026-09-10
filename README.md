@@ -4,7 +4,7 @@ One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional co
 
 - **POV swap.** Downed? Your stream shows a squad mate's POV until you are back up. Their feed is
   silent by default, so you keep hearing your own game; one tick box plays theirs instead. Your mic
-  is never touched. Detection reads the damage log on your own screen; the
+  is never touched. Detection reads the damage log on your own screen, with its local brightness taken out so a bright sky behind the see-through panel does not change the score; the
   friend's feed is watched for "REVIVING" so the switch back is instant.
 - **Clips.** Save OBS's replay buffer on demand and name the file with tags: from a hotkey, the
   dock, automatically when you get downed, or from **ClipHound**, the companion app that OCRs the
@@ -127,7 +127,7 @@ uint16 height, uint64 timestamp ms (little endian), then JPEG.
 | Switch | game source and scene; squad mates (kind, in-game name, VDO.Ninja quality); **Show whoever is closest** with Wait between swaps and the 50 m range; squad-mate sound and what of yours to mute; LAN discovery and NDI share; Extras: keep warm, preload every feed |
 | Dual POV | on/off, crew mate, vehicle and seat preset or a dragged box, opacity |
 | Look | name tag, plate, camcorder frame, grain, vignette; preview |
-| Detect | live picture with the damage-log match, the header box and the blue **NEARBY box**; **Test read**; thresholds, confirm frames, the 2 s delay before showing and the delay before coming back |
+| Detect | live picture with the damage-log match, the header box and the blue **NEARBY box**; **Test read**; the match threshold and **Hold down to**, confirm frames, the 2 s delay before showing and the delay before coming back |
 | Clips | replay buffer, file-name template, clip folder, Backtrack hotkeys and folder, clip on downed, ClipHound path and start/close with OBS |
 | ClipHound | your kill-feed name, clip library, clip every kill, multi-kill window, the kill-feed box and the reading rate, Twitch login |
 | Logs | the plugin's log and ClipHound's, Copy all |
