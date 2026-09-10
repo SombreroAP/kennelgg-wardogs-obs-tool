@@ -3,6 +3,7 @@
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
 ## 0.4.6
+- **The game source can be chosen on the Detect tab too**, right above the picture, instead of only on the Switch tab. It is the same setting in both places.
 - **The Help tab shows which version you are running**, and whether a newer one is out.
 - **You are told when there is a newer build.** On start-up the plugin asks kennel.gg for a small file saying what the latest build is; if yours is older, the dock shows a line with a download link and the Help tab says the same. Nothing about you is sent, there is no account, and it never installs anything by itself. Turn the check off on the Help tab.
 

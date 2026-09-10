@@ -417,6 +417,7 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	tabs->addTab(buildLogsTab(), "Logs");
 	tabs->addTab(buildAboutTab(), "Help");
 	building_ = false;
+	fillSources(); // again, now that every tab that shows a source list exists
 	v->addWidget(tabs, 1);
 	auto *bb = new QDialogButtonBox(QDialogButtonBox::Close, this);
 	v->addWidget(bb);
@@ -494,7 +495,14 @@ QWidget *SettingsDialog::buildSwitchTab()
 		g1));
 	v->addWidget(g1);
 	connect(refresh, &QPushButton::clicked, this, [this]() { fillSources(); });
-	connect(game_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { saveAndApply(); });
+	connect(game_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int i) {
+		if (gameDetect_ && i >= 0 && gameDetect_->currentText() != game_->currentText()) {
+			gameDetect_->blockSignals(true);
+			gameDetect_->setCurrentText(game_->currentText());
+			gameDetect_->blockSignals(false);
+		}
+		saveAndApply();
+	});
 	connect(scene_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { saveAndApply(); });
 
 	auto *g2 = new QGroupBox("Squad mates", w);
@@ -764,6 +772,24 @@ QWidget *SettingsDialog::buildDetectTab()
 {
 	auto *w = new QWidget(this);
 	auto *v = new QVBoxLayout(w);
+	auto *gs = new QHBoxLayout();
+	gameDetect_ = new QComboBox(w);
+	gameDetect_->setToolTip("The OBS source that shows WARDOGS - the same setting as on the Switch tab.");
+	auto *gsRefresh = new QPushButton("Refresh", w);
+	gs->addWidget(new QLabel("Your game source", w));
+	gs->addWidget(gameDetect_, 1);
+	gs->addWidget(gsRefresh);
+	v->addLayout(gs);
+	v->addWidget(muted(
+		"This is the source the damage log and the NEARBY list are read from: your capture card, Game Capture or Window Capture of WARDOGS. Same setting as the Switch tab.",
+		w));
+	connect(gsRefresh, &QPushButton::clicked, this, [this]() { fillSources(); });
+	connect(gameDetect_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
+		if (building_ || !game_ || gameDetect_->currentText().isEmpty())
+			return;
+		game_->setCurrentText(gameDetect_->currentText()); // one setting, two places to change it
+		saveAndApply();
+	});
 	frame_ = new FramePreview(w);
 	v->addWidget(frame_, 1);
 	meter_ = new QProgressBar(w);
@@ -1775,6 +1801,14 @@ void SettingsDialog::fillSources()
 		    i.first != Config::overlaySourceName())
 			game_->addItem(QString::fromStdString(i.first));
 	game_->setCurrentIndex(chosen.isEmpty() ? -1 : 0);
+	if (gameDetect_) {
+		gameDetect_->blockSignals(true);
+		gameDetect_->clear();
+		for (int i = 0; i < game_->count(); i++)
+			gameDetect_->addItem(game_->itemText(i));
+		gameDetect_->setCurrentIndex(game_->currentIndex());
+		gameDetect_->blockSignals(false);
+	}
 	scene_->clear();
 	scene_->addItem(kLiveScene);
 	for (auto &s : scenes)

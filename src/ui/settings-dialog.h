@@ -55,7 +55,7 @@ public:
 private:
 	Engine *e_;
 	// switch
-	QComboBox *scene_ = nullptr, *game_ = nullptr;
+	QComboBox *scene_ = nullptr, *game_ = nullptr, *gameDetect_ = nullptr;
 	QTableWidget *friends_;
 	QListWidget *mute_ = nullptr;
 	QCheckBox *keepWarm_, *bringFront_;
