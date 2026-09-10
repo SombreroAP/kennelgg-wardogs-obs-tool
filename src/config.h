@@ -15,6 +15,7 @@ struct Friend {
 	std::string gameName; // their name in the game's NEARBY list ("" = the name above)
 	bool trim = true;     // Discord: crop the window's flat borders away, leaving the game picture
 	int ndiBw = 0;        // NDI: 0 = full quality, 1 = low bandwidth (a small, gentler stream)
+	int ndiSync = 0;      // how the feed is timed: 0 frame sync, 1 timestamps, 2 source timecode, 3 internal
 	bool isWeb() const { return kind == FriendKind::Twitch || kind == FriendKind::VdoNinja; }
 	const std::string &nearName() const { return gameName.empty() ? name : gameName; }
 	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }
@@ -32,9 +33,10 @@ struct Config {
 	std::vector<std::string> onTop;
 	bool onTopV1 = false;            // seeded once from what is in the scene
 	std::string lookPos = "ml";      // where the POV tag sits: tl tc ml mc bl br
-	int ndiShareHeight = 720;        // what we send over NDI: 0 = the full canvas
-	int ndiShareFps = 30;            // 0 = the same rate as OBS
-	bool ndiShareV1 = false;         // one-time move to a sent size that a shared network can carry
+	int ndiShareHeight = 1080; // what we send over NDI: 0 = the full canvas
+	int ndiShareFps = 30;      // 0 = the same rate as OBS
+	bool ndiShareV1 = false; // 0.5.4 scaled the share to 720p30 by default
+	bool ndiShareV2 = false;   // ...0.5.6 moved it to 1080p30 and gave every size a 60 as well
 	bool lookPosV1 = false;          // one-time move off the bottom-left corner
 	bool audioAutoPicked = false; // desktop audio was ticked automatically once
 	bool bringToFront = true;

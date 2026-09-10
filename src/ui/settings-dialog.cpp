@@ -230,6 +230,15 @@ public:
 		ndiBw_->addItem("low bandwidth  (small picture, steadier on a busy network)", 1);
 		ndiBw_->setCurrentIndex(result.ndiBw == 1 ? 1 : 0);
 		form_->addRow("Receive at", ndiBw_);
+		ndiSync_ = new QComboBox(this);
+		ndiSync_->addItem("frame sync  (recommended)", 0);
+		ndiSync_->addItem("network timestamps", 1);
+		ndiSync_->addItem("the sender's timecode", 2);
+		ndiSync_->addItem("none  (show frames as they land)", 3);
+		ndiSync_->setCurrentIndex(std::clamp(result.ndiSync, 0, 3));
+		ndiSync_->setToolTip("How their feed is timed on the way in. If it still judders, try these in "
+				     "turn - some senders are steadier on one than another.");
+		form_->addRow("Timing", ndiSync_);
 
 		trim_ = new QCheckBox("Show the game only, not Discord's window", this);
 		trim_->setChecked(result.trim);
@@ -281,7 +290,7 @@ private:
 	QWidget *qualityRow_, *linkWidget_, *pickWidget_;
 	QLabel *pickLbl_, *hint_, *err_;
 	QCheckBox *trim_ = nullptr;
-	QComboBox *ndiBw_ = nullptr;
+	QComboBox *ndiBw_ = nullptr, *ndiSync_ = nullptr;
 	FriendKind kind() const { return (FriendKind)kind_->currentIndex(); }
 	Friend draft() const
 	{
@@ -290,6 +299,7 @@ private:
 		f.gameName = gameName_->text().trimmed().toStdString();
 		f.trim = trim_->isChecked();
 		f.ndiBw = ndiBw_->currentData().toInt();
+		f.ndiSync = ndiSync_->currentData().toInt();
 		f.kind = kind();
 		f.vdoHeight = res_->currentIndex() == 2 ? 1440 : res_->currentIndex() == 1 ? 1080 : 720;
 		f.vdoFps = fps_->currentIndex() == 1 ? 60 : 30;
@@ -380,6 +390,7 @@ private:
 		form_->setRowVisible(pickWidget_, k == FriendKind::Discord || k == FriendKind::Ndi);
 		form_->setRowVisible(trim_, k == FriendKind::Discord);
 		form_->setRowVisible(ndiBw_, k == FriendKind::Ndi);
+		form_->setRowVisible(ndiSync_, k == FriendKind::Ndi);
 		pickLbl_->setText(k == FriendKind::Ndi ? "NDI source" : "Discord window");
 		if (k == FriendKind::Discord || k == FriendKind::Ndi)
 			fillPick();
@@ -571,11 +582,15 @@ QWidget *SettingsDialog::buildSwitchTab()
 	auto *edit = new QPushButton("Edit...", g2);
 	auto *rem = new QPushButton("Remove", g2);
 	auto *act = new QPushButton("Make active", g2);
-	for (auto *b : {add, edit, rem, act})
+	auto *testBtn = new QPushButton("Test feed", g2);
+	testBtn->setToolTip("Watches the selected squad mate's feed for two seconds and tells you how many "
+			    "new pictures a second are actually arriving.");
+	for (auto *b : {add, edit, rem, act, testBtn})
 		fb->addWidget(b);
 	fb->addStretch(1);
 	h2->addLayout(fb);
 	v->addWidget(g2, 1);
+	connect(testBtn, &QPushButton::clicked, this, [this]() { testFeed(); });
 	connect(add, &QPushButton::clicked, this, [this]() { editFriend(-1); });
 	connect(edit, &QPushButton::clicked, this, [this]() { editFriend(friends_->currentRow()); });
 	connect(friends_, &QTableWidget::cellDoubleClicked, this, [this](int r, int) { editFriend(r); });
@@ -689,12 +704,16 @@ QWidget *SettingsDialog::buildSwitchTab()
 	fl->addRow(lr);
 	auto *qr = new QHBoxLayout();
 	ndiQuality_ = new QComboBox(gl);
-	for (auto &p : {std::pair<const char *, int>{"720p 30", 720},
-			{"900p 30", 900},
-			{"1080p 30", 1080},
-			{"the full canvas, full rate", 0}})
+	// height * 100 + fps, so one box covers both halves of the trade-off
+	for (auto &p : {std::pair<const char *, int>{"720p 30   (smallest)", 72030},
+			{"720p 60   (smoothest for its size)", 72060},
+			{"900p 30", 90030},
+			{"900p 60", 90060},
+			{"1080p 30   (default)", 108030},
+			{"1080p 60", 108060},
+			{"the full canvas, full rate   (heaviest)", 0}})
 		ndiQuality_->addItem(p.first, p.second);
-	int qi = ndiQuality_->findData(e_->cfg.ndiShareHeight);
+	int qi = ndiQuality_->findData(e_->cfg.ndiShareHeight * 100 + e_->cfg.ndiShareFps);
 	ndiQuality_->setCurrentIndex(qi >= 0 ? qi : 0);
 	qr->addWidget(ndiQuality_);
 	qr->addWidget(muted("What your squad mates receive. NDI sends a barely-compressed picture, so the full "
@@ -2177,8 +2196,9 @@ void SettingsDialog::collect()
 	c.friendAudio = friendAudio_ ? friendAudio_->isChecked() : c.friendAudio;
 	c.lookName = lookName_->isChecked();
 	if (ndiQuality_) {
-		c.ndiShareHeight = ndiQuality_->currentData().toInt();
-		c.ndiShareFps = c.ndiShareHeight == 0 ? 0 : 30;
+		int v = ndiQuality_->currentData().toInt();
+		c.ndiShareHeight = v / 100;
+		c.ndiShareFps = v % 100;
 	}
 	c.lookPlate = lookPlate_->isChecked();
 	if (lookPos_)
@@ -2229,6 +2249,59 @@ void SettingsDialog::collect()
 	c.nearCooldownS = nearCooldown_ ? nearCooldown_->value() : c.nearCooldownS;
 	c.nearMaxM = nearMax_ ? nearMax_->value() : c.nearMaxM;
 	c.appFps = appFps_ ? appFps_->value() : c.appFps;
+}
+
+/// Counts how many different pictures a feed actually delivers in two seconds. A feed that looks
+/// choppy either is not arriving at the rate you think (network or sender) or is arriving fine and
+/// being drawn badly (this PC) - and there is no way to tell those apart by eye.
+void SettingsDialog::testFeed()
+{
+	int r = friends_->currentRow();
+	if (r < 0 || r >= (int)e_->cfg.friends.size()) {
+		QMessageBox::information(this, "Kennel WARDOGS", "Pick a squad mate in the list first.");
+		return;
+	}
+	const Friend &f = e_->cfg.friends[r];
+	std::string src = e_->cfg.sourceFor(f);
+	if (src.empty() || !e_->sw.feedHash(src)) {
+		QMessageBox::information(this, "Kennel WARDOGS",
+					 "No picture from '" + QString::fromStdString(src) +
+						 "' - it is not in the scene, or nothing is coming in yet.");
+		return;
+	}
+	auto *count = new int(0);
+	auto *last = new uint64_t(0);
+	auto *ticks = new int(0);
+	auto *t = new QTimer(this);
+	t->setInterval(8); // ~125 looks a second: enough to tell 30 from 60
+	connect(t, &QTimer::timeout, this, [this, t, src, count, last, ticks, name = f.name]() {
+		uint64_t h = e_->sw.feedHash(src);
+		if (h && h != *last) {
+			if (*last)
+				(*count)++;
+			*last = h;
+		}
+		if (++*ticks < 250)
+			return;
+		t->stop();
+		t->deleteLater();
+		double fps = *count / 2.0;
+		QString msg = QString("%1's feed is delivering about %2 new pictures a second.")
+				      .arg(QString::fromStdString(name))
+				      .arg(fps, 0, 'f', 0);
+		msg += fps >= 50 ? "\n\nThat is a full-rate feed. If it still looks choppy the feed is fine and "
+				   "the drawing is not: check this PC's OBS Stats for rendering lag, and its GPU load."
+		       : fps >= 25 ? "\n\nThat is a 30-ish feed. It will look like half frames next to your own "
+				     "game. If the sender is on 60, their network or ours is not carrying it."
+				   : "\n\nThat is well under 30: the feed itself is not arriving properly. Try a "
+				     "smaller size in Share at on the sending PC, or Receive at -> low bandwidth.";
+		QMessageBox::information(this, "Kennel WARDOGS", msg);
+		delete count;
+		delete last;
+		delete ticks;
+	});
+	t->start();
+	e_->log("Measuring " + QString::fromStdString(f.name) + "'s feed for two seconds...");
 }
 
 void SettingsDialog::saveAndApply()

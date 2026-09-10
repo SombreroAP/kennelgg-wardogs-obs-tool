@@ -267,7 +267,13 @@ obs_data_t *Switcher::ndiSettings(const Friend &f)
 	obs_data_t *st = obs_data_create();
 	obs_data_set_string(st, "ndi_source_name", f.channel.c_str());
 	obs_data_set_int(st, "ndi_bw_mode", std::clamp(f.ndiBw, 0, 1));
-	obs_data_set_bool(st, "ndi_framesync", true);
+	// How the feed is timed on the way in. Frame sync hands OBS a frame on OBS's own clock and is
+	// the usual answer to judder; when it is not, the timing modes DistroAV offers are worth trying
+	// in turn, and "internal" is no smoothing at all - some senders judder less without it.
+	int sync = std::clamp(f.ndiSync, 0, 3);
+	obs_data_set_bool(st, "ndi_framesync", sync == 0);
+	if (sync != 0)
+		obs_data_set_int(st, "ndi_sync", sync == 1 ? 1 : sync == 2 ? 2 : 0);
 	obs_data_set_int(st, "latency", 0); // normal, not low: low turns the smoothing off again
 	return st;
 }
@@ -402,7 +408,7 @@ std::string Switcher::startNdiShare(const std::string &ndiName, int shareHeight,
 	if (shareHeight_ > 0 && ovi.base_height > 0 && (uint32_t)shareHeight_ < ovi.base_height) {
 		ovi.output_height = (uint32_t)shareHeight_;
 		ovi.output_width = (uint32_t)(((uint64_t)ovi.base_width * shareHeight_ / ovi.base_height + 1) & ~1u);
-		ovi.scale_type = OBS_SCALE_BICUBIC;
+		ovi.scale_type = OBS_SCALE_LANCZOS; // sharper than bicubic on a big downscale, same cost to send
 	}
 	if (shareFps_ > 0 && ovi.fps_den > 0 && (double)ovi.fps_num / ovi.fps_den > shareFps_ + 0.5) {
 		ovi.fps_num = (uint32_t)shareFps_;
@@ -566,6 +572,29 @@ int Switcher::hideEverywhere(const std::string &sourceName)
 /// edge while the whole row (or column) is one flat colour, and crops the scene item to what is left,
 /// so the stream shows the game and nothing else. Called each time their feed goes up, so it follows
 /// the window being resized.
+/// A cheap fingerprint of what a source is showing right now. Sampling it quickly and counting how
+/// often it changes measures the feed's real frame rate - the only way to tell "the network is not
+/// delivering" apart from "this PC is not drawing it".
+uint64_t Switcher::feedHash(const std::string &sourceName)
+{
+	obs_source_t *src = obs_get_source_by_name(sourceName.c_str());
+	if (!src)
+		return 0;
+	std::vector<uint8_t> bgra;
+	int w = 0, h = 0, ls = 0;
+	uint64_t hash = 0;
+	if (hashCap_.grab(src, 64, bgra, w, h, ls) && w > 0 && h > 0) {
+		hash = 1469598103934665603ULL;
+		for (int y = 0; y < h; y++)
+			for (int x = 0; x < w * 4; x += 7) { // every other pixel or so: plenty to tell frames apart
+				hash ^= bgra[(size_t)y * ls + x];
+				hash *= 1099511628211ULL;
+			}
+	}
+	obs_source_release(src);
+	return hash;
+}
+
 std::string Switcher::trimToContent(const Config &cfg, const Friend &f)
 {
 	if (f.source.empty())

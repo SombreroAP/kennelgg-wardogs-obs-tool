@@ -109,6 +109,7 @@ void Config::load()
 	DEFI(ndiShareHeight);
 	DEFI(ndiShareFps);
 	DEFB(ndiShareV1);
+	DEFB(ndiShareV2);
 	DEFB(lookPosV1);
 	DEFD(holdDrop);
 	DEFB(holdV2);
@@ -210,6 +211,7 @@ void Config::load()
 	GETI(ndiShareHeight);
 	GETI(ndiShareFps);
 	GETB(ndiShareV1);
+	GETB(ndiShareV2);
 	GETB(lookPosV1);
 	GETD(holdDrop);
 	GETB(holdV2);
@@ -289,6 +291,7 @@ void Config::load()
 			obs_data_set_default_bool(it, "trim", true);
 			f.trim = obs_data_get_bool(it, "trim");
 			f.ndiBw = (int)obs_data_get_int(it, "ndiBw");
+			f.ndiSync = (int)obs_data_get_int(it, "ndiSync");
 			if (obs_data_has_user_value(it, "vdoHeight")) {
 				f.vdoHeight = (int)obs_data_get_int(it, "vdoHeight");
 				f.vdoFps = (int)obs_data_get_int(it, "vdoFps");
@@ -327,11 +330,14 @@ void Config::load()
 		if (upFrames < 2)
 			upFrames = 2;
 	}
-	// a full-canvas 60 fps NDI stream is 200 Mbit and stutters on anything but a quiet wired LAN
-	if (!ndiShareV1) {
-		ndiShareV1 = true;
-		ndiShareHeight = 720;
-		ndiShareFps = 30;
+	// 0.5.4 dropped the share to 720p30, which is steady but soft, and 30 is visibly half the
+	// frames. 1080p30 is about three times the picture for a third of a gigabit link; anyone who
+	// wants motion over sharpness can pick 720p60 in the same box.
+	ndiShareV1 = true;
+	if (!ndiShareV2) {
+		ndiShareV2 = true;
+		if (ndiShareHeight == 720 && ndiShareFps == 30)
+			ndiShareHeight = 1080;
 	}
 	// the tag sat bottom-left, over the game's map and score; halfway up the left is clear of both
 	if (!lookPosV1) {
@@ -397,6 +403,7 @@ void Config::save() const
 	SETI(ndiShareHeight);
 	SETI(ndiShareFps);
 	SETB(ndiShareV1);
+	SETB(ndiShareV2);
 	SETB(lookPosV1);
 	SETD(holdDrop);
 	SETB(holdV2);
@@ -470,6 +477,7 @@ void Config::save() const
 		obs_data_set_string(it, "gameName", f.gameName.c_str());
 		obs_data_set_bool(it, "trim", f.trim);
 		obs_data_set_int(it, "ndiBw", f.ndiBw);
+		obs_data_set_int(it, "ndiSync", f.ndiSync);
 		obs_data_set_int(it, "vdoHeight", f.vdoHeight);
 		obs_data_set_int(it, "vdoFps", f.vdoFps);
 		obs_data_set_int(it, "vdoKbps", f.vdoKbps);

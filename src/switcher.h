@@ -27,6 +27,8 @@ public:
 	static std::vector<std::string> sceneNames();
 	/// Scene items in the plugin's scene, topmost first: name and source type.
 	std::vector<std::pair<std::string, std::string>> sceneItems(const Config &cfg);
+	/// Fingerprint of what a source shows right now; sample it fast to measure its real frame rate.
+	uint64_t feedHash(const std::string &sourceName);
 	/// Crop a Discord window capture down to the picture inside it. "" or a problem.
 	std::string trimToContent(const Config &cfg, const Friend &f);
 	/// Put the streamer's own camera and alerts back over the top of everything we add.
@@ -64,7 +66,7 @@ public:
 
 private:
 	int shareHeight_ = 0, shareFps_ = 0; // what the NDI share is scaled to
-	Capture trimCap_;                    // renders a frame of a feed to find its borders
+	Capture trimCap_, hashCap_;          // renders a frame of a feed to find its borders
 	obs_scene_t *dualScene_ = nullptr;   // the private nested scene behind the dual-POV window
 	obs_output_t *ndiOut_ = nullptr;
 	obs_view_t *ndiView_ = nullptr; // our own render of the program, so the share never taps the main mix

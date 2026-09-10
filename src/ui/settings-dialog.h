@@ -144,4 +144,5 @@ private:
 	void editFriend(int row);
 	void collect(); // UI -> cfg
 	void saveAndApply();
+	void testFeed();
 };

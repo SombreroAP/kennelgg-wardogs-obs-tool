@@ -2,6 +2,12 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.5.6
+- **Share at now covers both halves of the trade-off.** 0.5.4 only offered 30 fps, so choosing a size that a network could carry also halved the frame rate - steady, but soft and visibly half the frames. Every size now has a 30 and a 60: 720p, 900p, 1080p and the full canvas. The default moves to **1080p 30**, about three times the picture of 720p 30 for a third of a gigabit link; pick 720p 60 instead if motion matters more to you than sharpness.
+- The downscale uses **Lanczos** rather than bicubic - noticeably sharper at 720p and 1080p, and it costs the network nothing.
+- **Timing**, per squad mate in Edit...: frame sync (the default), network timestamps, the sender's timecode, or none. If a feed still judders, these are worth trying in turn; senders differ.
+- **Test feed** button on the Switch tab. It watches the selected squad mate's feed for two seconds and tells you how many new pictures a second are actually arriving - which is the only way to tell a feed that is not being delivered from one that is arriving fine and being drawn badly.
+
 ## 0.5.5
 - **The judder in the first seconds after a swap is gone.** Keeping a squad mate's feed warm hid its scene item, which is right for a browser feed - it goes on playing while hidden - but wrong for NDI: OBS stops a hidden source, DistroAV drops the connection, and the swap was then spent reconnecting and catching up. Non-browser feeds now stay in the scene fully transparent instead, so the receiver is connected and in step before you ever go down. Turn **Keep warm** on (Switch tab, Extras) if you had it off.
 
