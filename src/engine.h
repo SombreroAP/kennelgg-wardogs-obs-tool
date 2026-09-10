@@ -127,6 +127,8 @@ public slots:
 	void log(const QString &msg);
 	/// What the NDI share is actually doing, for the Switch tab. Not the same as the tick box.
 	QString ndiStatus() const;
+	/// One line saying what is actually true about NDI here: running, discoverable, adapters.
+	QString ndiReport();
 
 signals:
 	void stateChanged();

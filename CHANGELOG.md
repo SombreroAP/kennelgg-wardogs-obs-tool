@@ -2,6 +2,12 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.6.2
+- **Check NDI**, next to the NDI share line on the Switch tab, and in the log whenever the share starts. It reports what is actually true on that PC rather than guessing: whether your feed is running, whether the NDI runtime could be loaded at all, every feed NDI can see on the network, and whether your own is among them.
+- **When your feed is running but nothing can see it, it names the likely reason.** On a gaming PC that is usually not the firewall but a second network adapter: NDI advertises on one interface, and Hyper-V, WSL, Docker, VirtualBox and VPN clients all add adapters that can win that choice while ordinary traffic still routes perfectly. The report lists every active adapter with its address so you can see which ones are in the way. With only one adapter it points at Windows Firewall instead.
+- 0.6.1 said "your feed is running but discovery cannot see it" even when the NDI runtime had not loaded and it could not actually tell. It now says which of the two it is.
+- The log says **"NDI share has STOPPED"** with the reason when the output dies, instead of only mentioning it while restarting.
+
 ## 0.6.1
 - **A ticked box is no longer taken for a working share.** The plugin told the squad it was sharing over NDI whenever the box was ticked, whether or not the output had actually started - so a share that failed looked exactly like a working one from the other end, and the squad mate's feed was simply blank. Your beacon now only advertises a feed while the output is really running, and the Switch tab has an **NDI share** line that says what it is actually doing, in red when it is not.
 - **It checks that anything can find your feed.** A few seconds after the share starts, the plugin asks the NDI runtime whether it can see your own feed. If it cannot, the log says so and names the usual causes - Windows Firewall blocking OBS on a private network, or the two PCs being on different subnets - because a feed nobody can discover is, to a squad mate, the same as no feed at all.

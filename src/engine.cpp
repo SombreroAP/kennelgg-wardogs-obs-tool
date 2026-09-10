@@ -1,5 +1,6 @@
 #include "engine.h"
 #include "ndi.h"
+#include <QNetworkInterface>
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -146,8 +147,8 @@ void Engine::checkNdiShare()
 			ndiWasSharing_ = false;
 			ndiWarned_ = true;
 			QString e = QString::fromStdString(sw.ndiShareError());
-			log("NDI share is NOT running" + (e.isEmpty() ? QString(".") : " (" + e + ").") +
-			    " Squad mates will not see your feed. Trying again...");
+			log("NDI share has STOPPED" + (e.isEmpty() ? QString(".") : " (" + e + ").") +
+			    " Squad mates cannot see your feed. Starting it again...");
 		}
 		std::string e = sw.startNdiShare(ndiShareName().toStdString(), cfg.ndiShareHeight, cfg.ndiShareFps);
 		if (!e.empty())
@@ -158,21 +159,63 @@ void Engine::checkNdiShare()
 		ndiWarned_ = false;
 		emit stateChanged();
 		// ...and can anything actually discover it? A running output nobody can find is the same
-		// thing to a squad mate as no output at all, and that is almost always a firewall.
+		// thing to a squad mate as no output at all.
 		QTimer::singleShot(6000, this, [this]() {
-			if (stopping_ || !sw.ndiSharing())
-				return;
-			QString mine = ndiShareName();
-			for (const auto &n : kennelNdi::sources(1500))
-				if (QString::fromStdString(n).contains(mine, Qt::CaseInsensitive))
-					return; // we can see ourselves; discovery is working
-			log("NDI: your feed is running as \"" + mine +
-			    "\" but NDI discovery cannot see it, so squad mates will not find it in their "
-			    "source list. That is nearly always Windows Firewall blocking OBS on a private "
-			    "network, or the two PCs being on different subnets.");
+			if (!stopping_)
+				log(ndiReport());
 		});
 	}
 	lan.setSelf(playerName(), Lan::hostName(), sw.ndiSharing() ? ndiShareName() : "", PLUGIN_VERSION);
+}
+
+/// Everything we can actually establish about NDI on this PC, in one line. Guessing at causes was
+/// making things worse: a report says what is true and lets the cause follow from it.
+QString Engine::ndiReport()
+{
+	QStringList bits;
+	bits << (sw.ndiSharing() ? "your feed IS running as \"" + ndiShareName() + "\""
+				 : "your feed is NOT running" +
+					   (sw.ndiShareError().empty()
+						    ? QString()
+						    : " (" + QString::fromStdString(sw.ndiShareError()) + ")"));
+	if (!kennelNdi::available()) {
+		bits << "the NDI runtime could not be loaded here, so I cannot tell you what is discoverable "
+			"(this says nothing about whether squad mates can see you)";
+		return "NDI check: " + bits.join("; ") + ".";
+	}
+	std::vector<std::string> seen = kennelNdi::sources(1500);
+	QStringList names;
+	for (const auto &n : seen)
+		names << QString::fromStdString(n);
+	bits << (names.isEmpty() ? "NDI can see no feeds at all on this network" : "NDI can see: " + names.join(", "));
+	bool mine = false;
+	for (const auto &n : names)
+		if (n.contains(ndiShareName(), Qt::CaseInsensitive))
+			mine = true;
+	if (sw.ndiSharing() && !mine) {
+		bits << "it cannot see your own feed, which means nobody else will either";
+		// The usual cause on a gaming PC is not the firewall but a second network adapter: NDI
+		// advertises on one interface, and Hyper-V, WSL, Docker, VirtualBox and VPN clients all
+		// add adapters that win that choice while ordinary traffic still routes correctly.
+		QStringList nets;
+		for (const QNetworkInterface &i : QNetworkInterface::allInterfaces()) {
+			if (!(i.flags() & QNetworkInterface::IsUp) || (i.flags() & QNetworkInterface::IsLoopBack))
+				continue;
+			for (const QNetworkAddressEntry &e : i.addressEntries())
+				if (e.ip().protocol() == QAbstractSocket::IPv4Protocol)
+					nets << i.humanReadableName() + " " + e.ip().toString();
+		}
+		if (nets.size() > 1)
+			bits << QString("this PC has %1 active network adapters (%2) - NDI advertises on one of "
+					"them, and a Hyper-V, WSL, Docker, VirtualBox or VPN adapter will take "
+					"that choice while everything else still works. Disable the ones you do "
+					"not use, or pick the right one in NDI Access Manager")
+					.arg(nets.size())
+					.arg(nets.join(", "));
+		else
+			bits << "check Windows Firewall is allowing OBS on a Private network";
+	}
+	return "NDI check: " + bits.join("; ") + ".";
 }
 
 QString Engine::ndiStatus() const

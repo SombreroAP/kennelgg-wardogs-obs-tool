@@ -752,7 +752,19 @@ QWidget *SettingsDialog::buildSwitchTab()
 	ndiStatus_ = new QLabel(gl);
 	ndiStatus_->setWordWrap(true);
 	ndiStatus_->setText(e_->ndiStatus());
-	fl->addRow("NDI share", ndiStatus_);
+	auto *nsRow = new QHBoxLayout();
+	nsRow->addWidget(ndiStatus_, 1);
+	auto *ndiCheck = new QPushButton("Check NDI", gl);
+	ndiCheck->setToolTip("Says what is actually true here: whether your feed is running, what NDI can see "
+			     "on the network, and - when it cannot see your own feed - which of your network "
+			     "adapters is likely to be the reason.");
+	nsRow->addWidget(ndiCheck);
+	fl->addRow("NDI share", nsRow);
+	connect(ndiCheck, &QPushButton::clicked, this, [this]() {
+		QString r = e_->ndiReport();
+		e_->log(r);
+		QMessageBox::information(this, "Kennel WARDOGS", r);
+	});
 	lanStatus_ = muted("", gl);
 	fl->addRow(lanStatus_);
 	v->addWidget(gl);
