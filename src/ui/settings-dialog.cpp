@@ -1357,7 +1357,7 @@ QWidget *SettingsDialog::buildDualTab()
 	op->addWidget(opLbl);
 	f->addRow("Opacity", op);
 	dualAuto_ = new QCheckBox(
-		"Turn the window on by itself when I get in a vehicle, and off when I get out (needs ClipHound running)",
+		"Turn the window on by itself when I get in a vehicle (needs ClipHound running; it goes off when you get out either way)",
 		g);
 	f->addRow(dualAuto_);
 	f->addRow(muted(

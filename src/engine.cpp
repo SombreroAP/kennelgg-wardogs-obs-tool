@@ -312,7 +312,9 @@ void Engine::pushAppConfig()
 	nb["names"] = names;
 	set["nearby"] = nb;
 	QJsonObject vh;
-	vh["enabled"] = cfg.dualAuto && cfg.dual() != nullptr;
+	// read the vehicle corner whenever the window could be turned on by it, or is up and must go
+	// when you get out - whichever way it was turned on
+	vh["enabled"] = cfg.dual() != nullptr && (cfg.dualAuto || dualOn_);
 	vh["roi"] = QJsonArray{cfg.vehX, cfg.vehY, cfg.vehW, cfg.vehH};
 	set["vehicle"] = vh;
 	QJsonObject o;
@@ -1150,6 +1152,7 @@ void Engine::setDual(bool on, const QString &why)
 			return;
 	}
 	dualOn_ = on;
+	pushAppConfig(); // ClipHound watches the vehicle corner while the window is up
 	log((on ? "Dual POV on: " + QString::fromStdString(cfg.dual()->name) + " in the small window"
 		: QString("Dual POV off")) +
 	    " - " + why + ".");
@@ -1160,15 +1163,18 @@ void Engine::setDual(bool on, const QString &why)
 void Engine::onVehicle(const QString &seat)
 {
 	vehicleSeat_ = seat;
-	if (!cfg.dualAuto || !cfg.dual())
+	if (!cfg.dual())
 		return;
 	if (seat == "none") {
-		if (dualOn_ && dualAutoOn_) {
+		// out of the vehicle: the window goes, however it was turned on
+		if (dualOn_) {
 			dualAutoOn_ = false;
 			setDual(false, "out of the vehicle");
 		}
 		return;
 	}
+	if (!cfg.dualAuto)
+		return; // turning it on by itself is the tick box's job
 	if (seat != "vehicle" && seat.toStdString() != cfg.dualPreset) {
 		// the seat the game shows wins over the preset chosen by hand
 		struct P {
