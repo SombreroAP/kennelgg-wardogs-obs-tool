@@ -771,7 +771,12 @@ void Switcher::armOne(const Config &cfg, const Friend &f)
 			obs_source_release(hf);
 		}
 		obs_source_set_muted(src, true);
-		obs_sceneitem_set_visible(item, false); // browser sources keep running while hidden (shutdown off)
+		// A browser feed goes on playing while its scene item is hidden, so hide it. An NDI feed
+		// does not: OBS stops the source, DistroAV drops the connection, and the first seconds
+		// after a swap are then spent reconnecting - which is the judder people see. Keep it in
+		// the scene and fully transparent instead, so the receiver is up and in step before you
+		// ever go down.
+		obs_sceneitem_set_visible(item, !f.isWeb());
 	} else if (log)
 		log("Warm feed: '" + name + "' is not in the scene.");
 	if (!f.audioSource.empty()) {

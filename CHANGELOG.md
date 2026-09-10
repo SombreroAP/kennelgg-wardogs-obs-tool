@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.5.5
+- **The judder in the first seconds after a swap is gone.** Keeping a squad mate's feed warm hid its scene item, which is right for a browser feed - it goes on playing while hidden - but wrong for NDI: OBS stops a hidden source, DistroAV drops the connection, and the swap was then spent reconnecting and catching up. Non-browser feeds now stay in the scene fully transparent instead, so the receiver is connected and in step before you ever go down. Turn **Keep warm** on (Switch tab, Extras) if you had it off.
+
 ## 0.5.4
 - **NDI feeds are much steadier.** Three things, all on by default:
   - **What you send is now scaled.** NDI's picture is barely compressed, so sharing a full canvas at 60 is around 200 Mbit - more than a shared or half-duplex network carries steadily, which is what makes a squad mate's feed judder and drop. The share now goes out at **720p 30** by default, about a tenth of that and still plenty to revive from. **Share at** on the Switch tab raises it to 900p, 1080p or the full canvas. Your own stream and recording are untouched: the share is rendered from a view of its own.
