@@ -143,7 +143,7 @@ void Engine::checkNdiShare()
 	for (const auto &kv : lan.peers())
 		if (!kv.second.addr.isEmpty())
 			ips.push_back(kv.second.addr.toStdString());
-	kennelNdi::setExtraIps(ips); // discovery is multicast and does not cross every network
+	kennelNdi::setExtraIps(ips); // used only when something actually asks NDI a question
 	if (!cfg.ndiShare)
 		return;
 	if (!sw.ndiSharing()) {
@@ -162,12 +162,10 @@ void Engine::checkNdiShare()
 		ndiWasSharing_ = true;
 		ndiWarned_ = false;
 		emit stateChanged();
-		// ...and can anything actually discover it? A running output nobody can find is the same
-		// thing to a squad mate as no output at all.
-		QTimer::singleShot(6000, this, [this]() {
-			if (!stopping_)
-				log(ndiReport());
-		});
+		// Nothing here asks NDI anything by itself any more. Until 0.6.4 the plugin loaded its own
+		// copy of the NDI runtime and kept a finder open inside OBS, alongside DistroAV's - two NDI
+		// stacks on the same discovery sockets, which stopped both PCs seeing each other at all.
+		// Press Check NDI when you want to know; that asks once and lets go.
 	}
 	lan.setSelf(playerName(), Lan::hostName(), sw.ndiSharing() ? ndiShareName() : "", PLUGIN_VERSION);
 }
@@ -219,8 +217,10 @@ QString Engine::ndiReport()
 						    ? QString()
 						    : " (" + QString::fromStdString(sw.ndiShareError()) + ")"));
 	if (!kennelNdi::available()) {
-		bits << "the NDI runtime could not be loaded here, so I cannot tell you what is discoverable "
-			"(this says nothing about whether squad mates can see you)";
+		bits << "DistroAV has not loaded the NDI runtime in this OBS yet, so there is nothing here to "
+			"ask (turn the share on, or add an NDI source, then try again). The plugin will not "
+			"load a second copy itself - doing that put two NDI stacks in OBS and stopped both "
+			"PCs seeing anything";
 		return "NDI check: " + bits.join("; ") + ".";
 	}
 	QString cfgNote = ndiConfigNote();

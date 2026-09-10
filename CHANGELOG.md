@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.6.4
+- **Neither PC being able to see the other's feed at all was the plugin's fault, and this fixes it.** To list NDI feeds for the squad-mate picker, the plugin loaded its own copy of the NDI runtime into OBS - and if DistroAV had not already loaded one, that was a *second* NDI stack in the same process, initialised separately and holding a finder open for the life of OBS. Two NDI stacks contending for the same discovery sockets stops that PC seeing feeds and stops its own feed being seen. Both ends had the plugin, so both went dark, and it looked like a network fault.
+- The plugin now uses **only the runtime DistroAV has already loaded**, never loads or initialises one itself, and never holds a finder open: it asks once when you press **Check NDI** or add a squad mate, and lets go immediately. Nothing asks NDI anything on a timer any more.
+- **Install this on both PCs and restart both** (a fully restarted OBS on each is enough; a reboot does no harm). Feeds should appear in DistroAV's source list again as they did before.
+
 ## 0.6.3
 - **Check NDI reads NDI's own machine settings.** Two settings there switch discovery off completely, and are the usual reason a PC sees no feeds at all - its own included: a discovery server that is set but not answering, and a receive or send group that is not the one everybody else uses. NDI Access Manager writes them, and the report now says when either is set, with the file it read.
 - **Fix discovery**, next to Check NDI. On a network where NDI cannot discover anything, this writes your squad's addresses into NDI's own settings for that PC so it looks at them directly rather than waiting to find them - which is NDI's own documented answer to exactly this. It changes a setting outside OBS, so it asks first, and it says plainly when it cannot write the file.

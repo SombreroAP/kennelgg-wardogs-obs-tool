@@ -339,23 +339,6 @@ void Switcher::tuneNdiSources(Config &cfg)
 		obs_source_t *src = obs_get_source_by_name(f.source.c_str());
 		if (!src)
 			continue;
-		// their machine may be publishing under a slightly different name than we composed
-		std::vector<std::string> saw;
-		std::string real = resolveNdiName(f.channel, &saw);
-		if (!real.empty() && real != f.channel) {
-			if (log)
-				log("NDI: " + f.name + "'s feed is really called '" + real + "' - using that.");
-			f.channel = real;
-			changed = true;
-		} else if (real.empty() && log) {
-			std::string list;
-			for (const auto &h : saw)
-				list += (list.empty() ? "" : ", ") + h;
-			log("NDI: nothing is publishing '" + f.channel + "' (" + f.name +
-			    "), so their feed will "
-			    "be blank. NDI can see: " +
-			    (list.empty() ? "nothing at all" : list));
-		}
 		obs_data_t *st = ndiSettings(f);
 		if (!alreadySet(src, st))
 			obs_source_update(src, st);

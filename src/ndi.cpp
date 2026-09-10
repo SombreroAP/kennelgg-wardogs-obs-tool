@@ -33,7 +33,6 @@ struct Runtime {
 	findDestroyFn destroy = nullptr;
 	bool loaded = false;
 	bool tried = false;
-	void *finder = nullptr;
 	std::string extraIps; // comma separated, as NDI wants them
 };
 Runtime g;
@@ -42,23 +41,11 @@ std::mutex mx;
 #ifdef _WIN32
 HMODULE openLib()
 {
-	// DistroAV has almost always loaded it already; then this costs nothing and adds no reference
-	// to a library the user did not install.
-	if (HMODULE h = GetModuleHandleA("Processing.NDI.Lib.x64.dll"))
-		return h;
-	if (HMODULE h = LoadLibraryA("Processing.NDI.Lib.x64.dll"))
-		return h;
-	// the runtime installer sets one of these, per NDI's own documented lookup
-	for (const char *var : {"NDI_RUNTIME_DIR_V6", "NDI_RUNTIME_DIR_V5", "NDI_RUNTIME_DIR_V4"}) {
-		char dir[MAX_PATH];
-		DWORD n = GetEnvironmentVariableA(var, dir, MAX_PATH);
-		if (n == 0 || n >= MAX_PATH)
-			continue;
-		std::string p = std::string(dir) + "\\Processing.NDI.Lib.x64.dll";
-		if (HMODULE h = LoadLibraryA(p.c_str()))
-			return h;
-	}
-	return nullptr;
+	// ONLY the copy DistroAV has already loaded. Loading a second NDI runtime into the same process
+	// - the one NDI Tools installs, say - and initialising it puts two NDI stacks in OBS fighting
+	// over the same discovery sockets, and then nothing on that PC can see or be seen. If DistroAV
+	// has not loaded it, we simply cannot answer questions about NDI, and say so.
+	return GetModuleHandleA("Processing.NDI.Lib.x64.dll");
 }
 
 void load()
@@ -75,8 +62,7 @@ void load()
 	g.get = (findSourcesFn)GetProcAddress(h, "NDIlib_find_get_current_sources");
 	g.wait = (findWaitFn)GetProcAddress(h, "NDIlib_find_wait_for_sources");
 	g.destroy = (findDestroyFn)GetProcAddress(h, "NDIlib_find_destroy");
-	if (auto init = (initFn)GetProcAddress(h, "NDIlib_initialize"))
-		init();
+	// NDIlib_initialize is deliberately NOT called: DistroAV owns this runtime and has done it.
 	g.loaded = g.create && g.get && g.destroy;
 	if (!g.loaded)
 		obs_log(LOG_WARNING, "NDI: runtime loaded but the finder entry points are missing");
@@ -105,20 +91,20 @@ std::vector<std::string> sources(int waitMs)
 	load();
 	if (!g.loaded)
 		return out;
-	if (!g.finder) {
-		NDIfindCreate c{true, nullptr, g.extraIps.empty() ? nullptr : g.extraIps.c_str()};
-		g.finder = g.create(&c);
-		if (!g.finder)
-			return out;
-		// only the first look waits; the finder keeps listening in the background after that
-		if (g.wait && waitMs > 0)
-			g.wait(g.finder, (uint32_t)waitMs);
-	}
+	// Made for the question and destroyed straight after. A finder held open for the life of OBS is
+	// another party on the same discovery sockets as the plugin that actually does the NDI work.
+	NDIfindCreate c{true, nullptr, g.extraIps.empty() ? nullptr : g.extraIps.c_str()};
+	void *finder = g.create(&c);
+	if (!finder)
+		return out;
+	if (g.wait && waitMs > 0)
+		g.wait(finder, (uint32_t)waitMs);
 	uint32_t n = 0;
-	const NDIsource *s = g.get(g.finder, &n);
+	const NDIsource *s = g.get(finder, &n);
 	for (uint32_t i = 0; s && i < n; i++)
 		if (s[i].name && *s[i].name)
 			out.emplace_back(s[i].name);
+	g.destroy(finder);
 	return out;
 }
 
@@ -131,18 +117,11 @@ void setExtraIps(const std::vector<std::string> &ips)
 	if (joined == g.extraIps)
 		return;
 	g.extraIps = joined;
-	if (g.finder && g.destroy) { // start again so the new addresses are looked at
-		g.destroy(g.finder);
-		g.finder = nullptr;
-	}
 }
 
 void shutdown()
 {
-	std::lock_guard<std::mutex> lk(mx);
-	if (g.finder && g.destroy)
-		g.destroy(g.finder);
-	g.finder = nullptr;
+	// nothing is held open any more
 }
 
 } // namespace kennelNdi
