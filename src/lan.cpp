@@ -98,6 +98,10 @@ void Lan::read()
 		bool isNew = p.lastSeen.isNull();
 		p.name = o.value("name").toString();
 		p.host = host;
+		QString a = from.toString();
+		if (a.startsWith("::ffff:")) // IPv4 arriving on a dual-stack socket
+			a = a.mid(7);
+		p.addr = a;
 		p.ndi = o.value("ndi").toString();
 		p.version = o.value("version").toString();
 		p.lastSeen = QDateTime::currentDateTime();

@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.5.8
+- **Test the link to this squad mate**, next to the squad list on the Switch tab. It sends flat out to their OBS for four seconds, and their end reports what actually landed - so you get a real number for the path between the two PCs, not what the adapters claim. It then lists what each NDI size needs at your frame rate and tells you which one to set. "It is gigabit" is not a measurement: one port negotiated at 100 Mbit, a powerline adapter or a single Wi-Fi hop all look the same from the desk, and none of them carry a full-canvas NDI stream.
+- Both PCs need 0.5.8 with **Find squad mates on the LAN** ticked. The listening side uses the LAN port + 1 (47846 by default) and does nothing but count what it is sent and throw it away.
+
 ## 0.5.7
 - **The NDI share no longer blacks out another plugin's extra canvas.** 0.5.4 gave the share's own view its own frame rate as well as its own size, and a video mix running on a clock of its own is what Aitum's vertical canvas went black on - the same symptom 0.4.3 fixed, caused again by a different line. The share now only ever changes the output size: the mix keeps the canvas size and OBS's own frame rate.
 - **Share at is sizes only** - 720p, 900p, 1080p or the full canvas, always at your OBS frame rate. That also removes the frame-rate halving that made a smaller share look choppy: 720p is now 720p at 60 if that is what you run.

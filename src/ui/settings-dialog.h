@@ -57,6 +57,7 @@ private:
 	// switch
 	QComboBox *scene_ = nullptr, *game_ = nullptr, *gameDetect_ = nullptr;
 	QTableWidget *friends_;
+	QPushButton *speedBtn_ = nullptr;
 	QComboBox *lookPos_ = nullptr, *ndiQuality_ = nullptr;
 	QListWidget *onTop_ = nullptr;
 	QListWidget *mute_ = nullptr;
@@ -145,4 +146,5 @@ private:
 	void collect(); // UI -> cfg
 	void saveAndApply();
 	void testFeed();
+	void testLink();
 };

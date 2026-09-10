@@ -721,7 +721,14 @@ QWidget *SettingsDialog::buildSwitchTab()
 	fl->addRow("Share at", qr);
 	peers_ = new QListWidget(gl);
 	peers_->setMaximumHeight(90);
-	fl->addRow("Seen", peers_);
+	auto *peerRow = new QHBoxLayout();
+	peerRow->addWidget(peers_, 1);
+	speedBtn_ = new QPushButton("Test the link\nto this squad mate", gl);
+	speedBtn_->setToolTip("Sends flat out to them for four seconds and reports what actually arrived, then "
+			      "says which size their network will carry. Nothing is recorded or streamed.");
+	peerRow->addWidget(speedBtn_);
+	fl->addRow("Seen", peerRow);
+	connect(speedBtn_, &QPushButton::clicked, this, [this]() { testLink(); });
 	lanStatus_ = muted("", gl);
 	fl->addRow(lanStatus_);
 	v->addWidget(gl);
@@ -734,10 +741,14 @@ QWidget *SettingsDialog::buildSwitchTab()
 	connect(playerName_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
 	auto fillPeers = [this]() {
 		peers_->clear();
-		for (auto &kv : e_->lan.peers())
-			peers_->addItem(
-				kv.second.name + "  ·  " + kv.second.host +
-				(kv.second.ndi.isEmpty() ? "  (not sharing NDI)" : "  ·  NDI " + kv.second.ndi));
+		for (auto &kv : e_->lan.peers()) {
+			auto *it = new QListWidgetItem(kv.second.name + "  ·  " + kv.second.host +
+							       (kv.second.ndi.isEmpty() ? "  (not sharing NDI)"
+											: "  ·  NDI " + kv.second.ndi),
+						       peers_);
+			it->setData(Qt::UserRole, kv.second.addr);
+			it->setData(Qt::UserRole + 1, kv.second.name);
+		}
 		if (peers_->count() == 0)
 			peers_->addItem(
 				e_->cfg.lanEnabled
@@ -2249,6 +2260,79 @@ void SettingsDialog::collect()
 /// Counts how many different pictures a feed actually delivers in two seconds. A feed that looks
 /// choppy either is not arriving at the rate you think (network or sender) or is arriving fine and
 /// being drawn badly (this PC) - and there is no way to tell those apart by eye.
+/// Measures what the network to a squad mate actually carries, then says which NDI size fits in it.
+/// "It is gigabit" is not a measurement: one cable negotiated at 100, a powerline adapter or a Wi-Fi
+/// hop all look the same from the desk and none of them carry a full-canvas NDI stream.
+void SettingsDialog::testLink()
+{
+	auto *it = peers_->currentItem();
+	QString addr = it ? it->data(Qt::UserRole).toString() : QString();
+	QString who = it ? it->data(Qt::UserRole + 1).toString() : QString();
+	if (addr.isEmpty()) {
+		QMessageBox::information(
+			this, "Kennel WARDOGS",
+			"Pick a squad mate in the list first. They need this plugin running in "
+			"OBS, with \"Find squad mates on the LAN\" ticked, on version 0.5.8 or newer.");
+		return;
+	}
+	if (e_->speed.busy())
+		return;
+	speedBtn_->setEnabled(false);
+	speedBtn_->setText("measuring...");
+	e_->log("Measuring the link to " + who + " (" + addr + ")...");
+	auto *conn = new QMetaObject::Connection();
+	*conn = connect(&e_->speed, &Speed::done, this, [this, conn, who](double mbps, const QString &note) {
+		disconnect(*conn);
+		delete conn;
+		speedBtn_->setEnabled(true);
+		speedBtn_->setText("Test the link\nto this squad mate");
+		if (mbps < 0) {
+			QMessageBox::warning(this, "Kennel WARDOGS",
+					     "Could not measure the link to " + who + ": " + note +
+						     "\n\nThey need this plugin (0.5.8 or newer) running in OBS with "
+						     "\"Find squad mates on the LAN\" ticked, and Windows Firewall "
+						     "has to allow OBS on a private network.");
+			return;
+		}
+		struct obs_video_info ovi;
+		bool haveOvi = obs_get_video_info(&ovi) && ovi.fps_den > 0;
+		double fps = haveOvi ? (double)ovi.fps_num / ovi.fps_den : 60.0;
+		int bw = haveOvi ? (int)ovi.base_width : 1920, bh = haveOvi ? (int)ovi.base_height : 1080;
+		QString msg = QString("The link to %1 carries about %2 Mbit a second  (%3).\n\n")
+				      .arg(who)
+				      .arg(mbps, 0, 'f', 0)
+				      .arg(note);
+		// NDI needs headroom: a link run at its limit is a link that judders on every burst
+		const double room = 0.6;
+		struct Opt {
+			const char *label;
+			int height;
+		} opts[] = {{"the full canvas", 0}, {"1080p", 1080}, {"900p", 900}, {"720p", 720}};
+		QString fits;
+		for (const auto &o : opts) {
+			int h = o.height ? o.height : bh, w = o.height ? (int)((double)bw * h / bh) : bw;
+			double need = Speed::needMbps(w, h, fps);
+			msg += QString("  %1 at %2 needs about %3 Mbit%4\n")
+				       .arg(o.label, -16)
+				       .arg(fps, 0, 'f', 0)
+				       .arg(need, 4, 'f', 0)
+				       .arg(need <= mbps * room ? "   fits" : "");
+			if (fits.isEmpty() && need <= mbps * room)
+				fits = o.label;
+		}
+		msg += fits.isEmpty()
+			       ? "\nEven 720p is more than this link will hold steadily. That is a network fault "
+				 "rather than a setting: check for a 100 Mbit port, a powerline adapter or a Wi-Fi "
+				 "hop in the path, and use Receive at -> low bandwidth until it is sorted."
+			       : "\nSet Share at to " + fits +
+					 " on the SENDING PC. The rest is headroom: NDI "
+					 "bursts, and a link run at its limit judders.";
+		QMessageBox::information(this, "Kennel WARDOGS", msg);
+		e_->log(QString("Link to %1: %2 Mbit/s.").arg(who).arg(mbps, 0, 'f', 0));
+	});
+	e_->speed.measure(addr, (quint16)(e_->cfg.lanPort + 1), 4);
+}
+
 void SettingsDialog::testFeed()
 {
 	int r = friends_->currentRow();

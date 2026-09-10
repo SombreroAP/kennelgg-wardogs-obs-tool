@@ -47,6 +47,7 @@ target_sources(
     src/clips.cpp
     src/lan.cpp
     src/ndi.cpp
+    src/speed.cpp
     src/ui/dock.cpp
     src/ui/wizard.cpp
     src/ui/settings-dialog.cpp

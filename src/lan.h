@@ -13,6 +13,7 @@ class Lan : public QObject {
 public:
 	struct Peer {
 		QString name, host, ndi, version;
+		QString addr; // where its beacon came from, so we can measure the link to it
 		QDateTime lastSeen;
 	};
 	explicit Lan(QObject *parent = nullptr);

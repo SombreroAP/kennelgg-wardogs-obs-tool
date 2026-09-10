@@ -13,6 +13,7 @@
 #include "capture.h"
 #include "clips.h"
 #include "lan.h"
+#include "speed.h"
 #include "config.h"
 #include "detector.h"
 #include "switcher.h"
@@ -29,6 +30,7 @@ public:
 	Bridge bridge;
 	Clips clips;
 	Lan lan;
+	Speed speed; // measures the link to a squad mate, so the NDI size can be picked on a number
 	QString ndiShareName() const { return "Kennel POV"; }
 	QString playerName() const;
 	void applyLan(); // (re)start discovery + NDI share from cfg

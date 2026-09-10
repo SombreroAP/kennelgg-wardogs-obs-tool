@@ -133,8 +133,15 @@ void Engine::applyLan()
 	if (cfg.lanEnabled) {
 		if (!lan.running())
 			lan.start((quint16)cfg.lanPort);
-	} else
+		// the far end of a squad mate's link test: it swallows what they send and tells them what landed
+		if (!speed.listening() && !speed.listen((quint16)(cfg.lanPort + 1)))
+			log(QString("Could not open the link-test port %1 - squad mates cannot measure the "
+				    "network to you.")
+				    .arg(cfg.lanPort + 1));
+	} else {
 		lan.stop();
+		speed.stop();
+	}
 	if (cfg.ndiShare) {
 		auto start = [this]() {
 			if (!cfg.ndiShare || stopping_)
