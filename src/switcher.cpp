@@ -401,18 +401,17 @@ std::string Switcher::startNdiShare(const std::string &ndiName, int shareHeight,
 	// and only ever carries the main canvas.
 	struct obs_video_info ovi;
 	obs_get_video_info(&ovi);
-	// Send a smaller, slower picture than the canvas. NDI's full-quality stream is uncompressed-ish:
-	// 1440p60 is around 200 Mbit, which is more than a shared or half-duplex LAN carries steadily,
-	// and that is what makes a squad mate's feed judder and drop. 720p30 is a tenth of it and is
-	// plenty to revive from. Our own view is what renders it, so this costs the stream nothing.
+	// Send a smaller picture than the canvas. NDI's full-quality stream is barely compressed:
+	// 1440p60 is around 200 Mbit, which is more than most networks carry steadily, and that is what
+	// makes a squad mate's feed judder. Our own view renders it, so the stream itself pays nothing.
+	//
+	// Only the output size is changed. The mix keeps the canvas size and - importantly - OBS's own
+	// frame rate: a mix running at a different rate to the rest of OBS is what blacked out other
+	// plugins' extra canvases (Aitum's vertical canvas) in 0.5.4.
 	if (shareHeight_ > 0 && ovi.base_height > 0 && (uint32_t)shareHeight_ < ovi.base_height) {
 		ovi.output_height = (uint32_t)shareHeight_;
 		ovi.output_width = (uint32_t)(((uint64_t)ovi.base_width * shareHeight_ / ovi.base_height + 1) & ~1u);
-		ovi.scale_type = OBS_SCALE_LANCZOS; // sharper than bicubic on a big downscale, same cost to send
-	}
-	if (shareFps_ > 0 && ovi.fps_den > 0 && (double)ovi.fps_num / ovi.fps_den > shareFps_ + 0.5) {
-		ovi.fps_num = (uint32_t)shareFps_;
-		ovi.fps_den = 1;
+		ovi.scale_type = OBS_SCALE_LANCZOS; // sharper than bicubic on a big downscale, costs nothing to send
 	}
 	ndiView_ = obs_view_create();
 	obs_source_t *program = obs_get_output_source(0);

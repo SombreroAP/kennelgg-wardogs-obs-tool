@@ -34,7 +34,7 @@ struct Config {
 	bool onTopV1 = false;            // seeded once from what is in the scene
 	std::string lookPos = "ml";      // where the POV tag sits: tl tc ml mc bl br
 	int ndiShareHeight = 1080; // what we send over NDI: 0 = the full canvas
-	int ndiShareFps = 30;      // 0 = the same rate as OBS
+	int ndiShareFps = 0;       // always 0 now: the share runs at OBS's own rate
 	bool ndiShareV1 = false; // 0.5.4 scaled the share to 720p30 by default
 	bool ndiShareV2 = false;   // ...0.5.6 moved it to 1080p30 and gave every size a 60 as well
 	bool lookPosV1 = false;          // one-time move off the bottom-left corner

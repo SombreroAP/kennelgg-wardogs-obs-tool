@@ -330,15 +330,16 @@ void Config::load()
 		if (upFrames < 2)
 			upFrames = 2;
 	}
-	// 0.5.4 dropped the share to 720p30, which is steady but soft, and 30 is visibly half the
-	// frames. 1080p30 is about three times the picture for a third of a gigabit link; anyone who
-	// wants motion over sharpness can pick 720p60 in the same box.
+	// 0.5.4 dropped the share to 720p30. The size was right; the frame rate was not - it is half the
+	// frames, and a mix running at its own rate blacked out other plugins' extra canvases. The share
+	// always goes at OBS's rate now, and 1080p is the middle of the sizes.
 	ndiShareV1 = true;
 	if (!ndiShareV2) {
 		ndiShareV2 = true;
-		if (ndiShareHeight == 720 && ndiShareFps == 30)
+		if (ndiShareHeight == 720)
 			ndiShareHeight = 1080;
 	}
+	ndiShareFps = 0;
 	// the tag sat bottom-left, over the game's map and score; halfway up the left is clear of both
 	if (!lookPosV1) {
 		lookPosV1 = true;

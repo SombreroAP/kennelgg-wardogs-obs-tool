@@ -704,16 +704,12 @@ QWidget *SettingsDialog::buildSwitchTab()
 	fl->addRow(lr);
 	auto *qr = new QHBoxLayout();
 	ndiQuality_ = new QComboBox(gl);
-	// height * 100 + fps, so one box covers both halves of the trade-off
-	for (auto &p : {std::pair<const char *, int>{"720p 30   (smallest)", 72030},
-			{"720p 60   (smoothest for its size)", 72060},
-			{"900p 30", 90030},
-			{"900p 60", 90060},
-			{"1080p 30   (default)", 108030},
-			{"1080p 60", 108060},
-			{"the full canvas, full rate   (heaviest)", 0}})
+	for (auto &p : {std::pair<const char *, int>{"720p   (smallest)", 720},
+			{"900p", 900},
+			{"1080p   (default)", 1080},
+			{"the full canvas   (heaviest)", 0}})
 		ndiQuality_->addItem(p.first, p.second);
-	int qi = ndiQuality_->findData(e_->cfg.ndiShareHeight * 100 + e_->cfg.ndiShareFps);
+	int qi = ndiQuality_->findData(e_->cfg.ndiShareHeight);
 	ndiQuality_->setCurrentIndex(qi >= 0 ? qi : 0);
 	qr->addWidget(ndiQuality_);
 	qr->addWidget(muted("What your squad mates receive. NDI sends a barely-compressed picture, so the full "
@@ -2196,9 +2192,8 @@ void SettingsDialog::collect()
 	c.friendAudio = friendAudio_ ? friendAudio_->isChecked() : c.friendAudio;
 	c.lookName = lookName_->isChecked();
 	if (ndiQuality_) {
-		int v = ndiQuality_->currentData().toInt();
-		c.ndiShareHeight = v / 100;
-		c.ndiShareFps = v % 100;
+		c.ndiShareHeight = ndiQuality_->currentData().toInt();
+		c.ndiShareFps = 0; // always at OBS's own rate: a mix on its own clock blacked out other canvases
 	}
 	c.lookPlate = lookPlate_->isChecked();
 	if (lookPos_)

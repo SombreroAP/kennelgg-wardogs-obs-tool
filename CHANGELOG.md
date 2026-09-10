@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.5.7
+- **The NDI share no longer blacks out another plugin's extra canvas.** 0.5.4 gave the share's own view its own frame rate as well as its own size, and a video mix running on a clock of its own is what Aitum's vertical canvas went black on - the same symptom 0.4.3 fixed, caused again by a different line. The share now only ever changes the output size: the mix keeps the canvas size and OBS's own frame rate.
+- **Share at is sizes only** - 720p, 900p, 1080p or the full canvas, always at your OBS frame rate. That also removes the frame-rate halving that made a smaller share look choppy: 720p is now 720p at 60 if that is what you run.
+- If a canvas is ever black again, set **Share at** to *the full canvas* (that makes the share an exact copy of what OBS renders) or untick the NDI share, and tell me which of the two it was.
+
 ## 0.5.6
 - **Share at now covers both halves of the trade-off.** 0.5.4 only offered 30 fps, so choosing a size that a network could carry also halved the frame rate - steady, but soft and visibly half the frames. Every size now has a 30 and a 60: 720p, 900p, 1080p and the full canvas. The default moves to **1080p 30**, about three times the picture of 720p 30 for a third of a gigabit link; pick 720p 60 instead if motion matters more to you than sharpness.
 - The downscale uses **Lanczos** rather than bicubic - noticeably sharper at 720p and 1080p, and it costs the network nothing.
