@@ -114,7 +114,8 @@ struct Config {
 	bool watchRevive =
 		true; // look for "REVIVING" on the friend's feed and switch back instantly when the damage log goes
 	double reviveThreshold = 0.80;
-	double customTemplateWidthFrac = 0;                        // 0 = built-in damage-log template
+	bool wideSearch = false;            // look over the whole frame at more sizes: slower, for unusual HUDs
+	double customTemplateWidthFrac = 0; // 0 = built-in damage-log template
 	double boxX = 0.80, boxY = 0.45, boxW = 0.15, boxH = 0.04; // capture box for a custom template
 
 	static const char *webSourceName() { return "Kennel web"; }

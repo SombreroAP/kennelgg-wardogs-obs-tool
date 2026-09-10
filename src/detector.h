@@ -22,10 +22,13 @@ struct Match {
 class Detector {
 public:
 	/// Band of the frame to search, as fractions.
-	float fromX = 0.60f, toX = 1.0f, fromY = 0.25f, toY = 0.85f;
+	float fromX = 0.45f, toX = 1.0f, fromY = 0.15f, toY = 0.95f;
 	double threshold = 0.85;
 
 	/// Template as grayscale pixels, plus its width as a fraction of the frame it was cut from.
+	/// Widest size the template is tried at, as a multiple of its measured size. Raise it for a
+	/// HUD that is much bigger or smaller than the one the template was cut from.
+	float minScale = 0.5f, maxScale = 1.6f;
 	void setTemplate(const std::vector<float> &gray, int w, int h, float widthFrac);
 	bool loadTemplatePng(const std::string &path, float widthFrac);
 	bool hasTemplate() const { return !scaled_.empty(); }

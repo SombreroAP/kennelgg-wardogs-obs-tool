@@ -77,6 +77,7 @@ private:
 	QSpinBox *downFrames_, *upFrames_, *minDown_, *pollMs_;
 	QSpinBox *downDelay_ = nullptr, *upDelay_ = nullptr;
 	QCheckBox *auto_, *revive_;
+	QCheckBox *wide_ = nullptr;
 	QSlider *reviveThr_;
 	QLabel *reviveLbl_;
 

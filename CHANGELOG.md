@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.4.7
+- **When the damage log is never found.** The Detect tab has **Save a frame...**, which writes a PNG of your game source exactly as the plugin sees it; do that while downed and send it, and the HUD it cannot match can be looked at directly. The usual search area is also wider than it was (from 45 % across and 15 % down, was 60 % and 25 %), and **Look over the whole frame, at more sizes** tries everything from a third to twice the expected size for a HUD the normal search misses.
+- Dragging the match threshold below 0.75 now says, in red, that it will match almost anything - which is what a "downed all the time" reading means, not a fix for a log that is never found.
+
 ## 0.4.6
 - **The game source can be chosen on the Detect tab too**, right above the picture, instead of only on the Switch tab. It is the same setting in both places.
 - **The Help tab shows which version you are running**, and whether a newer one is out.

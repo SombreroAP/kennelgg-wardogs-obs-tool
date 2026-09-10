@@ -153,6 +153,7 @@ void Config::load()
 	DEFB(ndiShare);
 	DEFB(autoAddPeers);
 	DEFD(reviveThreshold);
+	DEFB(wideSearch);
 	DEFD(customTemplateWidthFrac);
 	DEFD(boxX);
 	DEFD(boxY);
@@ -244,6 +245,7 @@ void Config::load()
 	GETB(ndiShare);
 	GETB(autoAddPeers);
 	GETD(reviveThreshold);
+	GETB(wideSearch);
 	GETD(customTemplateWidthFrac);
 	GETD(boxX);
 	GETD(boxY);
@@ -392,6 +394,7 @@ void Config::save() const
 	SETB(ndiShare);
 	SETB(autoAddPeers);
 	SETD(reviveThreshold);
+	SETB(wideSearch);
 	SETD(customTemplateWidthFrac);
 	SETD(boxX);
 	SETD(boxY);

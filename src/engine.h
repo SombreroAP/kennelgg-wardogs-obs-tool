@@ -95,6 +95,9 @@ public:
 	void stop();
 	void reloadConfig(); // after the settings dialog saved
 	void loadTemplates();
+	void applySearchWidth();
+	/// PNG of the game source as the plugin sees it. Returns the path, or a message starting with a capital.
+	QString saveFrame();
 	bool needsSetup() const { return cfg.gameSource.empty() || cfg.friends.empty(); }
 	/// Tick every desktop-audio input once, when nothing was chosen yet.
 	void autoPickAudio();

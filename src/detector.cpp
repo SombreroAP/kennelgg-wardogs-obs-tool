@@ -130,9 +130,9 @@ void Detector::setTemplate(const std::vector<float> &gray, int w, int h, float w
 	lockScale_ = -1;
 	float baseW = widthFrac * FrameWidth;
 	float aspect = (float)h / w;
-	for (int k = 0; k < 40; k++) {
-		float sc = 0.5f * std::pow(kScaleStep, (float)k);
-		if (sc > 1.6f)
+	for (int k = 0; k < 60; k++) {
+		float sc = minScale * std::pow(kScaleStep, (float)k);
+		if (sc > maxScale)
 			break;
 		int sw = std::max(8, (int)std::lround(baseW * sc)), sh = (int)std::lround(baseW * sc * aspect);
 		if (sh < kMinTemplateHeight)

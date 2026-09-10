@@ -16,6 +16,7 @@
 #include <windows.h>
 #endif
 #include <QUrl>
+#include <QDir>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QJsonDocument>
@@ -209,6 +210,7 @@ void Engine::loadTemplates()
 {
 	detGame_.threshold = cfg.threshold;
 	detRevive_.threshold = cfg.reviveThreshold;
+	applySearchWidth();
 	bool loaded = false;
 	if (cfg.customTemplateWidthFrac > 0) {
 		// custom template: raw floats written by captureTemplate()
@@ -235,6 +237,52 @@ void Engine::loadTemplates()
 	if (r)
 		detRevive_.loadTemplatePng(r, 98.0f / 1875.0f);
 	bfree(r);
+}
+
+/// How much of the frame, and how many sizes, the damage-log search covers.
+void Engine::applySearchWidth()
+{
+	if (cfg.wideSearch) {
+		detGame_.fromX = 0.0f;
+		detGame_.toX = 1.0f;
+		detGame_.fromY = 0.0f;
+		detGame_.toY = 1.0f;
+		detGame_.minScale = 0.35f;
+		detGame_.maxScale = 2.2f;
+	} else {
+		detGame_.fromX = 0.45f;
+		detGame_.toX = 1.0f;
+		detGame_.fromY = 0.15f;
+		detGame_.toY = 0.95f;
+		detGame_.minScale = 0.5f;
+		detGame_.maxScale = 1.6f;
+	}
+	detGame_.unlock();
+}
+
+/// A PNG of the game source exactly as the plugin sees it, for working out why a HUD is not matched.
+QString Engine::saveFrame()
+{
+	if (cfg.gameSource.empty())
+		return "No game source is set (Detect or Switch tab).";
+	obs_source_t *src = obs_get_source_by_name(cfg.gameSource.c_str());
+	if (!src)
+		return "Cannot find the game source '" + QString::fromStdString(cfg.gameSource) + "'.";
+	int native = (int)obs_source_get_width(src);
+	std::vector<uint8_t> bgra;
+	int w = 0, h = 0, ls = 0;
+	bool ok = native > 0 && capRoi_.grab(src, native, bgra, w, h, ls);
+	obs_source_release(src);
+	if (!ok)
+		return "Could not render the game source (is it showing anything?).";
+	QImage img((const uchar *)bgra.data(), w, h, ls, QImage::Format_ARGB32);
+	QString dir = QString::fromStdString(Config::configDir());
+	QDir().mkpath(dir);
+	QString path = dir + "/frame-" + QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss") + ".png";
+	if (!img.copy().save(path, "PNG"))
+		return "Could not write " + path;
+	log("Saved a frame for diagnosis: " + path);
+	return path;
 }
 
 void Engine::autoPickAudio()

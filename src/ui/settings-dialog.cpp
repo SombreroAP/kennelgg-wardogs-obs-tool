@@ -850,12 +850,48 @@ QWidget *SettingsDialog::buildDetectTab()
 	auto *row = new QHBoxLayout();
 	auto *cap = new QPushButton("Capture my own header template from the box (while downed)", w);
 	auto *builtin = new QPushButton("Use built-in template", w);
+	auto *saveFrame = new QPushButton("Save a frame...", w);
+	saveFrame->setToolTip(
+		"Writes a PNG of your game source as the plugin sees it. Do this while downed and send it to Sombrero if the damage log is never found.");
 	tplLbl_ = new QLabel(w);
 	row->addWidget(cap);
 	row->addWidget(builtin);
+	row->addWidget(saveFrame);
 	row->addWidget(tplLbl_);
 	row->addStretch(1);
 	v->addLayout(row);
+	wide_ = new QCheckBox("Look over the whole frame, at more sizes (slower; for a HUD the normal search misses)",
+			      w);
+	wide_->setChecked(e_->cfg.wideSearch);
+	v->addWidget(wide_);
+	connect(wide_, &QCheckBox::toggled, this, [this](bool on) {
+		if (building_)
+			return;
+		e_->cfg.wideSearch = on;
+		e_->cfg.save();
+		e_->applySearchWidth();
+		e_->log(on ? "Damage-log search widened to the whole frame."
+			   : "Damage-log search back to the usual area.");
+	});
+	connect(saveFrame, &QPushButton::clicked, this, [this]() {
+		QString r = e_->saveFrame();
+		if (!r.startsWith("/") && !r.contains(":/") && !r.contains(":\\")) {
+			QMessageBox::warning(this, "Kennel WARDOGS", r);
+			return;
+		}
+		QMessageBox m(this);
+		m.setWindowTitle("Kennel WARDOGS");
+		m.setIcon(QMessageBox::Information);
+		m.setText("Saved a picture of your game source.");
+		m.setInformativeText(
+			r +
+			"\n\nIf the damage log is never found, do this while you are DOWNED and send that file to Sombrero: it shows exactly what the plugin is looking at.");
+		auto *open = m.addButton("Open the folder", QMessageBox::AcceptRole);
+		m.addButton(QMessageBox::Close);
+		m.exec();
+		if (m.clickedButton() == open)
+			QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(r).absolutePath()));
+	});
 	connect(cap, &QPushButton::clicked, this, [this]() { e_->captureTemplate(); });
 	connect(builtin, &QPushButton::clicked, this, [this]() { e_->useBuiltInTemplate(); });
 	tplLbl_->setText(!e_->hasTemplate()     ? "No template"
@@ -944,8 +980,14 @@ QWidget *SettingsDialog::buildDetectTab()
 		g));
 	v->addWidget(g);
 
-	connect(thr_, &QSlider::valueChanged, this,
-		[this](int val) { thrLbl_->setText(QString::number(val / 100.0, 'f', 2)); });
+	connect(thr_, &QSlider::valueChanged, this, [this](int val) {
+		thrLbl_->setText(QString::number(val / 100.0, 'f', 2) +
+				 (val < 75 ? "  -  too low: this matches almost anything, so you will be shown as"
+					     " downed all the time. Leave it near 0.85 and use \"Save a frame\""
+					     " instead."
+					   : ""));
+		thrLbl_->setStyleSheet(val < 75 ? "color: #ce6050;" : "");
+	});
 	connect(thr_, &QSlider::sliderReleased, this, [this]() { saveAndApply(); });
 	connect(reviveThr_, &QSlider::valueChanged, this,
 		[this](int val) { reviveLbl_->setText(QString::number(val / 100.0, 'f', 2)); });
