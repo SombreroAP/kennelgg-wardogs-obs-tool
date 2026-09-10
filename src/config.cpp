@@ -105,6 +105,7 @@ void Config::load()
 	DEFD(threshold);
 	DEFB(thresholdV2);
 	DEFB(onTopV1);
+	DEFB(warmNdi);
 	DEFS(lookPos);
 	DEFI(ndiShareHeight);
 	DEFI(ndiShareFps);
@@ -207,6 +208,7 @@ void Config::load()
 	GETD(threshold);
 	GETB(thresholdV2);
 	GETB(onTopV1);
+	GETB(warmNdi);
 	GETS(lookPos);
 	GETI(ndiShareHeight);
 	GETI(ndiShareFps);
@@ -400,6 +402,7 @@ void Config::save() const
 	SETD(threshold);
 	SETB(thresholdV2);
 	SETB(onTopV1);
+	SETB(warmNdi);
 	SETS(lookPos);
 	SETI(ndiShareHeight);
 	SETI(ndiShareFps);

@@ -62,6 +62,7 @@ private:
 	QComboBox *lookPos_ = nullptr, *ndiQuality_ = nullptr;
 	QListWidget *onTop_ = nullptr;
 	QListWidget *mute_ = nullptr;
+	QCheckBox *warmNdi_ = nullptr;
 	QCheckBox *keepWarm_, *bringFront_;
 	QCheckBox *preload_ = nullptr, *friendAudio_ = nullptr;
 	// look

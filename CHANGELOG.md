@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.6.6
+- **A squad mate's NDI feed is no longer streaming the whole time you are alive.** Keeping a feed warm leaves the source running so a swap is instant - which for NDI means their full stream crossing the network and being decoded on both PCs continuously, for something you need only when you go down. At 1440p that is around 240 Mbit running permanently, and it is enough on its own to make everything judder. NDI feeds are now connected only while they are shown; there is a tick box on the Switch tab (Extras) to keep one connected if you would rather have the instant swap and can spare the bandwidth. Browser and Discord feeds are unchanged.
+- If the picture still judders, the size being sent is the next thing: **Share at** on the *sending* PC. A full 1440p canvas is about 240 Mbit of nearly-raw video; 1080p is about a third of that and 720p a tenth.
+
 ## 0.6.5
 - **Why NDI only worked with OBS run as administrator, explained in the plugin.** Windows hands whole ranges of TCP ports to Hyper-V, WSL, Docker and the like, and a program running as a normal user cannot bind anything inside them. NDI's ports (5960-5970) land inside one of those ranges on a lot of machines - so NDI works when OBS is elevated and not otherwise, no firewall rule will fix it, and nothing on screen ever hints at it. **Check NDI** now says whether OBS is elevated, whether NDI's ports are inside a reserved range, and the exact commands that free them; it also says so once in the log at start-up, unprompted.
 - **Deleting a squad mate offers to delete the sources made for them.** *Remove and delete the sources* / *Remove, keep the sources* / *Cancel*, with the sources listed so you can see what will go. Only ever ones the plugin made: a squad mate set up as an OBS source you already had keeps it, and the shared browser source is never touched.

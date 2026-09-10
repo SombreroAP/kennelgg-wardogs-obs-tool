@@ -886,6 +886,13 @@ QWidget *SettingsDialog::buildSwitchTab()
 	v4->addWidget(preload_);
 	connect(preload_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	v4->addWidget(keepWarm_);
+	warmNdi_ = new QCheckBox("Keep a squad mate's NDI feed connected while you are alive - swaps to them "
+				 "with no delay at all, but their stream then runs across the network the whole "
+				 "time. Leave it off if anything judders.",
+				 g4);
+	warmNdi_->setChecked(e_->cfg.warmNdi);
+	v4->addWidget(warmNdi_);
+	connect(warmNdi_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	v->addWidget(g4);
 	connect(bringFront_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(keepWarm_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
@@ -2274,6 +2281,8 @@ void SettingsDialog::collect()
 	c.ndiShare = ndiShare_->isChecked();
 	c.autoAddPeers = autoAdd_->isChecked();
 	c.keepWarm = keepWarm_->isChecked();
+	if (warmNdi_)
+		c.warmNdi = warmNdi_->isChecked();
 	c.preloadFeeds = preload_ ? preload_->isChecked() : c.preloadFeeds;
 	c.friendAudio = friendAudio_ ? friendAudio_->isChecked() : c.friendAudio;
 	c.lookName = lookName_->isChecked();

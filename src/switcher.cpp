@@ -923,12 +923,14 @@ void Switcher::armOne(const Config &cfg, const Friend &f)
 			obs_source_release(hf);
 		}
 		obs_source_set_muted(src, true);
-		// A browser feed goes on playing while its scene item is hidden, so hide it. An NDI feed
-		// does not: OBS stops the source, DistroAV drops the connection, and the first seconds
-		// after a swap are then spent reconnecting - which is the judder people see. Keep it in
-		// the scene and fully transparent instead, so the receiver is up and in step before you
-		// ever go down.
-		obs_sceneitem_set_visible(item, !f.isWeb());
+		// A browser feed goes on playing while its scene item is hidden, so hide it and let it play.
+		//
+		// An NDI feed is the opposite problem. Kept in the scene it stays connected and swaps
+		// instantly - but it is then pulling its full stream the whole time you are alive, which is
+		// a constant load on the network and on both PCs for something you need only when you go
+		// down. Off by default; the tick box on the Switch tab trades that bandwidth for the swap.
+		bool keepUp = !f.isWeb() && (cfg.warmNdi || f.kind == FriendKind::Discord);
+		obs_sceneitem_set_visible(item, keepUp);
 	} else if (log)
 		log("Warm feed: '" + name + "' is not in the scene.");
 	if (!f.audioSource.empty()) {

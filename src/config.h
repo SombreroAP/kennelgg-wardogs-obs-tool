@@ -32,6 +32,7 @@ struct Config {
 	/// First in the list is the topmost.
 	std::vector<std::string> onTop;
 	bool onTopV1 = false;            // seeded once from what is in the scene
+	bool warmNdi = false;            // keep an NDI feed connected while you are alive (constant bandwidth)
 	std::string lookPos = "ml";      // where the POV tag sits: tl tc ml mc bl br
 	int ndiShareHeight = 1080; // what we send over NDI: 0 = the full canvas
 	int ndiShareFps = 0;       // always 0 now: the share runs at OBS's own rate
