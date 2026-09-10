@@ -51,7 +51,7 @@ public:
 	float memY() const { return memYf_; }
 
 	/// Frame width the detector expects (what the source is rendered to).
-	static constexpr int FrameWidth = 800;
+	static constexpr int FrameWidth = 1000; // the header is ~10 px tall here; less and NCC is noise
 	static Frame fromBGRA(const uint8_t *bgra, int w, int h, int linesize);
 	static std::vector<float> blur3(const std::vector<float> &g, int w, int h);
 

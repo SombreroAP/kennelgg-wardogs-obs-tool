@@ -102,7 +102,8 @@ struct Config {
 	// detection
 	bool autoDetect = true;
 	bool enabled = true;
-	double threshold = 0.85;
+	double threshold = 0.80;
+	bool thresholdV2 = false; // one-time move to 0.80 with the wording-only template
 	int pollMs = 100;
 	int downFrames = 2, upFrames = 1, minDownMs = 0;
 	int downDelayMs =
@@ -116,7 +117,7 @@ struct Config {
 	double reviveThreshold = 0.80;
 	bool wideSearch = false;            // look over the whole frame at more sizes: slower, for unusual HUDs
 	double customTemplateWidthFrac = 0; // 0 = built-in damage-log template
-	double boxX = 0.80, boxY = 0.45, boxW = 0.15, boxH = 0.04; // capture box for a custom template
+	double boxX = 0.84, boxY = 0.62, boxW = 0.13, boxH = 0.035; // capture box for a custom template
 
 	static const char *webSourceName() { return "Kennel web"; }
 	/// Browser source a web feed lives in. With preloading each squad mate gets their own, so

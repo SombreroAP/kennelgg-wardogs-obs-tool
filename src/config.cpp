@@ -103,6 +103,7 @@ void Config::load()
 	DEFB(autoDetect);
 	DEFB(enabled);
 	DEFD(threshold);
+	DEFB(thresholdV2);
 	DEFI(pollMs);
 	DEFI(downFrames);
 	DEFI(upFrames);
@@ -195,6 +196,7 @@ void Config::load()
 	GETB(autoDetect);
 	GETB(enabled);
 	GETD(threshold);
+	GETB(thresholdV2);
 	GETI(pollMs);
 	GETI(downFrames);
 	GETI(upFrames);
@@ -291,6 +293,13 @@ void Config::load()
 		upFrames = 1; // instant return
 	if (minDownMs == 2000 || minDownMs == 500)
 		minDownMs = 0;
+	// the built-in template is the wording only now, which scores lower but stands much further
+	// clear of everything else: 0.85 was tuned for the old one and is too strict for this
+	if (!thresholdV2) {
+		thresholdV2 = true;
+		if (threshold >= 0.83 || threshold < 0.75)
+			threshold = 0.80;
+	}
 	// your own game audio is no longer muted by default: the squad mate's feed comes in silent
 	// and you turn its sound on if you want it (Settings -> Switch)
 	if (!audioDefaults2) {
@@ -344,6 +353,7 @@ void Config::save() const
 	SETB(autoDetect);
 	SETB(enabled);
 	SETD(threshold);
+	SETB(thresholdV2);
 	SETI(pollMs);
 	SETI(downFrames);
 	SETI(upFrames);

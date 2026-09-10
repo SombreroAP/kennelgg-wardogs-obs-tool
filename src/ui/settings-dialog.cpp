@@ -971,7 +971,7 @@ QWidget *SettingsDialog::buildDetectTab()
 	thrLbl_ = new QLabel(QString::number(e_->cfg.threshold, 'f', 2), g);
 	thrRow->addWidget(thr_, 1);
 	thrRow->addWidget(thrLbl_);
-	thrRow->addWidget(muted("real header ~0.9+, anything else under ~0.75", g));
+	thrRow->addWidget(muted("your header scores well clear of everything else; 0.80 is the default", g));
 	f->addRow("Match threshold", thrRow);
 	auto *frRow = new QHBoxLayout();
 	downFrames_ = new QSpinBox(g);

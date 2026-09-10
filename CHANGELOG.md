@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.4.9
+- **Detection works across resolutions.** The gap between the **B** key hint and "VIEW DAMAGE LOG" is a different fraction of the screen at 720p, 1080p, 1440p and 4K, so the old template - which spanned the hint, the gap and the wording - could only ever be a near miss on a resolution other than the one it was cut from. The built-in template is now the wording alone, which is the same shape everywhere and only changes size, and the game source is read at 1000 px across instead of 800 so that small text has enough pixels to match on. On the 1080p frame that was failing this scores 0.86 where everything else on screen scores 0.51; before it was 0.82 against 0.63.
+- The match threshold default moves from 0.85 to **0.80** to suit the new template, and existing settings are moved with it (including the ones dragged down below 0.75 to try to make the old template work).
+
 ## 0.4.8
 - **Learn my HUD** (Detect tab), for a damage log that is never quite matched. Press it while downed: the plugin shows you what it found, and on your say-so cuts that header out of your own screen and uses it from then on, so the score goes near 1 instead of sitting just under the threshold. The built-in template was cut from one particular screen, and the gap between the **B** key hint and the wording is not the same on every HUD - which is exactly the near miss that made one tester drop the threshold to 0.6 and then be shown as downed permanently.
 

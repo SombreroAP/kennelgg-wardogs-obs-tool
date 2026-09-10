@@ -227,7 +227,10 @@ void Engine::loadTemplates()
 	if (!loaded) {
 		char *p = obs_module_file("templates/damagelog.png");
 		if (p)
-			detGame_.loadTemplatePng(p, 262.0f / 1704.0f);
+			// the wording only: the gap between the "B" key hint and the words is a different
+			// fraction of the screen at every resolution, so a template spanning both can only
+			// ever be a near miss on somebody else's setup
+			detGame_.loadTemplatePng(p, 198.0f / 1704.0f);
 		bfree(p);
 		cfg.customTemplateWidthFrac = 0;
 	}
