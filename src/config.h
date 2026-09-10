@@ -13,6 +13,7 @@ struct Friend {
 	int vdoHeight = 1080, vdoFps = 60, vdoKbps = 12000; // VDO.Ninja quality (push and view links)
 	std::string vdoCodec = "h264";
 	std::string gameName; // their name in the game's NEARBY list ("" = the name above)
+	bool trim = true;     // Discord: crop the window's flat borders away, leaving the game picture
 	bool isWeb() const { return kind == FriendKind::Twitch || kind == FriendKind::VdoNinja; }
 	const std::string &nearName() const { return gameName.empty() ? name : gameName; }
 	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }
@@ -28,7 +29,9 @@ struct Config {
 	/// Sources that stay above everything the plugin adds: the streamer's camera, their alerts.
 	/// First in the list is the topmost.
 	std::vector<std::string> onTop;
-	bool onTopV1 = false; // seeded once from what is in the scene
+	bool onTopV1 = false;            // seeded once from what is in the scene
+	std::string lookPos = "ml";      // where the POV tag sits: tl tc ml mc bl br
+	bool lookPosV1 = false;          // one-time move off the bottom-left corner
 	bool audioAutoPicked = false; // desktop audio was ticked automatically once
 	bool bringToFront = true;
 	bool keepWarm = true;

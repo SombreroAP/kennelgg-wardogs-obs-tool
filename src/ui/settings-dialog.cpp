@@ -225,6 +225,12 @@ public:
 		pickLbl_ = new QLabel("Discord window", this);
 		form_->addRow(pickLbl_, pickWidget_);
 
+		trim_ = new QCheckBox("Show the game only, not Discord's window", this);
+		trim_->setChecked(result.trim);
+		trim_->setToolTip("Crops the flat grey and black edges of their Discord window away, each time "
+				  "their feed goes up, so your stream shows their game picture and nothing else.");
+		form_->addRow("Borders", trim_);
+
 		hint_ = new QLabel(this);
 		hint_->setWordWrap(true);
 		form_->addRow(hint_);
@@ -268,12 +274,14 @@ private:
 	QSpinBox *kbps_;
 	QWidget *qualityRow_, *linkWidget_, *pickWidget_;
 	QLabel *pickLbl_, *hint_, *err_;
+	QCheckBox *trim_ = nullptr;
 	FriendKind kind() const { return (FriendKind)kind_->currentIndex(); }
 	Friend draft() const
 	{
 		Friend f = result;
 		f.name = name_->text().trimmed().toStdString();
 		f.gameName = gameName_->text().trimmed().toStdString();
+		f.trim = trim_->isChecked();
 		f.kind = kind();
 		f.vdoHeight = res_->currentIndex() == 2 ? 1440 : res_->currentIndex() == 1 ? 1080 : 720;
 		f.vdoFps = fps_->currentIndex() == 1 ? 60 : 30;
@@ -362,6 +370,7 @@ private:
 		form_->setRowVisible(linkWidget_, k == FriendKind::VdoNinja);
 		form_->setRowVisible(source_, k == FriendKind::ObsSource);
 		form_->setRowVisible(pickWidget_, k == FriendKind::Discord || k == FriendKind::Ndi);
+		form_->setRowVisible(trim_, k == FriendKind::Discord);
 		pickLbl_->setText(k == FriendKind::Ndi ? "NDI source" : "Discord window");
 		if (k == FriendKind::Discord || k == FriendKind::Ndi)
 			fillPick();
@@ -767,7 +776,7 @@ QWidget *SettingsDialog::buildLookTab()
 	auto *v = new QVBoxLayout(w);
 	auto *g = new QGroupBox("Ham it up", w);
 	auto *f = new QFormLayout(g);
-	lookName_ = new QCheckBox("Name tag  (\"POV · PUP\" bottom-left, Kennel colours)", g);
+	lookName_ = new QCheckBox("Name tag  (\"POV · PUP\", Kennel colours)", g);
 	auto *nameRow = new QHBoxLayout();
 	lookLabel_ = new QLineEdit(QString::fromStdString(e_->cfg.lookLabel), g);
 	lookLabel_->setMaximumWidth(120);
@@ -775,6 +784,19 @@ QWidget *SettingsDialog::buildLookTab()
 	nameRow->addWidget(new QLabel("prefix", g));
 	nameRow->addWidget(lookLabel_);
 	nameRow->addWidget(lookPlate_);
+	lookPos_ = new QComboBox(g);
+	// the game draws its map bottom-left and the score along the bottom, so the tag starts halfway up
+	for (auto &p : {std::pair<const char *, const char *>{"middle left", "ml"},
+			{"middle", "mc"},
+			{"top left", "tl"},
+			{"top centre", "tc"},
+			{"bottom left", "bl"},
+			{"bottom right", "br"}})
+		lookPos_->addItem(p.first, p.second);
+	int pi = lookPos_->findData(QString::fromStdString(e_->cfg.lookPos));
+	lookPos_->setCurrentIndex(pi >= 0 ? pi : 0);
+	nameRow->addWidget(new QLabel("at", g));
+	nameRow->addWidget(lookPos_);
 	nameRow->addStretch(1);
 	f->addRow(lookName_);
 	f->addRow("", nameRow);
@@ -804,6 +826,7 @@ QWidget *SettingsDialog::buildLookTab()
 		if (previewing_ || e_->applied())
 			e_->previewLook(true);
 	};
+	connect(lookPos_, &QComboBox::currentIndexChanged, this, [relook](int) { relook(); });
 	for (auto *c : {lookName_, lookPlate_, lookCam_, lookGrain_, lookVig_})
 		connect(c, &QCheckBox::toggled, this, [relook](bool) { relook(); });
 	connect(lookLabel_, &QLineEdit::editingFinished, this, relook);
@@ -2072,6 +2095,9 @@ void SettingsDialog::editFriend(int row)
 	if (dlg.exec() != QDialog::Accepted)
 		return;
 	Friend f = dlg.result;
+	if (f.kind == FriendKind::Discord)
+		// give the capture a moment to have a picture, then crop Discord's window off it
+		QTimer::singleShot(900, this, [this, f]() { e_->sw.trimToContent(e_->cfg, f); });
 	if (f.ownsSources()) {
 		std::string e = e_->sw.createFriendSources(e_->cfg, f);
 		if (!e.empty()) {
@@ -2124,6 +2150,8 @@ void SettingsDialog::collect()
 	c.friendAudio = friendAudio_ ? friendAudio_->isChecked() : c.friendAudio;
 	c.lookName = lookName_->isChecked();
 	c.lookPlate = lookPlate_->isChecked();
+	if (lookPos_)
+		c.lookPos = lookPos_->currentData().toString().toStdString();
 	c.lookCam = lookCam_->isChecked();
 	c.lookGrain = lookGrain_->isChecked();
 	c.lookVignette = lookVig_->isChecked();

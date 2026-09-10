@@ -22,9 +22,15 @@ body { font-family: "Saira Condensed", "Segoe UI", sans-serif; color: #fff; }
 #bat span { display: inline-block; width: 2.6vw; height: 1.3vw; border: 0.16vw solid #fff; border-radius: 0.2vw; vertical-align: -0.2vw; position: relative; margin-left: 0.5vw; }
 #bat span::before { content: ""; position: absolute; left: 0.15vw; top: 0.15vw; bottom: 0.15vw; width: 62%; background: #fff; }
 #bat span::after { content: ""; position: absolute; right: -0.4vw; top: 0.3vw; width: 0.25vw; height: 0.6vw; background: #fff; }
-#name { position: absolute; bottom: 3.2vw; left: 8.5vw; font-size: 3.4vw; text-transform: uppercase; letter-spacing: 0.25vw; text-shadow: 0 3px 10px rgba(0,0,0,.85); display: none; line-height: 1; }
+#name { position: absolute; bottom: 3.2vw; left: 8.5vw; transform: none; font-size: 3.4vw; text-transform: uppercase; letter-spacing: 0.25vw; text-shadow: 0 3px 10px rgba(0,0,0,.85); display: none; line-height: 1; }
 #name small { font-size: 1.8vw; color: #E8E5DD; opacity: .85; margin-right: 0.8vw; letter-spacing: 0.15vw; }
 #name b { color: #C99A3B; }
+#name.pos-tl { top: 3.2vw; bottom: auto; left: 8.5vw; right: auto; }
+#name.pos-tc { top: 3.2vw; bottom: auto; left: 50%; right: auto; transform: translateX(-50%); text-align: center; }
+#name.pos-ml { top: 50%; bottom: auto; left: 8.5vw; right: auto; transform: translateY(-50%); }
+#name.pos-mc { top: 50%; bottom: auto; left: 50%; right: auto; transform: translate(-50%, -50%); text-align: center; }
+#name.pos-bl { top: auto; bottom: 3.2vw; left: 8.5vw; right: auto; }
+#name.pos-br { top: auto; bottom: 3.2vw; left: auto; right: 8.5vw; text-align: right; }
 #name.plate { background: rgba(11,14,16,.78); padding: 0.8vw 1.4vw; border-left: 0.35vw solid #C99A3B; }
 </style></head>
 <body>
@@ -45,7 +51,7 @@ body { font-family: "Saira Condensed", "Segoe UI", sans-serif; color: #fff; }
   var grain = Math.max(0, Math.min(100, parseInt(q.get("grain") || "0", 10) || 0));
   var label = q.get("label") || "POV";
 
-  if (name) { var n = document.getElementById("name"); n.style.display = "block"; n.querySelector("small").textContent = label; n.querySelector("b").textContent = name; if (plate) n.classList.add("plate"); }
+  if (name) { var n = document.getElementById("name"); n.style.display = "block"; n.querySelector("small").textContent = label; n.querySelector("b").textContent = name; if (plate) n.classList.add("plate"); n.classList.add("pos-" + (q.get("pos") || "ml")); }
   if (vig) document.getElementById("vig").style.display = "block";
   if (cam) {
     document.getElementById("cam").style.display = "block";

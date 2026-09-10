@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <obs.h>
+#include "capture.h"
 #include "config.h"
 
 /// Everything POVBridge does to OBS: show/hide the friend, the look overlay, mute game audio.
@@ -26,6 +27,8 @@ public:
 	static std::vector<std::string> sceneNames();
 	/// Scene items in the plugin's scene, topmost first: name and source type.
 	std::vector<std::pair<std::string, std::string>> sceneItems(const Config &cfg);
+	/// Crop a Discord window capture down to the picture inside it. "" or a problem.
+	std::string trimToContent(const Config &cfg, const Friend &f);
 	/// Put the streamer's own camera and alerts back over the top of everything we add.
 	void raiseOnTop(const Config &cfg);
 	/// A first guess at what belongs on top: cameras, and anything that looks like alerts.
@@ -56,6 +59,7 @@ public:
 	}
 
 private:
+	Capture trimCap_;                  // renders a frame of a feed to find its borders
 	obs_scene_t *dualScene_ = nullptr; // the private nested scene behind the dual-POV window
 	obs_output_t *ndiOut_ = nullptr;
 	obs_view_t *ndiView_ = nullptr; // our own render of the program, so the share never taps the main mix

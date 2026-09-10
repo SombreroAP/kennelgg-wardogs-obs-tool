@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.5.3
+- **A squad mate's Discord share shows their game, not their Discord window.** Their screen share arrives inside Discord's own window - flat grey down the sides, black letterboxing around the picture. The plugin now renders a frame of their feed, walks in from each edge while the whole row or column is still one flat colour, and crops the scene item to what is left. It runs each time their feed goes up, so it follows the window being resized, and never takes more than a third off any side. Turn it off per squad mate with **Borders** in Edit....
+- **The POV tag has moved off the map.** It sat bottom-left, over the game's minimap and the score along the bottom. It now sits halfway up the left-hand side, clear of both, and there is an **at** box next to the name tag on the Look tab to put it middle, top left, top centre, bottom left or bottom right instead. Existing setups are moved once.
+
 ## 0.5.2
 - **Your camera and your alerts stay on top.** A new **Always on top** box on the Switch tab: tick your face cam and your alert overlays and they are lifted back over the top every time the plugin shows a squad mate, brings up the Dual POV window, adds a source or puts the look overlay on - nothing of ours can cover them. The list is the stacking order, first is the topmost, and you can drag it around. Your camera and anything that looks like alerts are ticked for you the first time you open it.
 - **A squad mate's Discord feed no longer flickers.** Saving settings re-applied the window-capture settings to a source that already had them, and Windows tears the capture down and starts it again each time. The plugin now writes settings only when something has actually changed. Probing for the window list is also cached for a few seconds - it briefly makes a second capture of the same window, which is the other half of the flicker.

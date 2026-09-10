@@ -66,6 +66,7 @@ std::string Switcher::overlayUrl(const Config &cfg, const std::string &friendNam
 		     "&label=" + urlEncode(cfg.lookLabel);
 		if (cfg.lookPlate)
 			q += "&plate=1";
+		q += "&pos=" + urlEncode(cfg.lookPos.empty() ? "ml" : cfg.lookPos);
 	}
 	if (cfg.lookCam)
 		q += "&cam=1";
@@ -513,6 +514,91 @@ int Switcher::hideEverywhere(const std::string &sourceName)
 }
 
 /// Scene items in the plugin's scene, top of the stack first: name and source type.
+/// A Discord screen share arrives inside Discord's own window: flat grey chrome down the sides and
+/// black letterboxing around the picture. This renders one frame of the source, walks in from each
+/// edge while the whole row (or column) is one flat colour, and crops the scene item to what is left,
+/// so the stream shows the game and nothing else. Called each time their feed goes up, so it follows
+/// the window being resized.
+std::string Switcher::trimToContent(const Config &cfg, const Friend &f)
+{
+	if (f.source.empty())
+		return "";
+	obs_source_t *ss = sceneSource(cfg);
+	if (!ss)
+		return "no scene";
+	obs_scene_t *scene = obs_scene_from_source(ss);
+	obs_sceneitem_t *item = obs_scene_find_source(scene, f.source.c_str());
+	obs_source_t *src = obs_get_source_by_name(f.source.c_str());
+	std::string err;
+	if (!item || !src) {
+		err = "'" + f.source + "' is not in the scene";
+	} else if (!f.trim) {
+		struct obs_sceneitem_crop none = {0, 0, 0, 0};
+		obs_sceneitem_set_crop(item, &none);
+	} else {
+		const int W = 320;
+		std::vector<uint8_t> bgra;
+		int w = 0, h = 0, ls = 0;
+		if (!trimCap_.grab(src, W, bgra, w, h, ls) || w < 32 || h < 32) {
+			err = "no picture from '" + f.source + "' yet";
+		} else {
+			auto lum = [&](int x, int y) {
+				const uint8_t *p = &bgra[(size_t)y * ls + (size_t)x * 4];
+				return (int)(0.114f * p[0] + 0.587f * p[1] + 0.299f * p[2]);
+			};
+			// a row or column of window chrome is one flat colour; the picture never is
+			const int kFlat = 10;
+			auto flatRow = [&](int y) {
+				int lo = 255, hi = 0;
+				for (int x = 0; x < w; x++) {
+					int v = lum(x, y);
+					lo = std::min(lo, v);
+					hi = std::max(hi, v);
+				}
+				return hi - lo <= kFlat;
+			};
+			auto flatCol = [&](int x) {
+				int lo = 255, hi = 0;
+				for (int y = 0; y < h; y++) {
+					int v = lum(x, y);
+					lo = std::min(lo, v);
+					hi = std::max(hi, v);
+				}
+				return hi - lo <= kFlat;
+			};
+			int top = 0, bottom = 0, left = 0, right = 0;
+			const int maxTB = h / 3, maxLR = w / 3; // never eat into the picture itself
+			while (top < maxTB && flatRow(top))
+				top++;
+			while (bottom < maxTB && flatRow(h - 1 - bottom))
+				bottom++;
+			while (left < maxLR && flatCol(left))
+				left++;
+			while (right < maxLR && flatCol(w - 1 - right))
+				right++;
+			uint32_t sw = obs_source_get_width(src), sh = obs_source_get_height(src);
+			struct obs_sceneitem_crop crop = {(int)std::lround((double)left * sw / w),
+							  (int)std::lround((double)top * sh / h),
+							  (int)std::lround((double)right * sw / w),
+							  (int)std::lround((double)bottom * sh / h)};
+			struct obs_sceneitem_crop had = {0, 0, 0, 0};
+			obs_sceneitem_get_crop(item, &had);
+			if (crop.left != had.left || crop.top != had.top || crop.right != had.right ||
+			    crop.bottom != had.bottom) {
+				obs_sceneitem_set_crop(item, &crop);
+				if (log && (crop.left || crop.top || crop.right || crop.bottom))
+					log("Trimmed the borders off " + f.name + "'s feed (" +
+					    std::to_string(crop.left) + "/" + std::to_string(crop.top) + "/" +
+					    std::to_string(crop.right) + "/" + std::to_string(crop.bottom) + " px).");
+			}
+		}
+	}
+	if (src)
+		obs_source_release(src);
+	obs_source_release(ss);
+	return err;
+}
+
 std::vector<std::pair<std::string, std::string>> Switcher::sceneItems(const Config &cfg)
 {
 	std::vector<std::pair<std::string, std::string>> out;

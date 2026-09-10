@@ -105,6 +105,8 @@ void Config::load()
 	DEFD(threshold);
 	DEFB(thresholdV2);
 	DEFB(onTopV1);
+	DEFS(lookPos);
+	DEFB(lookPosV1);
 	DEFD(holdDrop);
 	DEFB(holdV2);
 	DEFI(pollMs);
@@ -201,6 +203,8 @@ void Config::load()
 	GETD(threshold);
 	GETB(thresholdV2);
 	GETB(onTopV1);
+	GETS(lookPos);
+	GETB(lookPosV1);
 	GETD(holdDrop);
 	GETB(holdV2);
 	GETI(pollMs);
@@ -276,6 +280,8 @@ void Config::load()
 			f.audioSource = obs_data_get_string(it, "audioSource");
 			f.channel = obs_data_get_string(it, "channel");
 			f.gameName = obs_data_get_string(it, "gameName");
+			obs_data_set_default_bool(it, "trim", true);
+			f.trim = obs_data_get_bool(it, "trim");
 			if (obs_data_has_user_value(it, "vdoHeight")) {
 				f.vdoHeight = (int)obs_data_get_int(it, "vdoHeight");
 				f.vdoFps = (int)obs_data_get_int(it, "vdoFps");
@@ -313,6 +319,11 @@ void Config::load()
 		holdV2 = true;
 		if (upFrames < 2)
 			upFrames = 2;
+	}
+	// the tag sat bottom-left, over the game's map and score; halfway up the left is clear of both
+	if (!lookPosV1) {
+		lookPosV1 = true;
+		lookPos = "ml";
 	}
 	// your own game audio is no longer muted by default: the squad mate's feed comes in silent
 	// and you turn its sound on if you want it (Settings -> Switch)
@@ -369,6 +380,8 @@ void Config::save() const
 	SETD(threshold);
 	SETB(thresholdV2);
 	SETB(onTopV1);
+	SETS(lookPos);
+	SETB(lookPosV1);
 	SETD(holdDrop);
 	SETB(holdV2);
 	SETI(pollMs);
@@ -439,6 +452,7 @@ void Config::save() const
 		obs_data_set_string(it, "audioSource", f.audioSource.c_str());
 		obs_data_set_string(it, "channel", f.channel.c_str());
 		obs_data_set_string(it, "gameName", f.gameName.c_str());
+		obs_data_set_bool(it, "trim", f.trim);
 		obs_data_set_int(it, "vdoHeight", f.vdoHeight);
 		obs_data_set_int(it, "vdoFps", f.vdoFps);
 		obs_data_set_int(it, "vdoKbps", f.vdoKbps);

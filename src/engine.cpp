@@ -1311,6 +1311,14 @@ void Engine::applyNow(bool on, const QString &why)
 		if (!detected_)
 			clearNearby();
 	}
+	if (on) {
+		// their window has had a moment to draw by now; crop Discord's chrome off what we show
+		QTimer::singleShot(500, this, [this]() {
+			const Friend *a = cfg.active();
+			if (!stopping_ && applied_ && a && a->kind == FriendKind::Discord && a->trim)
+				sw.trimToContent(cfg, *a);
+		});
+	}
 	if (dualOn_)
 		sw.applyDual(cfg, !on); // the small window makes way for the full-screen swap, and returns
 	sendPov(on ? "downed" : "up");
