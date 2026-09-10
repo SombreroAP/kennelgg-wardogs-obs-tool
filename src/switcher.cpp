@@ -512,10 +512,12 @@ std::string Switcher::startNdiShare(const std::string &ndiName, int shareHeight,
 	obs_output_set_mixer(ndiOut_, 5);
 	if (!obs_output_start(ndiOut_)) {
 		const char *e = obs_output_get_last_error(ndiOut_);
-		std::string err = e ? e : "NDI output would not start";
+		ndiErr_ = e ? e : "the NDI output would not start";
 		stopNdiShare();
-		return err;
+		return ndiErr_;
 	}
+	ndiErr_.clear();
+	ndiName_ = ndiName;
 	(void)track6;
 	if (log)
 		log("Sharing your feed over NDI as \"" + ndiName + "\" at " + std::to_string(ovi.output_width) + "x" +

@@ -2,6 +2,7 @@
 #include "ndi.h"
 #include <algorithm>
 #include <QScrollArea>
+#include <QNetworkInterface>
 #include <QJsonArray>
 #include <QTimer>
 #include <QApplication>
@@ -694,6 +695,11 @@ QWidget *SettingsDialog::buildSwitchTab()
 	});
 	connect(nearFollow_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(e_, &Engine::stateChanged, this, [this]() {
+		if (ndiStatus_) {
+			QString t = e_->ndiStatus();
+			ndiStatus_->setText(t);
+			ndiStatus_->setStyleSheet(t.startsWith("NOT") ? "color: #ce6050;" : "");
+		}
 		if (nearLbl_)
 			nearLbl_->setText(e_->nearbyStatus());
 		if (nearOn_ && nearOn_->isChecked() != e_->cfg.nearEnabled) {
@@ -743,6 +749,10 @@ QWidget *SettingsDialog::buildSwitchTab()
 	peerRow->addWidget(speedBtn_);
 	fl->addRow("Seen", peerRow);
 	connect(speedBtn_, &QPushButton::clicked, this, [this]() { testLink(); });
+	ndiStatus_ = new QLabel(gl);
+	ndiStatus_->setWordWrap(true);
+	ndiStatus_->setText(e_->ndiStatus());
+	fl->addRow("NDI share", ndiStatus_);
 	lanStatus_ = muted("", gl);
 	fl->addRow(lanStatus_);
 	v->addWidget(gl);
@@ -2296,7 +2306,7 @@ void SettingsDialog::testLink()
 	speedBtn_->setText("measuring...");
 	e_->log("Measuring the link to " + who + " (" + addr + ")...");
 	auto *conn = new QMetaObject::Connection();
-	*conn = connect(&e_->speed, &Speed::done, this, [this, conn, who](double mbps, const QString &note) {
+	*conn = connect(&e_->speed, &Speed::done, this, [this, conn, who, addr](double mbps, const QString &note) {
 		disconnect(*conn);
 		delete conn;
 		speedBtn_->setEnabled(true);
@@ -2317,6 +2327,22 @@ void SettingsDialog::testLink()
 				      .arg(who)
 				      .arg(mbps, 0, 'f', 0)
 				      .arg(note);
+		// NDI finds feeds by multicast, which does not cross subnets: a squad mate we can reach
+		// perfectly well may still never appear in the source list
+		if (!addr.isEmpty()) {
+			QString theirs = addr.section('.', 0, 2);
+			bool sameNet = false;
+			for (const QHostAddress &a : QNetworkInterface::allAddresses())
+				if (a.protocol() == QAbstractSocket::IPv4Protocol &&
+				    a.toString().section('.', 0, 2) == theirs)
+					sameNet = true;
+			if (!sameNet)
+				msg += "They are on a different subnet to you (" + addr +
+				       "). NDI finds feeds by multicast, which does not cross subnets - so their "
+				       "feed may never appear in the source list even though the link is fine. Put "
+				       "both PCs on the same subnet, or add each other by address in NDI Access "
+				       "Manager.\n\n";
+		}
 		// NDI needs headroom: a link run at its limit is a link that judders on every burst
 		const double room = 0.6;
 		struct Opt {

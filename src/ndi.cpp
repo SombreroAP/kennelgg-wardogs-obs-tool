@@ -34,6 +34,7 @@ struct Runtime {
 	bool loaded = false;
 	bool tried = false;
 	void *finder = nullptr;
+	std::string extraIps; // comma separated, as NDI wants them
 };
 Runtime g;
 std::mutex mx;
@@ -105,7 +106,7 @@ std::vector<std::string> sources(int waitMs)
 	if (!g.loaded)
 		return out;
 	if (!g.finder) {
-		NDIfindCreate c{true, nullptr, nullptr};
+		NDIfindCreate c{true, nullptr, g.extraIps.empty() ? nullptr : g.extraIps.c_str()};
 		g.finder = g.create(&c);
 		if (!g.finder)
 			return out;
@@ -119,6 +120,21 @@ std::vector<std::string> sources(int waitMs)
 		if (s[i].name && *s[i].name)
 			out.emplace_back(s[i].name);
 	return out;
+}
+
+void setExtraIps(const std::vector<std::string> &ips)
+{
+	std::string joined;
+	for (const auto &i : ips)
+		joined += (joined.empty() ? "" : ",") + i;
+	std::lock_guard<std::mutex> lk(mx);
+	if (joined == g.extraIps)
+		return;
+	g.extraIps = joined;
+	if (g.finder && g.destroy) { // start again so the new addresses are looked at
+		g.destroy(g.finder);
+		g.finder = nullptr;
+	}
 }
 
 void shutdown()

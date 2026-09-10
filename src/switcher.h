@@ -60,6 +60,10 @@ public:
 	/// input taken off that track so squad mates get game audio only. Returns "" or an error.
 	std::string startNdiShare(const std::string &ndiName, int shareHeight, int shareFps);
 	void stopNdiShare();
+	/// Is our own feed actually going out? Ticking the box is not the same as the output running.
+	bool ndiSharing() const { return ndiOut_ && obs_output_active(ndiOut_); }
+	const std::string &ndiShareError() const { return ndiErr_; }
+	const std::string &ndiShareName() const { return ndiName_; }
 	static bool outputKindAvailable(const char *kind);
 	static std::string ndiFullName(const std::string &host, const std::string &ndiName)
 	{
@@ -71,6 +75,7 @@ private:
 	Capture trimCap_, hashCap_;          // renders a frame of a feed to find its borders
 	obs_scene_t *dualScene_ = nullptr;   // the private nested scene behind the dual-POV window
 	obs_output_t *ndiOut_ = nullptr;
+	std::string ndiErr_, ndiName_;
 	obs_view_t *ndiView_ = nullptr; // our own render of the program, so the share never taps the main mix
 	video_t *ndiVideo_ = nullptr;
 

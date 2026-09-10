@@ -1,4 +1,5 @@
 #include "engine.h"
+#include "ndi.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -127,9 +128,68 @@ QString Engine::playerName() const
 	return cfg.playerName.empty() ? Lan::hostName() : QString::fromStdString(cfg.playerName);
 }
 
+/// Once every 15 s: is our own share up, is NDI able to see it, and hand NDI the addresses of the
+/// squad mates our own beacon already found.
+void Engine::checkNdiShare()
+{
+	if (stopping_)
+		return;
+	std::vector<std::string> ips;
+	for (const auto &kv : lan.peers())
+		if (!kv.second.addr.isEmpty())
+			ips.push_back(kv.second.addr.toStdString());
+	kennelNdi::setExtraIps(ips); // discovery is multicast and does not cross every network
+	if (!cfg.ndiShare)
+		return;
+	if (!sw.ndiSharing()) {
+		if (ndiWasSharing_ || !ndiWarned_) {
+			ndiWasSharing_ = false;
+			ndiWarned_ = true;
+			QString e = QString::fromStdString(sw.ndiShareError());
+			log("NDI share is NOT running" + (e.isEmpty() ? QString(".") : " (" + e + ").") +
+			    " Squad mates will not see your feed. Trying again...");
+		}
+		std::string e = sw.startNdiShare(ndiShareName().toStdString(), cfg.ndiShareHeight, cfg.ndiShareFps);
+		if (!e.empty())
+			return;
+	}
+	if (!ndiWasSharing_) {
+		ndiWasSharing_ = true;
+		ndiWarned_ = false;
+		emit stateChanged();
+		// ...and can anything actually discover it? A running output nobody can find is the same
+		// thing to a squad mate as no output at all, and that is almost always a firewall.
+		QTimer::singleShot(6000, this, [this]() {
+			if (stopping_ || !sw.ndiSharing())
+				return;
+			QString mine = ndiShareName();
+			for (const auto &n : kennelNdi::sources(1500))
+				if (QString::fromStdString(n).contains(mine, Qt::CaseInsensitive))
+					return; // we can see ourselves; discovery is working
+			log("NDI: your feed is running as \"" + mine +
+			    "\" but NDI discovery cannot see it, so squad mates will not find it in their "
+			    "source list. That is nearly always Windows Firewall blocking OBS on a private "
+			    "network, or the two PCs being on different subnets.");
+		});
+	}
+	lan.setSelf(playerName(), Lan::hostName(), sw.ndiSharing() ? ndiShareName() : "", PLUGIN_VERSION);
+}
+
+QString Engine::ndiStatus() const
+{
+	if (!cfg.ndiShare)
+		return "Not sharing.";
+	if (sw.ndiSharing())
+		return "Sharing as \"" + ndiShareName() + "\".";
+	QString e = QString::fromStdString(sw.ndiShareError());
+	return "NOT sharing" + (e.isEmpty() ? QString(" yet.") : ": " + e);
+}
+
 void Engine::applyLan()
 {
-	lan.setSelf(playerName(), Lan::hostName(), cfg.ndiShare ? ndiShareName() : "", PLUGIN_VERSION);
+	// only tell the squad we are sharing when the output is actually up: a ticked box that failed
+	// to start looked exactly like a working feed from the other end
+	lan.setSelf(playerName(), Lan::hostName(), sw.ndiSharing() ? ndiShareName() : "", PLUGIN_VERSION);
 	if (cfg.lanEnabled) {
 		if (!lan.running())
 			lan.start((quint16)cfg.lanPort);
@@ -386,6 +446,9 @@ void Engine::start()
 	if (cfg.launchApp)
 		launchApp();
 	applyLan();
+	ndiHealth_.setInterval(15000);
+	connect(&ndiHealth_, &QTimer::timeout, this, [this]() { checkNdiShare(); });
+	ndiHealth_.start();
 	sw.tuneNdiSources(cfg); // frame sync on the squad mates' feeds we already have
 	timer_.start(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())

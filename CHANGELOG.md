@@ -2,6 +2,12 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.6.1
+- **A ticked box is no longer taken for a working share.** The plugin told the squad it was sharing over NDI whenever the box was ticked, whether or not the output had actually started - so a share that failed looked exactly like a working one from the other end, and the squad mate's feed was simply blank. Your beacon now only advertises a feed while the output is really running, and the Switch tab has an **NDI share** line that says what it is actually doing, in red when it is not.
+- **It checks that anything can find your feed.** A few seconds after the share starts, the plugin asks the NDI runtime whether it can see your own feed. If it cannot, the log says so and names the usual causes - Windows Firewall blocking OBS on a private network, or the two PCs being on different subnets - because a feed nobody can discover is, to a squad mate, the same as no feed at all.
+- **It restarts a share that has died**, every 15 seconds, and says so in the log.
+- **The link test warns about different subnets.** NDI finds feeds by multicast, which does not cross a subnet: a squad mate whose link measures perfectly can still never appear in your source list. The plugin also now hands NDI the addresses of the squad mates its own beacon already found, so its list still fills in where discovery alone would not.
+
 ## 0.6.0
 - **A squad mate's NDI feed that connects to nothing, fixed.** The plugin composed their feed's name from their beacon as "<their computer> (Kennel POV)", but NDI advertises the machine name in its own form - upper case, the DNS name, whatever the runtime settled on - and DistroAV matches that string exactly. One letter's difference and the source connects to nothing, shows nothing, and reports no error anywhere. The plugin now asks the NDI runtime what is actually being published and matches on the part in brackets, which is the half we control; if a name has drifted it is corrected and the log says so.
 - **And it says so when nobody is publishing.** If no feed on the network matches, adding the squad mate now fails with a real message, and the log lists every NDI name it can actually see - so "their OBS is not sharing" and "we are asking for the wrong name" stop looking identical.

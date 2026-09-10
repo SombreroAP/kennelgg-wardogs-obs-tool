@@ -30,10 +30,13 @@ public:
 	Bridge bridge;
 	Clips clips;
 	Lan lan;
-	Speed speed; // measures the link to a squad mate, so the NDI size can be picked on a number
+	QTimer ndiHealth_; // is our own share really running, and can NDI see it?
+	Speed speed;       // measures the link to a squad mate, so the NDI size can be picked on a number
 	QString ndiShareName() const { return "Kennel POV"; }
 	QString playerName() const;
-	void applyLan(); // (re)start discovery + NDI share from cfg
+	void applyLan();
+	void checkNdiShare();
+	bool ndiWasSharing_ = false, ndiWarned_ = false; // (re)start discovery + NDI share from cfg
 	QString appStatus() const { return appStatus_; }
 	bool appConnected() const { return bridge.clients() > 0; }
 	void onReplaySaved() { clips.onReplaySaved(); }
@@ -122,6 +125,8 @@ public slots:
 	void clipNow(const QString &title = "manual", const QStringList &tags = {"manual"},
 		     const QString &source = "hotkey");
 	void log(const QString &msg);
+	/// What the NDI share is actually doing, for the Switch tab. Not the same as the tick box.
+	QString ndiStatus() const;
 
 signals:
 	void stateChanged();
