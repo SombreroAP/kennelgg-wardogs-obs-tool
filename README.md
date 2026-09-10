@@ -65,7 +65,8 @@ themselves on first run; later they are under **Tools → Kennel.gg WARDOGS OBS 
 At a LAN party nothing needs typing. Every PC running this plugin announces itself on the network
 (UDP 47821) and, with **DistroAV** installed, publishes its game feed over NDI as `<PC name> (Kennel
 POV)` on audio track 6, with every microphone taken off that track so squad mates hear the game,
-not you. Squad mates found this way are added to your list by themselves as NDI feeds, and you to
+not you. The share is rendered from its own view of the program output, so it carries the main
+canvas only and leaves other plugins' canvases (Aitum's vertical canvas, for one) alone. Squad mates found this way are added to your list by themselves as NDI feeds, and you to
 theirs. Set **Your name** on the Switch tab; untick the options there to opt out.
 
 ## Squad-mate feeds

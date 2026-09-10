@@ -276,13 +276,28 @@ std::string Switcher::startNdiShare(const std::string &ndiName)
 	obs_data_release(st);
 	if (!ndiOut_)
 		return "could not create the NDI output";
-	obs_output_set_media(ndiOut_, obs_get_video(), obs_get_audio());
+	// Render the share from a view of our own on the program output, never from OBS's main video
+	// mix: an output tapped onto the mix broke other plugins' extra canvases (Aitum's vertical
+	// canvas went black). The view shows what the program shows, follows scene changes by itself,
+	// and only ever carries the main canvas.
+	struct obs_video_info ovi;
+	obs_get_video_info(&ovi);
+	ndiView_ = obs_view_create();
+	obs_source_t *program = obs_get_output_source(0);
+	obs_view_set_source(ndiView_, 0, program);
+	if (program)
+		obs_source_release(program);
+	ndiVideo_ = obs_view_add2(ndiView_, &ovi);
+	if (!ndiVideo_) {
+		stopNdiShare();
+		return "could not create a video output for the NDI share";
+	}
+	obs_output_set_media(ndiOut_, ndiVideo_, obs_get_audio());
 	obs_output_set_mixer(ndiOut_, 5);
 	if (!obs_output_start(ndiOut_)) {
 		const char *e = obs_output_get_last_error(ndiOut_);
 		std::string err = e ? e : "NDI output would not start";
-		obs_output_release(ndiOut_);
-		ndiOut_ = nullptr;
+		stopNdiShare();
 		return err;
 	}
 	(void)track6;
@@ -293,12 +308,20 @@ std::string Switcher::startNdiShare(const std::string &ndiName)
 
 void Switcher::stopNdiShare()
 {
-	if (!ndiOut_)
-		return;
-	if (obs_output_active(ndiOut_))
-		obs_output_stop(ndiOut_);
-	obs_output_release(ndiOut_);
-	ndiOut_ = nullptr;
+	if (ndiOut_) {
+		if (obs_output_active(ndiOut_))
+			obs_output_stop(ndiOut_);
+		obs_output_release(ndiOut_);
+		ndiOut_ = nullptr;
+	}
+	if (ndiView_) {
+		obs_view_set_source(ndiView_, 0, nullptr);
+		if (ndiVideo_)
+			obs_view_remove(ndiView_);
+		obs_view_destroy(ndiView_);
+		ndiView_ = nullptr;
+		ndiVideo_ = nullptr;
+	}
 }
 
 obs_source_t *Switcher::sceneSource(const Config &cfg)

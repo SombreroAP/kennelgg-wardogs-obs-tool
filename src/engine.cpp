@@ -130,9 +130,18 @@ void Engine::applyLan()
 	} else
 		lan.stop();
 	if (cfg.ndiShare) {
-		std::string e = sw.startNdiShare(ndiShareName().toStdString());
-		if (!e.empty())
-			log("NDI share: " + QString::fromStdString(e));
+		auto start = [this]() {
+			if (!cfg.ndiShare || stopping_)
+				return;
+			std::string e = sw.startNdiShare(ndiShareName().toStdString());
+			if (!e.empty())
+				log("NDI share: " + QString::fromStdString(e));
+		};
+		if (!ndiDelayed_) {
+			ndiDelayed_ = true; // first time: let every other plugin finish setting up its outputs
+			QTimer::singleShot(4000, this, start);
+		} else
+			start();
 	} else
 		sw.stopNdiShare();
 }

@@ -48,6 +48,8 @@ public:
 
 private:
 	obs_output_t *ndiOut_ = nullptr;
+	obs_view_t *ndiView_ = nullptr; // our own render of the program, so the share never taps the main mix
+	video_t *ndiVideo_ = nullptr;
 
 public:
 	static std::vector<std::pair<std::string, std::string>> inputs(); // name, id

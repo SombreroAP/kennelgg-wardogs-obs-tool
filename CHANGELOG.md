@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.4.1
+- **NDI share no longer breaks other plugins' canvases.** It was tapped onto OBS's main video mix, which turned Aitum's vertical canvas black and stopped recordings that used it. The share now renders from a view of its own on the program output, so it only ever carries the main canvas and leaves every other canvas alone. It also starts a few seconds after OBS has finished loading, so other plugins set up first.
+
 ## 0.4.0
 - **Dual POV** (new tab). Two of you in a tank or a Havoc: your own POV stays on screen and your crew mate's feed sits in a small window over it, placed where the game draws nothing. Pick the crew mate, pick the vehicle and the seat you are in - tank driver, tank gunner, Havoc pilot, Havoc gunner in the CAM view - and the window goes where that seat's HUD leaves room (top-left between the team chat and the kill feed; inside the picture frame for the CAM view). Or Custom: drag the box on the live picture, or type left, top and width. Opacity slider. Picture only, no sound. A **Dual POV** button in the dock and a hotkey ("dual POV window on / off") turn it on and off; it comes back on with OBS if it was on. When you go down the window steps aside for the full-screen swap and returns after.
 
