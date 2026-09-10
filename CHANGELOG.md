@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.6.5
+- **Why NDI only worked with OBS run as administrator, explained in the plugin.** Windows hands whole ranges of TCP ports to Hyper-V, WSL, Docker and the like, and a program running as a normal user cannot bind anything inside them. NDI's ports (5960-5970) land inside one of those ranges on a lot of machines - so NDI works when OBS is elevated and not otherwise, no firewall rule will fix it, and nothing on screen ever hints at it. **Check NDI** now says whether OBS is elevated, whether NDI's ports are inside a reserved range, and the exact commands that free them; it also says so once in the log at start-up, unprompted.
+- **Deleting a squad mate offers to delete the sources made for them.** *Remove and delete the sources* / *Remove, keep the sources* / *Cancel*, with the sources listed so you can see what will go. Only ever ones the plugin made: a squad mate set up as an OBS source you already had keeps it, and the shared browser source is never touched.
+- **Preloading no longer keeps every NDI feed decoding.** A warm NDI feed is a receiver running a full stream the whole time, and several at 1440p judder for no gain - an NDI receiver is back in well under a second. Browser feeds, which take seconds to load, are still all kept warm; NDI and Discord feeds are kept warm only for the squad mate you would actually show.
+
 ## 0.6.4
 - **Neither PC being able to see the other's feed at all was the plugin's fault, and this fixes it.** To list NDI feeds for the squad-mate picker, the plugin loaded its own copy of the NDI runtime into OBS - and if DistroAV had not already loaded one, that was a *second* NDI stack in the same process, initialised separately and holding a finder open for the life of OBS. Two NDI stacks contending for the same discovery sockets stops that PC seeing feeds and stops its own feed being seen. Both ends had the plugin, so both went dark, and it looked like a network fault.
 - The plugin now uses **only the runtime DistroAV has already loaded**, never loads or initialises one itself, and never holds a finder open: it asks once when you press **Check NDI** or add a squad mate, and lets go immediately. Nothing asks NDI anything on a timer any more.

@@ -613,6 +613,28 @@ QWidget *SettingsDialog::buildSwitchTab()
 		int r = friends_->currentRow();
 		if (r < 0 || r >= (int)e_->cfg.friends.size())
 			return;
+		Friend f = e_->cfg.friends[r];
+		// the sources we made for them go too, unless they say otherwise: a season of squad mates
+		// otherwise leaves a scene full of dead captures
+		std::vector<std::string> mine = Switcher::friendSourceNames(e_->cfg, f);
+		if (!mine.empty()) {
+			QStringList list;
+			for (const auto &n : mine)
+				list << QString::fromStdString(n);
+			QMessageBox box(QMessageBox::Question, "Kennel WARDOGS",
+					"Remove " + QString::fromStdString(f.name) +
+						"?\n\nThese sources were made for them:\n  " + list.join("\n  "),
+					QMessageBox::NoButton, this);
+			QPushButton *both = box.addButton("Remove and delete the sources", QMessageBox::AcceptRole);
+			QPushButton *justOne = box.addButton("Remove, keep the sources", QMessageBox::ActionRole);
+			box.addButton(QMessageBox::Cancel);
+			box.setDefaultButton(both);
+			box.exec();
+			if (box.clickedButton() != both && box.clickedButton() != justOne)
+				return;
+			if (box.clickedButton() == both)
+				e_->sw.removeFriendSources(e_->cfg, f);
+		}
 		e_->cfg.friends.erase(e_->cfg.friends.begin() + r);
 		if (e_->cfg.activeFriend >= (int)e_->cfg.friends.size())
 			e_->cfg.activeFriend = std::max(0, (int)e_->cfg.friends.size() - 1);

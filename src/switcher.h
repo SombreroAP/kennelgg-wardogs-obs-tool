@@ -47,6 +47,10 @@ public:
 	/// Create an input of this kind (or reuse one with the name), put it in the scene, optionally full-canvas. Returns "" or an error.
 	std::string createInScene(const Config &cfg, const char *kind, const std::string &name, obs_data_t *settings,
 				  bool fullCanvas, bool visible, bool toBottom = false);
+	/// The sources the plugin made for this squad mate (never one of theirs, never the shared one).
+	static std::vector<std::string> friendSourceNames(const Config &cfg, const Friend &f);
+	/// Take those out of every scene and delete them. Returns how many went.
+	int removeFriendSources(const Config &cfg, const Friend &f);
 	/// Sources a squad mate needs, created and placed. Fills f.source / f.audioSource.
 	std::string createFriendSources(const Config &cfg, Friend &f);
 	std::string createGameCapture(Config &cfg);

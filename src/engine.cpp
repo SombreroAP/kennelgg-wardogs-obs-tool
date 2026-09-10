@@ -5,6 +5,11 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDir>
+#include <QProcess>
+#include <QRegularExpression>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -24,6 +29,11 @@
 #endif
 #include <QUrl>
 #include <QDir>
+#include <QProcess>
+#include <QRegularExpression>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QJsonDocument>
@@ -206,6 +216,43 @@ static QString ndiConfigNote()
 	return QString();
 }
 
+#ifdef _WIN32
+/// Windows hands whole ranges of TCP ports to Hyper-V, WSL, Docker and the like, and a program
+/// running as a normal user then cannot bind anything inside them. NDI's ports (5960 upwards) land
+/// in one of those ranges on a lot of machines, which is why NDI suddenly works when OBS is started
+/// as administrator - an administrator may bind them, an ordinary user may not. Nothing about the
+/// network is wrong on such a PC, and no firewall rule will fix it.
+static QString ndiPortNote()
+{
+	QProcess p;
+	p.setProcessChannelMode(QProcess::MergedChannels);
+	p.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
+		args->flags |= CREATE_NO_WINDOW; // no console window flashing up
+	});
+	p.start("netsh", {"int", "ipv4", "show", "excludedportrange", "protocol=tcp"});
+	if (!p.waitForFinished(4000))
+		return QString();
+	const QString out = QString::fromLocal8Bit(p.readAll());
+	static const QRegularExpression rx("(\\d+)\\s+(\\d+)");
+	for (auto it = rx.globalMatch(out); it.hasNext();) {
+		QRegularExpressionMatch m = it.next();
+		int start = m.captured(1).toInt(), end = m.captured(2).toInt();
+		if (end < start || start < 1024)
+			continue;
+		if (start <= 5970 && end >= 5960) // NDI's own range sits inside a reserved one
+			return QString("Windows has reserved TCP ports %1-%2 for something else (Hyper-V, WSL, "
+				       "Docker or similar) and NDI's ports 5960-5970 are inside it - which is "
+				       "exactly why NDI works when OBS is started as administrator and not "
+				       "otherwise. In an admin Command Prompt: net stop winnat, then netsh int "
+				       "ipv4 add excludedportrange protocol=tcp startport=5960 numberofports=11 "
+				       "store=persistent, then net start winnat, then reboot")
+				.arg(start)
+				.arg(end);
+	}
+	return QString();
+}
+#endif
+
 /// Everything we can actually establish about NDI on this PC, in one line. Guessing at causes was
 /// making things worse: a report says what is true and lets the cause follow from it.
 QString Engine::ndiReport()
@@ -223,6 +270,23 @@ QString Engine::ndiReport()
 			"PCs seeing anything";
 		return "NDI check: " + bits.join("; ") + ".";
 	}
+#ifdef _WIN32
+	bool admin = false;
+	{
+		HANDLE tok = nullptr;
+		TOKEN_ELEVATION el{};
+		DWORD sz = sizeof(el);
+		if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &tok)) {
+			if (GetTokenInformation(tok, TokenElevation, &el, sizeof(el), &sz))
+				admin = el.TokenIsElevated;
+			CloseHandle(tok);
+		}
+	}
+	bits << (admin ? "OBS is running as administrator" : "OBS is running as a normal user");
+	QString portNote = ndiPortNote();
+	if (!portNote.isEmpty())
+		bits << portNote;
+#endif
 	QString cfgNote = ndiConfigNote();
 	if (!cfgNote.isEmpty())
 		bits << cfgNote;
@@ -577,6 +641,18 @@ void Engine::start()
 	if (cfg.launchApp)
 		launchApp();
 	applyLan();
+#ifdef _WIN32
+	// Say this once, unprompted: a reserved port range silently stops NDI working for anyone not
+	// running OBS as administrator, and nothing on screen would ever hint at it.
+	if (cfg.ndiShare || cfg.lanEnabled)
+		std::thread([this]() {
+			QString note = ndiPortNote();
+			if (note.isEmpty())
+				return;
+			QMetaObject::invokeMethod(
+				this, [this, note]() { log("NDI: " + note + "."); }, Qt::QueuedConnection);
+		}).detach();
+#endif
 	ndiHealth_.setInterval(15000);
 	connect(&ndiHealth_, &QTimer::timeout, this, [this]() { checkNdiShare(); });
 	ndiHealth_.start();

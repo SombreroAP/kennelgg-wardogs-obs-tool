@@ -349,6 +349,50 @@ void Switcher::tuneNdiSources(Config &cfg)
 		cfg.save();
 }
 
+/// The sources this plugin made for one squad mate, taken out of every scene and deleted. Only ever
+/// ours: a squad mate set up as "an OBS source you already have" keeps their source, and the shared
+/// browser source everyone uses when feeds are not preloaded is left alone.
+std::vector<std::string> Switcher::friendSourceNames(const Config &cfg, const Friend &f)
+{
+	std::vector<std::string> names;
+	if (f.ownsSources()) { // Discord and NDI: we created these
+		if (!f.source.empty())
+			names.push_back(f.source);
+		if (!f.audioSource.empty())
+			names.push_back(f.audioSource);
+	}
+	if (f.isWeb()) {
+		std::string web = cfg.webSourceFor(f);
+		if (web != Config::webSourceName()) // the per-squad-mate one, not the shared one
+			names.push_back(web);
+	}
+	return names;
+}
+
+int Switcher::removeFriendSources(const Config &cfg, const Friend &f)
+{
+	int gone = 0;
+	for (const auto &name : friendSourceNames(cfg, f)) {
+		obs_source_t *src = obs_get_source_by_name(name.c_str());
+		if (!src)
+			continue;
+		struct obs_frontend_source_list scenes = {};
+		obs_frontend_get_scenes(&scenes);
+		for (size_t i = 0; i < scenes.sources.num; i++) {
+			obs_scene_t *scene = obs_scene_from_source(scenes.sources.array[i]);
+			if (obs_sceneitem_t *it = scene ? obs_scene_find_source(scene, name.c_str()) : nullptr)
+				obs_sceneitem_remove(it);
+		}
+		obs_frontend_source_list_free(&scenes);
+		obs_source_remove(src); // OBS lets it go once nothing holds it
+		obs_source_release(src);
+		gone++;
+		if (log)
+			log("Removed the source '" + name + "'.");
+	}
+	return gone;
+}
+
 std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 {
 	std::string base = "Kennel · " + (f.name.empty() ? std::string("squad mate") : f.name);
@@ -831,9 +875,19 @@ std::string Switcher::updateLook(const Config &cfg, bool on)
 void Switcher::armWarm(const Config &cfg)
 {
 	if (cfg.preloadFeeds) {
-		// every squad mate's feed loaded and playing behind the scenes, so a swap is instant
-		for (const auto &f : cfg.friends)
-			armOne(cfg, f);
+		// Every browser feed loaded and playing behind the scenes, so a swap is instant - a Twitch
+		// or VDO.Ninja page takes seconds to come up and is worth the wait.
+		//
+		// NDI is the other way round. A warm NDI feed is a receiver decoding a full stream the whole
+		// time, and four of those at 1440p is a stuttering mess for no gain: an NDI receiver is back
+		// in well under a second. So only the squad mate we would actually show is kept warm.
+		const Friend *act = cfg.active();
+		for (const auto &f : cfg.friends) {
+			if (f.isWeb() || (act && f.name == act->name))
+				armOne(cfg, f);
+			else
+				hideEverywhere(cfg.sourceFor(f)); // stops it receiving
+		}
 		raiseOnTop(cfg);
 		// the shared browser source is not used in this mode; make sure it is not left showing
 		hideEverywhere(Config::webSourceName());
