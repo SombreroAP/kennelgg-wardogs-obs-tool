@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## 0.6.0
+- **A squad mate's NDI feed that connects to nothing, fixed.** The plugin composed their feed's name from their beacon as "<their computer> (Kennel POV)", but NDI advertises the machine name in its own form - upper case, the DNS name, whatever the runtime settled on - and DistroAV matches that string exactly. One letter's difference and the source connects to nothing, shows nothing, and reports no error anywhere. The plugin now asks the NDI runtime what is actually being published and matches on the part in brackets, which is the half we control; if a name has drifted it is corrected and the log says so.
+- **And it says so when nobody is publishing.** If no feed on the network matches, adding the squad mate now fails with a real message, and the log lists every NDI name it can actually see - so "their OBS is not sharing" and "we are asking for the wrong name" stop looking identical.
+- **Every settings tab scrolls.** At 125 % Windows scaling, on a laptop screen or with a large font the contents were squeezed into whatever height was left instead of keeping their own. The window can also be made genuinely small now.
+
 ## 0.5.9
 - **A squad mate's NDI feed showing nothing at all, fixed.** 0.5.4 turned DistroAV's frame sync on for every NDI feed to smooth out judder. On some setups the picture then never arrives, which is worse than the judder it was meant to fix. The plugin no longer touches how a feed is timed: **Timing** in Edit... now starts at *leave DistroAV's own setting alone*, and 0.5.9 puts frame sync back off on feeds 0.5.4 to 0.5.8 turned it on for. Frame sync, timestamps, the sender's timecode and none are all still there to try by hand - which is where a setting like that belongs.
 - The forced "normal latency" write is gone with it. The only receive setting the plugin sets by itself is the one you choose in **Receive at**.

@@ -262,6 +262,41 @@ std::string Switcher::createInScene(const Config &cfg, const char *kind, const s
 /// How a squad mate's NDI feed should be received. Frame sync is the important one: it hands OBS a
 /// frame on OBS's own clock instead of whenever the network delivers one, which is what turns a
 /// feed that judders and drops on a busy LAN into a steady one.
+/// What a squad mate's feed is really called on the network.
+///
+/// The name we compose from their beacon is "<their computer> (Kennel POV)", but NDI advertises the
+/// machine name in its own form - upper case, or the DNS name, or whatever the NDI runtime settled
+/// on - and DistroAV matches the string exactly. One letter's difference and the receiver connects
+/// to nothing and shows nothing, with no error anywhere. So we ask the NDI runtime what is actually
+/// out there and match on the part in brackets, which is the half we control.
+std::string Switcher::resolveNdiName(const std::string &wanted, std::vector<std::string> *sawOut)
+{
+	std::vector<std::string> have = kennelNdi::sources(1200);
+	if (sawOut)
+		*sawOut = have;
+	if (have.empty())
+		return wanted; // nothing to check against; leave it alone
+	auto lower = [](std::string v) {
+		std::transform(v.begin(), v.end(), v.begin(), ::tolower);
+		return v;
+	};
+	auto inner = [](const std::string &v) {
+		size_t a = v.rfind('('), b = v.rfind(')');
+		return a != std::string::npos && b != std::string::npos && b > a ? v.substr(a + 1, b - a - 1) : v;
+	};
+	for (const auto &h : have)
+		if (h == wanted)
+			return h;
+	for (const auto &h : have)
+		if (lower(h) == lower(wanted))
+			return h;
+	std::string want = lower(inner(wanted));
+	for (const auto &h : have)
+		if (lower(inner(h)) == want)
+			return h;
+	return "";
+}
+
 obs_data_t *Switcher::ndiSettings(const Friend &f)
 {
 	obs_data_t *st = obs_data_create();
@@ -295,20 +330,40 @@ obs_data_t *Switcher::ndiSettings(const Friend &f)
 
 /// Put those settings on the NDI feeds that already exist, once, without touching anything else -
 /// updating an ndi_source restarts the receiver, so only when something actually differs.
-void Switcher::tuneNdiSources(const Config &cfg)
+void Switcher::tuneNdiSources(Config &cfg)
 {
-	for (const auto &f : cfg.friends) {
+	bool changed = false;
+	for (auto &f : cfg.friends) {
 		if (f.kind != FriendKind::Ndi || f.source.empty())
 			continue;
 		obs_source_t *src = obs_get_source_by_name(f.source.c_str());
 		if (!src)
 			continue;
+		// their machine may be publishing under a slightly different name than we composed
+		std::vector<std::string> saw;
+		std::string real = resolveNdiName(f.channel, &saw);
+		if (!real.empty() && real != f.channel) {
+			if (log)
+				log("NDI: " + f.name + "'s feed is really called '" + real + "' - using that.");
+			f.channel = real;
+			changed = true;
+		} else if (real.empty() && log) {
+			std::string list;
+			for (const auto &h : saw)
+				list += (list.empty() ? "" : ", ") + h;
+			log("NDI: nothing is publishing '" + f.channel + "' (" + f.name +
+			    "), so their feed will "
+			    "be blank. NDI can see: " +
+			    (list.empty() ? "nothing at all" : list));
+		}
 		obs_data_t *st = ndiSettings(f);
 		if (!alreadySet(src, st))
 			obs_source_update(src, st);
 		obs_data_release(st);
 		obs_source_release(src);
 	}
+	if (changed)
+		cfg.save();
 }
 
 std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
@@ -342,6 +397,21 @@ std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 	if (f.kind == FriendKind::Ndi) {
 		if (!kindAvailable("ndi_source"))
 			return "the NDI source type is missing: install DistroAV (obs-ndi) first";
+		std::vector<std::string> saw;
+		std::string real = resolveNdiName(f.channel, &saw);
+		if (real.empty()) {
+			std::string list;
+			for (const auto &h : saw)
+				list += (list.empty() ? "" : ", ") + h;
+			return "nothing on the network is publishing '" + f.channel + "'" +
+			       (list.empty() ? " - and NDI cannot see any feed at all right now"
+					     : " - NDI can see: " + list);
+		}
+		if (real != f.channel) {
+			if (log)
+				log("NDI: '" + f.channel + "' is really called '" + real + "' - using that.");
+			f.channel = real;
+		}
 		obs_data_t *st = ndiSettings(f);
 		std::string e = createInScene(cfg, "ndi_source", base, st, true, false);
 		obs_data_release(st);

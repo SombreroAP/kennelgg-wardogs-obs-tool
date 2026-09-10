@@ -50,10 +50,12 @@ public:
 	/// Sources a squad mate needs, created and placed. Fills f.source / f.audioSource.
 	std::string createFriendSources(const Config &cfg, Friend &f);
 	std::string createGameCapture(Config &cfg);
+	/// What a squad mate's feed is really called on the network ("" = nobody is publishing it).
+	static std::string resolveNdiName(const std::string &wanted, std::vector<std::string> *sawOut = nullptr);
 	/// Receiving settings for a squad mate's NDI feed (frame sync on, their bandwidth choice).
 	static obs_data_t *ndiSettings(const Friend &f); // caller releases
 	/// Apply those to the NDI feeds already in OBS.
-	void tuneNdiSources(const Config &cfg);
+	void tuneNdiSources(Config &cfg);
 	/// Publish the program feed over NDI (DistroAV's output type) on mixer track 6, with every microphone
 	/// input taken off that track so squad mates get game audio only. Returns "" or an error.
 	std::string startNdiShare(const std::string &ndiName, int shareHeight, int shareFps);

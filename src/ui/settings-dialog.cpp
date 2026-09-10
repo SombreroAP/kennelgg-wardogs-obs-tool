@@ -1,6 +1,7 @@
 #include "ui/settings-dialog.h"
 #include "ndi.h"
 #include <algorithm>
+#include <QScrollArea>
 #include <QJsonArray>
 #include <QTimer>
 #include <QApplication>
@@ -468,18 +469,29 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	setWindowTitle("Kennel.gg WARDOGS OBS Tools");
 	setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowMinMaxButtonsHint);
 	setSizeGripEnabled(true);
-	setMinimumSize(640, 480);
+	setMinimumSize(560, 400); // it scrolls now, so it can be made genuinely small
 	resize(900, 720);
 	auto *v = new QVBoxLayout(this);
 	auto *tabs = new QTabWidget(this);
-	tabs->addTab(buildSwitchTab(), "Switch");
-	tabs->addTab(buildLookTab(), "Look");
-	tabs->addTab(buildDetectTab(), "Detect");
-	tabs->addTab(buildDualTab(), "Dual POV");
-	tabs->addTab(buildClipsTab(), "Clips");
-	tabs->addTab(buildAppTab(), "ClipHound");
-	tabs->addTab(buildLogsTab(), "Logs");
-	tabs->addTab(buildAboutTab(), "Help");
+	// Every tab scrolls. On a small screen, at 125 % Windows scaling or with a large font, the
+	// contents used to be squeezed into whatever height was left instead of keeping their own.
+	auto scrolled = [tabs](QWidget *page, const char *name) {
+		auto *sa = new QScrollArea(tabs);
+		sa->setWidget(page);
+		sa->setWidgetResizable(true);
+		sa->setFrameShape(QFrame::NoFrame);
+		sa->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+		page->setMinimumWidth(560); // narrower than this and the two-column rows get silly
+		tabs->addTab(sa, name);
+	};
+	scrolled(buildSwitchTab(), "Switch");
+	scrolled(buildLookTab(), "Look");
+	scrolled(buildDetectTab(), "Detect");
+	scrolled(buildDualTab(), "Dual POV");
+	scrolled(buildClipsTab(), "Clips");
+	scrolled(buildAppTab(), "ClipHound");
+	tabs->addTab(buildLogsTab(), "Logs"); // already a scrolling text view
+	scrolled(buildAboutTab(), "Help");
 	building_ = false;
 	fillSources(); // again, now that every tab that shows a source list exists
 	v->addWidget(tabs, 1);
@@ -917,6 +929,7 @@ QWidget *SettingsDialog::buildDetectTab()
 		saveAndApply();
 	});
 	frame_ = new FramePreview(w);
+	frame_->setMinimumHeight(260); // inside a scrolling tab a picture with no floor collapses
 	v->addWidget(frame_, 1);
 	meter_ = new QProgressBar(w);
 	meter_->setRange(0, 1000);
