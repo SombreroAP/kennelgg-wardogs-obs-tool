@@ -91,6 +91,7 @@ void Roster::poll()
 				e.name = m.value("name").toString().trimmed();
 				if (e.name.isEmpty())
 					continue;
+				e.handle = m.value("username").toString().trimmed();
 				e.streaming = m.value("streaming").toBool();
 				e.camera = m.value("camera").toBool();
 				e.channel = chan;

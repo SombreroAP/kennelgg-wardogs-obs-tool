@@ -16,6 +16,7 @@ class Roster : public QObject {
 public:
 	struct Member {
 		QString name;           // their Discord display name
+		QString handle;         // their Discord username: what a popped-out share is titled with
 		bool streaming = false; // they have gone live in the call
 		bool camera = false;
 		QString channel; // the voice channel they are in

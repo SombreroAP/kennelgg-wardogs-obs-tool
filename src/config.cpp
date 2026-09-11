@@ -89,6 +89,7 @@ void Config::load()
 	DEFB(audioDefaults2);
 	DEFB(audioDefaults3);
 	DEFB(ndiShelved);
+	DEFB(discordShared1);
 	DEFB(rosterEnabled);
 	DEFS(rosterUrl);
 	DEFS(rosterChannel);
@@ -201,6 +202,7 @@ void Config::load()
 	GETB(audioDefaults2);
 	GETB(audioDefaults3);
 	GETB(ndiShelved);
+	GETB(discordShared1);
 	GETB(rosterEnabled);
 	GETS(rosterUrl);
 	GETS(rosterChannel);
@@ -322,6 +324,7 @@ void Config::load()
 			obs_data_set_default_bool(it, "trim", true);
 			f.trim = obs_data_get_bool(it, "trim");
 			f.fromRoster = obs_data_get_bool(it, "fromRoster");
+			f.handle = obs_data_get_string(it, "handle");
 			f.ndiBw = (int)obs_data_get_int(it, "ndiBw");
 			f.ndiSync = (int)obs_data_get_int(it, "ndiSync");
 			if (obs_data_has_user_value(it, "vdoHeight")) {
@@ -432,6 +435,7 @@ void Config::save() const
 	SETB(audioDefaults2);
 	SETB(audioDefaults3);
 	SETB(ndiShelved);
+	SETB(discordShared1);
 	SETB(rosterEnabled);
 	SETS(rosterUrl);
 	SETS(rosterChannel);
@@ -547,6 +551,7 @@ void Config::save() const
 		obs_data_set_string(it, "gameName", f.gameName.c_str());
 		obs_data_set_bool(it, "trim", f.trim);
 		obs_data_set_bool(it, "fromRoster", f.fromRoster);
+		obs_data_set_string(it, "handle", f.handle.c_str());
 		obs_data_set_int(it, "ndiBw", f.ndiBw);
 		obs_data_set_int(it, "ndiSync", f.ndiSync);
 		obs_data_set_int(it, "vdoHeight", f.vdoHeight);

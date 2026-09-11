@@ -40,6 +40,10 @@ public:
 	/// Bring the squad slots into line with the roster. Adds a slot when somebody goes live in the
 	/// call, takes it away when they stop. Slots you added by hand are never touched.
 	void syncRoster();
+	/// Discord titles a popped-out share with its owner's username. Find those windows, give each
+	/// squad mate their own capture of theirs, and take it back when the window goes.
+	void watchPopouts();
+	void armPopoutWatch();
 	QString rosterStatus() const { return roster.status(); }
 	void applyLan();
 	void applyReplaySeconds();
@@ -174,6 +178,8 @@ private:
 	void detect(const Match &m);
 
 	QTimer timer_, frameTimer_, downDelay_, upDelay_;
+	QTimer popoutTimer_;
+	QString popoutNote_; // the unnamed pop-out we last mentioned, so the log says it once
 	std::atomic<bool> busy_{false}, stopping_{false}, frameBusy_{false};
 	Capture capGame_, capFriend_, capRoi_;
 	QString appStatus_;

@@ -33,6 +33,17 @@ public:
 	std::vector<std::pair<std::string, std::string>> sceneItems(const Config &cfg);
 	/// Fingerprint of what a source shows right now; sample it fast to measure its real frame rate.
 	uint64_t feedHash(const std::string &sourceName);
+	/// A Discord window that is not the main one: a popped-out share or call. Discord titles a
+	/// popped-out tile with the person's username once it has drawn, so the title says whose it is.
+	struct Popout {
+		std::string title, cls, window; // window: OBS's "title:class:exe" spelling, ready to set
+		bool minimized = false;
+	};
+	static std::vector<Popout> discordPopouts();
+	/// Give a squad mate their own capture of this pop-out, bound by exact title. "" or a problem.
+	std::string bindPopout(const Config &cfg, Friend &f, const Popout &p);
+	/// Back onto the shared Discord capture; their own one is deleted.
+	void unbindPopout(const Config &cfg, Friend &f);
 	/// Crop a Discord window capture down to the picture inside it. "" or a problem.
 	std::string trimToContent(const Config &cfg, const Friend &f);
 	/// Put the streamer's own camera and alerts back over the top of everything we add.

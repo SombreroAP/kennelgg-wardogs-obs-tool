@@ -7,6 +7,10 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#endif
 
 static std::string urlEncode(const std::string &s)
 {
@@ -387,6 +391,14 @@ int Switcher::removeFriendSources(const Config &cfg, const Friend &f)
 {
 	int gone = 0;
 	for (const auto &name : friendSourceNames(cfg, f)) {
+		// the shared Discord capture belongs to everyone watching the call; it goes with the last
+		// of them, not the first
+		int users = 0;
+		for (const auto &g : cfg.friends)
+			if (g.source == name || g.audioSource == name)
+				users++;
+		if (users > 1)
+			continue;
 		obs_source_t *src = obs_get_source_by_name(name.c_str());
 		if (!src)
 			continue;
@@ -456,28 +468,34 @@ std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 {
 	std::string base = "Kennel.gg · " + (f.name.empty() ? std::string("squad mate") : f.name);
 	if (f.kind == FriendKind::Discord) {
-		// their popped-out Go Live window, captured with the Windows 10 method so it survives being covered
+		// "Any Discord window" means the share is watched inside Discord's own window, and every
+		// squad mate set up that way is looking at the same window: one capture between them, not
+		// one each. Five captures of one window cost five times the GPU and all showed the same
+		// picture anyway. When one of them pops their share out, bindPopout gives them their own.
+		bool shared = f.sharesDiscordCall();
+		std::string video = shared ? Friend::discordCallSourceName() : base;
+		std::string audio = shared ? Friend::discordCallAudioName() : base + " audio";
 		obs_data_t *st = obs_data_create();
 		obs_data_set_string(st, "window", f.channel.c_str());
-		obs_data_set_int(st, "method", 2);
+		obs_data_set_int(st, "method", 2); // Windows 10 capture: survives the window being covered
 		obs_data_set_int(st, "priority",
 				 f.channel.find("Discord.exe") != std::string::npos ? 2 : 1); // 2 = match by executable
 		obs_data_set_bool(st, "cursor", false);
 		obs_data_set_bool(st, "client_area", true);
-		std::string e = createInScene(cfg, "window_capture", base, st, true, false);
+		std::string e = createInScene(cfg, "window_capture", video, st, true, false);
 		obs_data_release(st);
 		if (!e.empty())
 			return e;
-		f.source = base;
+		f.source = video;
 		// Discord's audio (their game sound), matched by executable so it follows any Discord window
 		obs_data_t *au = obs_data_create();
 		obs_data_set_string(au, "window", f.channel.c_str());
 		obs_data_set_int(au, "priority", 2);
-		e = createInScene(cfg, "wasapi_process_output_capture", base + " audio", au, false, false);
+		e = createInScene(cfg, "wasapi_process_output_capture", audio, au, false, false);
 		obs_data_release(au);
 		if (!e.empty())
 			return e;
-		f.audioSource = base + " audio";
+		f.audioSource = audio;
 		return "";
 	}
 	if (f.kind == FriendKind::Ndi) {
@@ -507,6 +525,134 @@ std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 		return "";
 	}
 	return "";
+}
+
+#ifdef _WIN32
+/// OBS's own spelling of a window: "title:class:exe", with '#' and ':' inside the title escaped the
+/// way libobs does it (window-helpers.c encode_dstr), '#' first so an escape is never re-escaped.
+static std::string obsWindowString(const std::string &title, const std::string &cls, const std::string &exe)
+{
+	std::string t;
+	for (char c : title) {
+		if (c == '#')
+			t += "#22";
+		else if (c == ':')
+			t += "#3A";
+		else
+			t += c;
+	}
+	return t + ":" + cls + ":" + exe;
+}
+
+static std::string narrow(const wchar_t *w)
+{
+	if (!w || !*w)
+		return "";
+	int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, nullptr, 0, nullptr, nullptr);
+	std::string out(n > 0 ? n - 1 : 0, '\0');
+	if (n > 0)
+		WideCharToMultiByte(CP_UTF8, 0, w, -1, &out[0], n, nullptr, nullptr);
+	return out;
+}
+
+static BOOL CALLBACK popoutEnum(HWND hwnd, LPARAM lp)
+{
+	auto *out = reinterpret_cast<std::vector<Switcher::Popout> *>(lp);
+	if (!IsWindowVisible(hwnd))
+		return TRUE;
+	LONG style = GetWindowLongW(hwnd, GWL_STYLE), ex = GetWindowLongW(hwnd, GWL_EXSTYLE);
+	if ((style & WS_CHILD) || (ex & WS_EX_TOOLWINDOW))
+		return TRUE;
+	DWORD pid = 0;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (!pid)
+		return TRUE;
+	HANDLE ph = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+	if (!ph)
+		return TRUE;
+	wchar_t path[MAX_PATH] = {};
+	DWORD len = MAX_PATH;
+	bool ok = QueryFullProcessImageNameW(ph, 0, path, &len) != 0;
+	CloseHandle(ph);
+	if (!ok)
+		return TRUE;
+	std::string exe = narrow(path);
+	size_t slash = exe.find_last_of("\\/");
+	if (slash != std::string::npos)
+		exe = exe.substr(slash + 1);
+	if (_stricmp(exe.c_str(), "Discord.exe") != 0)
+		return TRUE;
+	wchar_t cls[128] = {}, title[512] = {};
+	GetClassNameW(hwnd, cls, 128);
+	GetWindowTextW(hwnd, title, 512);
+	Switcher::Popout p;
+	p.title = narrow(title);
+	p.cls = narrow(cls);
+	if (p.title.empty() || p.cls.rfind("Chrome_WidgetWin_", 0) != 0)
+		return TRUE;
+	// Discord's main window ("#squad | Kennel.gg - Discord", or plain "Discord") is not a pop-out
+	std::string t = p.title;
+	if (t == "Discord" || (t.size() > 10 && t.compare(t.size() - 10, 10, " - Discord") == 0))
+		return TRUE;
+	p.window = obsWindowString(p.title, p.cls, exe);
+	p.minimized = IsIconic(hwnd) != 0;
+	out->push_back(p);
+	return TRUE;
+}
+#endif
+
+std::vector<Switcher::Popout> Switcher::discordPopouts()
+{
+	std::vector<Popout> out;
+#ifdef _WIN32
+	EnumWindows(popoutEnum, reinterpret_cast<LPARAM>(&out));
+#endif
+	return out;
+}
+
+std::string Switcher::bindPopout(const Config &cfg, Friend &f, const Popout &p)
+{
+	std::string mine = "Kennel.gg · " + (f.name.empty() ? std::string("squad mate") : f.name);
+	obs_data_t *st = obs_data_create();
+	obs_data_set_string(st, "window", p.window.c_str());
+	obs_data_set_int(st, "method", 2);
+	obs_data_set_int(st, "priority", 1); // exact title: this window and no other
+	obs_data_set_bool(st, "cursor", false);
+	obs_data_set_bool(st, "client_area", true);
+	std::string e = createInScene(cfg, "window_capture", mine, st, true, false);
+	obs_data_release(st);
+	if (!e.empty())
+		return e;
+	f.source = mine; // the shared call capture stays for everyone else; their audio stays shared too
+	return "";
+}
+
+void Switcher::unbindPopout(const Config &cfg, Friend &f)
+{
+	if (!f.onPopout())
+		return;
+	std::string mine = f.source;
+	f.source = Friend::discordCallSourceName();
+	int users = 0;
+	for (const auto &g : cfg.friends)
+		if (g.source == mine)
+			users++;
+	if (users) // someone else is somehow on it; leave it
+		return;
+	obs_source_t *src = obs_get_source_by_name(mine.c_str());
+	if (!src)
+		return;
+	hideEverywhere(mine);
+	struct obs_frontend_source_list scenes = {};
+	obs_frontend_get_scenes(&scenes);
+	for (size_t i = 0; i < scenes.sources.num; i++) {
+		obs_scene_t *scene = obs_scene_from_source(scenes.sources.array[i]);
+		if (obs_sceneitem_t *it = scene ? obs_scene_find_source(scene, mine.c_str()) : nullptr)
+			obs_sceneitem_remove(it);
+	}
+	obs_frontend_source_list_free(&scenes);
+	obs_source_remove(src);
+	obs_source_release(src);
 }
 
 std::string Switcher::createGameCapture(Config &cfg)

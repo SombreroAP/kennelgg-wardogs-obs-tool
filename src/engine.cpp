@@ -48,6 +48,8 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	downSince_ = lastReviveSeen_;
 	lastPick_ = lastNearbyWarn_ = lastReviveSeen_;
 	connect(&roster, &Roster::changed, this, &Engine::syncRoster);
+	popoutTimer_.setInterval(2000);
+	connect(&popoutTimer_, &QTimer::timeout, this, &Engine::watchPopouts);
 	connect(&timer_, &QTimer::timeout, this, &Engine::tick);
 	connect(&frameTimer_, &QTimer::timeout, this, &Engine::frameTick);
 	downDelay_.setSingleShot(true);
@@ -732,6 +734,30 @@ void Engine::start()
 	if (cfg.launchApp)
 		launchApp();
 	sw.migrateNames(cfg); // sources a build before 0.7.0 made, under their old names
+	if (!cfg.discordShared1) {
+		// 0.7.5 gave every squad mate watching the Discord call their own capture of the same
+		// window. Fold them into the one shared capture; a pop-out gets its own again when it appears.
+		int folded = 0;
+		for (auto &f : cfg.friends) {
+			if (!f.sharesDiscordCall() || f.source == Friend::discordCallSourceName())
+				continue;
+			sw.removeFriendSources(cfg, f);
+			f.source.clear();
+			f.audioSource.clear();
+			std::string e = sw.createFriendSources(cfg, f);
+			if (!e.empty())
+				log("Could not remake " + QString::fromStdString(f.name) +
+				    "'s Discord capture: " + QString::fromStdString(e));
+			else
+				folded++;
+		}
+		cfg.discordShared1 = true;
+		cfg.save();
+		if (folded)
+			log(QString("Squad mates watching the Discord call now share one capture (%1 moved over).")
+				    .arg(folded));
+	}
+	armPopoutWatch();
 #ifdef _WIN32
 	// Two copies of this plugin both load, and the second one gets no bridge port: ClipHound then
 	// connects to the wrong one and everything looks like it is "starting" for ever.
@@ -1050,12 +1076,18 @@ void Engine::syncRoster()
 	for (const auto &m : live) {
 		bool known = false;
 		for (auto &f : cfg.friends)
-			if (m.name.compare(QString::fromStdString(f.name), Qt::CaseInsensitive) == 0)
+			if (m.name.compare(QString::fromStdString(f.name), Qt::CaseInsensitive) == 0) {
 				known = true;
+				if (f.handle.empty() && !m.handle.isEmpty()) {
+					f.handle = m.handle.toStdString(); // an older slot learns the username
+					changed = true;
+				}
+			}
 		if (known)
 			continue; // already there, by hand or from an earlier poll
 		Friend f;
 		f.name = m.name.toStdString();
+		f.handle = m.handle.toStdString();
 		f.kind = FriendKind::Discord;
 		// matched by executable, so it follows the Go Live window whether or not it is popped out
 		f.channel = "Discord:Chrome_WidgetWin_1:Discord.exe";
@@ -1086,7 +1118,121 @@ void Engine::syncRoster()
 	cfg.save();
 	if (cfg.keepWarm && !applied_)
 		sw.armWarm(cfg);
+	armPopoutWatch();
 	emit stateChanged();
+}
+
+void Engine::armPopoutWatch()
+{
+	bool any = false;
+	for (const auto &f : cfg.friends)
+		if (f.sharesDiscordCall())
+			any = true;
+	if (any && !popoutTimer_.isActive()) {
+		popoutTimer_.start();
+		watchPopouts();
+	} else if (!any && popoutTimer_.isActive())
+		popoutTimer_.stop();
+}
+
+void Engine::watchPopouts()
+{
+	if (stopping_)
+		return;
+	std::vector<Switcher::Popout> wins = Switcher::discordPopouts();
+	auto lower = [](const std::string &s) {
+		return QString::fromStdString(s).toLower();
+	};
+	std::vector<bool> taken(wins.size(), false);
+	bool changed = false;
+	const Friend *active = cfg.active();
+	std::string activeName = active ? active->name : "";
+	int liveShared = 0; // squad mates watching the call who are not on a pop-out yet
+	for (const auto &f : cfg.friends)
+		if (f.sharesDiscordCall() && !f.onPopout())
+			liveShared++;
+
+	// 1. everyone: is their window still there, or is there one for them now
+	for (auto &f : cfg.friends) {
+		if (!f.sharesDiscordCall())
+			continue;
+		QString name = lower(f.name), handle = lower(f.handle);
+		int hit = -1;
+		for (size_t i = 0; i < wins.size() && hit < 0; ++i) {
+			if (taken[i])
+				continue;
+			QString t = lower(wins[i].title);
+			if (t == "discord popout") // not drawn yet, so not named yet
+				continue;
+			if ((!handle.isEmpty() && t.contains(handle)) || (name.size() >= 3 && t.contains(name)))
+				hit = (int)i;
+		}
+		// the one pop-out that has no name yet: if exactly one of the squad is on the shared call
+		// it can only be theirs. Anything more ambiguous waits for Discord to title it.
+		if (hit < 0 && liveShared == 1 && !f.onPopout()) {
+			int unnamed = -1, count = 0;
+			for (size_t i = 0; i < wins.size(); ++i)
+				if (!taken[i] && lower(wins[i].title) == "discord popout") {
+					unnamed = (int)i;
+					count++;
+				}
+			if (count == 1)
+				hit = unnamed;
+		}
+		if (hit >= 0) {
+			taken[hit] = true;
+			if (!f.onPopout()) {
+				std::string e = sw.bindPopout(cfg, f, wins[hit]);
+				if (!e.empty()) {
+					log("Squad: found " + QString::fromStdString(f.name) +
+					    "'s pop-out but could not capture it: " + QString::fromStdString(e));
+					continue;
+				}
+				log("Squad: " + QString::fromStdString(f.name) + "'s share is popped out (\"" +
+				    QString::fromStdString(wins[hit].title) + "\") - showing that window for them.");
+				changed = true;
+				if (applied_ && f.name == activeName) {
+					Switcher::hideEverywhere(Friend::discordCallSourceName());
+					applyNow(true, "their pop-out appeared");
+				}
+			}
+			QString minKey = QString::fromStdString(f.name) + "/min";
+			if (wins[hit].minimized && popoutNote_ != minKey) {
+				popoutNote_ = minKey;
+				log("Squad: " + QString::fromStdString(f.name) +
+				    "'s pop-out is minimised, so its picture is frozen - restore the window (it can "
+				    "sit behind the game, just not minimised).");
+			}
+		} else if (f.onPopout()) {
+			sw.unbindPopout(cfg, f);
+			log("Squad: " + QString::fromStdString(f.name) +
+			    "'s pop-out closed - back to the Discord window for them.");
+			changed = true;
+			if (applied_ && f.name == activeName)
+				applyNow(true, "their pop-out closed");
+		}
+	}
+
+	// 2. a named pop-out nobody matched: say so once, it usually means the roster has no username
+	for (size_t i = 0; i < wins.size(); ++i) {
+		if (taken[i])
+			continue;
+		QString t = QString::fromStdString(wins[i].title);
+		if (t.compare("Discord Popout", Qt::CaseInsensitive) == 0)
+			continue;
+		if (popoutNote_ != t) {
+			popoutNote_ = t;
+			log("Squad: a Discord pop-out titled \"" + t +
+			    "\" is open but matches nobody in the squad. If it is a squad mate's, their name in "
+			    "the slot needs to appear in that title.");
+		}
+	}
+	if (changed) {
+		cfg.save();
+		if (cfg.keepWarm && !applied_)
+			sw.armWarm(cfg);
+		emit stateChanged();
+	}
 }
 
 void Engine::reloadConfig()
@@ -1109,6 +1255,7 @@ void Engine::reloadConfig()
 		bridge.close();
 	applyLan();
 	applyRosterConfig();
+	armPopoutWatch();
 	applyReplaySeconds();
 	detGame_.threshold = cfg.threshold;
 	detRevive_.threshold = cfg.reviveThreshold;

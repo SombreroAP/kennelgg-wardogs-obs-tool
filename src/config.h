@@ -26,6 +26,17 @@ struct Friend {
 	/// somebody goes live in the call and takes them away again when they stop, so a slot is never
 	/// left behind. Slots you made yourself are never touched.
 	bool fromRoster = false;
+	/// Their Discord username (the handle), when the roster gave it. A popped-out share is titled
+	/// with this, not the display name, so it is what the pop-out watcher matches on.
+	std::string handle;
+	/// "Any Discord window": the share is watched inside Discord's own window. Every squad mate set
+	/// up this way is looking at the same window, so they share one capture.
+	static const char *anyDiscordWindow() { return "Discord:Chrome_WidgetWin_1:Discord.exe"; }
+	bool sharesDiscordCall() const { return kind == FriendKind::Discord && channel == anyDiscordWindow(); }
+	/// Bound to their own popped-out window right now (the source is theirs, not the shared one).
+	bool onPopout() const { return sharesDiscordCall() && !source.empty() && source != discordCallSourceName(); }
+	static const char *discordCallSourceName() { return "Kennel.gg · Discord call"; }
+	static const char *discordCallAudioName() { return "Kennel.gg · Discord call audio"; }
 	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }
 };
 
@@ -57,6 +68,7 @@ struct Config {
 	bool audioDefaults2 = false; // one-time move to "nothing of yours is muted by default"
 	bool audioDefaults3 = false; // ...and once more: nothing muted, and no sound taken from their feed
 	bool ndiShelved = false;     // NDI and LAN discovery off and hidden until they are ready
+	bool discordShared1 = false; // one-time move to one shared capture of the Discord window
 	// Discord roster: the Kennel.gg bot publishes who is in voice and who is sharing, and squad
 	// slots fill themselves in from it. Off until an address is entered.
 	bool rosterEnabled = false;
