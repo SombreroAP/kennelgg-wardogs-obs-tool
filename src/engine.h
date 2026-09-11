@@ -14,6 +14,7 @@
 #include "clips.h"
 #include "lan.h"
 #include "speed.h"
+#include "roster.h"
 #include "config.h"
 #include "detector.h"
 #include "switcher.h"
@@ -34,6 +35,12 @@ public:
 	Speed speed;       // measures the link to a squad mate, so the NDI size can be picked on a number
 	QString ndiShareName() const { return "Kennel POV"; }
 	QString playerName() const;
+	Roster roster; // who is in Discord voice and who is sharing (published by the Kennel.gg bot)
+	void applyRosterConfig();
+	/// Bring the squad slots into line with the roster. Adds a slot when somebody goes live in the
+	/// call, takes it away when they stop. Slots you added by hand are never touched.
+	void syncRoster();
+	QString rosterStatus() const { return roster.status(); }
 	void applyLan();
 	void applyReplaySeconds();
 	void syncAppPort();

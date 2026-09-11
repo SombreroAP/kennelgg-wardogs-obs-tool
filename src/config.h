@@ -22,6 +22,10 @@ struct Friend {
 		       kind == FriendKind::YouTube;
 	}
 	const std::string &nearName() const { return gameName.empty() ? name : gameName; }
+	/// Added by the Discord roster rather than by hand. The plugin owns these: it adds them when
+	/// somebody goes live in the call and takes them away again when they stop, so a slot is never
+	/// left behind. Slots you made yourself are never touched.
+	bool fromRoster = false;
 	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }
 };
 
@@ -53,7 +57,14 @@ struct Config {
 	bool audioDefaults2 = false; // one-time move to "nothing of yours is muted by default"
 	bool audioDefaults3 = false; // ...and once more: nothing muted, and no sound taken from their feed
 	bool ndiShelved = false;     // NDI and LAN discovery off and hidden until they are ready
-	int vdoBitrateKbps = 12000;  // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
+	// Discord roster: the Kennel.gg bot publishes who is in voice and who is sharing, and squad
+	// slots fill themselves in from it. Off until an address is entered.
+	bool rosterEnabled = false;
+	std::string rosterUrl;        // https://kennel.gg/api/voice-<key>.json
+	std::string rosterChannel;    // only this voice channel ("" = whichever one people are in)
+	int rosterPollS = 6;          // how often to ask
+	bool rosterAddSources = true; // create the Discord capture for whoever goes live
+	int vdoBitrateKbps = 12000;   // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
 
 	// dual POV: a squad mate's feed in a small window over your own POV (tank / chopper crews)
 	bool dualEnabled = false;
@@ -116,7 +127,7 @@ struct Config {
 		false; // edited while the app was not connected; push on connect // tell ClipHound to quit when OBS closes (and end it if we started it)
 	std::string clipNameTemplate = "{title} - {date} {time}"; // the same words as the Twitch clip, then when
 	bool autoStartReplay = true;
-	int replaySeconds = 45; // how far back a clip reaches; written into OBS's replay-buffer setting
+	int replaySeconds = 45;               // how far back a clip reaches; written into OBS's replay-buffer setting
 	bool clipOnDowned = false;            // also clip when you get downed (the moment before is in the buffer)
 	bool clipUseReplay = true;            // save OBS's own replay buffer on a clip
 	std::vector<std::string> clipHotkeys; // OBS hotkey names fired on every clip (e.g. Aitum Backtrack "save")

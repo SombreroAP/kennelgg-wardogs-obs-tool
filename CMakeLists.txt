@@ -48,6 +48,7 @@ target_sources(
     src/lan.cpp
     src/ndi.cpp
     src/speed.cpp
+    src/roster.cpp
     src/ui/dock.cpp
     src/ui/wizard.cpp
     src/ui/settings-dialog.cpp

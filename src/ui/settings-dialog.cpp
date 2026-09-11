@@ -964,6 +964,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 	lanStatus_ = muted("", gl);
 	fl->addRow(lanStatus_);
 	v->addWidget(gl);
+	v->addWidget(gr);
 	lanOn_->setChecked(e_->cfg.lanEnabled);
 	ndiShare_->setChecked(e_->cfg.ndiShare);
 	connect(ndiQuality_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
@@ -994,6 +995,46 @@ QWidget *SettingsDialog::buildSwitchTab()
 	};
 	fillPeers();
 	connect(&e_->lan, &Lan::peersChanged, this, fillPeers);
+
+	auto *gr = new QGroupBox("Squad from Discord", w);
+	auto *fr = new QFormLayout(gr);
+	rosterOn_ = new QCheckBox("Fill squad slots from who is sharing in Discord", gr);
+	rosterOn_->setChecked(e_->cfg.rosterEnabled);
+	fr->addRow(rosterOn_);
+	rosterUrl_ = new QLineEdit(QString::fromStdString(e_->cfg.rosterUrl), gr);
+	rosterUrl_->setPlaceholderText("https://kennel.gg/api/voice-....json");
+	fr->addRow("Roster address", rosterUrl_);
+	rosterChannel_ = new QLineEdit(QString::fromStdString(e_->cfg.rosterChannel), gr);
+	rosterChannel_->setPlaceholderText("(any voice channel)");
+	fr->addRow("Only this channel", rosterChannel_);
+	rosterSources_ = new QCheckBox("Also make their Discord capture for them", gr);
+	rosterSources_->setChecked(e_->cfg.rosterAddSources);
+	fr->addRow(rosterSources_);
+	rosterStatus_ = new QLabel(gr);
+	rosterStatus_->setWordWrap(true);
+	fr->addRow(rosterStatus_);
+	auto *rosterNote =
+		new QLabel("Discord will not tell a plugin who is in a call, so the Kennel.gg Discord bot publishes it "
+			   "instead. Ask in the server for your roster address - it carries a key, so treat it like a "
+			   "password and do not put it on stream. When somebody goes live in the call a squad slot "
+			   "appears with their Discord name on it, and it goes away again when they stop. Slots you "
+			   "added yourself are never touched.",
+			   gr);
+	rosterNote->setWordWrap(true);
+	rosterNote->setStyleSheet("color: palette(mid);");
+	fr->addRow(rosterNote);
+	auto showRoster = [this]() {
+		QString s = e_->rosterStatus();
+		QStringList live;
+		for (const auto &m : e_->roster.streamers())
+			live << m.name;
+		if (!live.isEmpty())
+			s += "  -  sharing: " + live.join(", ");
+		rosterStatus_->setText(s);
+	};
+	connect(&e_->roster, &Roster::changed, this, showRoster);
+	connect(&e_->roster, &Roster::polled, this, showRoster);
+	showRoster();
 
 	auto *g3 = new QGroupBox("Sound while a squad mate is on screen", w);
 	auto *v3 = new QVBoxLayout(g3);
@@ -1053,6 +1094,10 @@ QWidget *SettingsDialog::buildSwitchTab()
 	v4->addWidget(warmNdi_);
 	connect(warmNdi_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	v->addWidget(g4);
+	connect(rosterOn_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(rosterSources_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(rosterUrl_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
+	connect(rosterChannel_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
 	connect(bringFront_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(keepWarm_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 
@@ -2498,6 +2543,10 @@ void SettingsDialog::collect()
 	if (sceneV_)
 		c.sceneV = sceneV_->currentData().toString().toStdString();
 	c.lanEnabled = lanOn_->isChecked();
+	c.rosterEnabled = rosterOn_->isChecked();
+	c.rosterUrl = rosterUrl_->text().trimmed().toStdString();
+	c.rosterChannel = rosterChannel_->text().trimmed().toStdString();
+	c.rosterAddSources = rosterSources_->isChecked();
 	c.ndiShare = ndiShare_->isChecked();
 	c.autoAddPeers = autoAdd_->isChecked();
 	c.keepWarm = keepWarm_->isChecked();

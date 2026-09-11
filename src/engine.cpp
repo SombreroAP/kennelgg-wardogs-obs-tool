@@ -47,6 +47,7 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	lastReviveSeen_ = clock_::now() - std::chrono::hours(1);
 	downSince_ = lastReviveSeen_;
 	lastPick_ = lastNearbyWarn_ = lastReviveSeen_;
+	connect(&roster, &Roster::changed, this, &Engine::syncRoster);
 	connect(&timer_, &QTimer::timeout, this, &Engine::tick);
 	connect(&frameTimer_, &QTimer::timeout, this, &Engine::frameTick);
 	downDelay_.setSingleShot(true);
@@ -741,6 +742,7 @@ void Engine::start()
 		    "never fire.");
 #endif
 	applyLan();
+	applyRosterConfig();
 #ifdef _WIN32
 	// Say this once, unprompted: a reserved port range silently stops NDI working for anyone not
 	// running OBS as administrator, and nothing on screen would ever hint at it.
@@ -1002,6 +1004,91 @@ void Engine::stop()
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
+void Engine::applyRosterConfig()
+{
+	if (!cfg.rosterEnabled || cfg.rosterUrl.empty()) {
+		roster.stop();
+		return;
+	}
+	roster.configure(QString::fromStdString(cfg.rosterUrl), cfg.rosterPollS,
+			 QString::fromStdString(cfg.rosterChannel));
+}
+
+void Engine::syncRoster()
+{
+	if (!cfg.rosterEnabled)
+		return;
+	// Only the people actually sharing get a slot. Everyone in the call would mean a window
+	// capture each for feeds that do not exist, and Discord puts every share inside the one
+	// window anyway - a slot for somebody who is not live could never show anything.
+	QList<Roster::Member> live = roster.streamers();
+	QString activeName = (cfg.activeFriend >= 0 && cfg.activeFriend < (int)cfg.friends.size())
+				     ? QString::fromStdString(cfg.friends[cfg.activeFriend].name)
+				     : QString();
+	bool changed = false;
+
+	// gone: they stopped sharing or left the call
+	for (size_t i = cfg.friends.size(); i-- > 0;) {
+		Friend &f = cfg.friends[i];
+		if (!f.fromRoster)
+			continue; // yours, not ours
+		bool still = false;
+		for (const auto &m : live)
+			if (m.name.compare(QString::fromStdString(f.name), Qt::CaseInsensitive) == 0)
+				still = true;
+		if (still)
+			continue;
+		if (applied_ && (int)i == cfg.activeFriend)
+			applyNow(false, "their Discord share ended");
+		sw.removeFriendSources(cfg, f);
+		log("Squad: " + QString::fromStdString(f.name) + " stopped sharing - slot removed.");
+		cfg.friends.erase(cfg.friends.begin() + (long)i);
+		changed = true;
+	}
+
+	// new: somebody went live in the call
+	for (const auto &m : live) {
+		bool known = false;
+		for (auto &f : cfg.friends)
+			if (m.name.compare(QString::fromStdString(f.name), Qt::CaseInsensitive) == 0)
+				known = true;
+		if (known)
+			continue; // already there, by hand or from an earlier poll
+		Friend f;
+		f.name = m.name.toStdString();
+		f.kind = FriendKind::Discord;
+		// matched by executable, so it follows the Go Live window whether or not it is popped out
+		f.channel = "Discord:Chrome_WidgetWin_1:Discord.exe";
+		f.fromRoster = true;
+		if (cfg.rosterAddSources) {
+			std::string e = sw.createFriendSources(cfg, f);
+			if (!e.empty()) {
+				log("Squad: " + m.name +
+				    " went live in Discord, but the capture could not be "
+				    "made: " +
+				    QString::fromStdString(e));
+				continue;
+			}
+		}
+		cfg.friends.push_back(f);
+		changed = true;
+		log("Squad: " + m.name + " is sharing in Discord - slot added.");
+	}
+
+	if (!changed)
+		return;
+	// the list moved under it; keep pointing at the same person rather than at whoever slid into
+	// that position
+	cfg.activeFriend = 0;
+	for (size_t i = 0; i < cfg.friends.size(); ++i)
+		if (QString::fromStdString(cfg.friends[i].name) == activeName)
+			cfg.activeFriend = (int)i;
+	cfg.save();
+	if (cfg.keepWarm && !applied_)
+		sw.armWarm(cfg);
+	emit stateChanged();
+}
+
 void Engine::reloadConfig()
 {
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
@@ -1021,6 +1108,7 @@ void Engine::reloadConfig()
 	} else if (!cfg.bridgeEnabled && bridge.listening())
 		bridge.close();
 	applyLan();
+	applyRosterConfig();
 	applyReplaySeconds();
 	detGame_.threshold = cfg.threshold;
 	detRevive_.threshold = cfg.reviveThreshold;

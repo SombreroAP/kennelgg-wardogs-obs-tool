@@ -70,7 +70,8 @@ void Config::load()
 		// up the old file, once, so nobody sets everything up again
 		std::string dir = configDir();
 		size_t cut = dir.find_last_of("/\\", dir.size() - 2);
-		std::string oldPath = (cut == std::string::npos ? dir : dir.substr(0, cut + 1)) + "kennel-wardogs/config.json";
+		std::string oldPath =
+			(cut == std::string::npos ? dir : dir.substr(0, cut + 1)) + "kennel-wardogs/config.json";
 		d = obs_data_create_from_json_file(oldPath.c_str());
 		if (d)
 			obs_log(LOG_INFO, "settings carried over from %s", oldPath.c_str());
@@ -88,6 +89,11 @@ void Config::load()
 	DEFB(audioDefaults2);
 	DEFB(audioDefaults3);
 	DEFB(ndiShelved);
+	DEFB(rosterEnabled);
+	DEFS(rosterUrl);
+	DEFS(rosterChannel);
+	DEFI(rosterPollS);
+	DEFB(rosterAddSources);
 	DEFS(sceneV);
 	DEFI(vdoBitrateKbps);
 	DEFB(dualEnabled);
@@ -195,6 +201,11 @@ void Config::load()
 	GETB(audioDefaults2);
 	GETB(audioDefaults3);
 	GETB(ndiShelved);
+	GETB(rosterEnabled);
+	GETS(rosterUrl);
+	GETS(rosterChannel);
+	GETI(rosterPollS);
+	GETB(rosterAddSources);
 	GETS(sceneV);
 	GETI(vdoBitrateKbps);
 	GETB(dualEnabled);
@@ -310,6 +321,7 @@ void Config::load()
 			f.gameName = obs_data_get_string(it, "gameName");
 			obs_data_set_default_bool(it, "trim", true);
 			f.trim = obs_data_get_bool(it, "trim");
+			f.fromRoster = obs_data_get_bool(it, "fromRoster");
 			f.ndiBw = (int)obs_data_get_int(it, "ndiBw");
 			f.ndiSync = (int)obs_data_get_int(it, "ndiSync");
 			if (obs_data_has_user_value(it, "vdoHeight")) {
@@ -420,6 +432,11 @@ void Config::save() const
 	SETB(audioDefaults2);
 	SETB(audioDefaults3);
 	SETB(ndiShelved);
+	SETB(rosterEnabled);
+	SETS(rosterUrl);
+	SETS(rosterChannel);
+	SETI(rosterPollS);
+	SETB(rosterAddSources);
 	SETS(sceneV);
 	SETI(vdoBitrateKbps);
 	SETB(dualEnabled);
@@ -529,6 +546,7 @@ void Config::save() const
 		obs_data_set_string(it, "channel", f.channel.c_str());
 		obs_data_set_string(it, "gameName", f.gameName.c_str());
 		obs_data_set_bool(it, "trim", f.trim);
+		obs_data_set_bool(it, "fromRoster", f.fromRoster);
 		obs_data_set_int(it, "ndiBw", f.ndiBw);
 		obs_data_set_int(it, "ndiSync", f.ndiSync);
 		obs_data_set_int(it, "vdoHeight", f.vdoHeight);
