@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.7.1
+- **The 0.7.0 installer put the plugin in the wrong folder, so OBS never loaded it** - no dock, no Tools entry, no error. It kept the old AppId so Windows would see an upgrade, and Inno Setup then reused the previous install folder: `kennelgg.dll` ended up under `plugins\kennel-wardogs`, and OBS only loads a DLL named after its folder. 0.7.1 always installs to `plugins\kennelgg` and removes the stray folder 0.7.0 left. Nothing else changed.
+
 ## 0.7.0
 - **Renamed to Kennel.gg Wardogs OBS Tool, all the way down.** The window, the dock, the hotkey labels, the installer, the repo - and now the plugin itself: the module is `kennelgg`, it installs to `plugins\kennelgg`, ClipHound lives in `ProgramData\Kennel.gg\ClipHound`, and every source the plugin makes is named "Kennel.gg ..." ("Kennel.gg · Pup", "Kennel.gg web", "Kennel.gg look", "Kennel.gg dual"). The Help tab has an **About The Kennel** section with what kennel.gg is and links to the site, Discord, Twitch and X, and the installer's welcome page says who made it.
 - **Nothing is lost in the move.** The installer removes the old `plugins\kennel-wardogs` folder (two copies would both load), carries ClipHound's config over and removes its old folder; the plugin picks up its old settings file the first time it starts under the new id; sources made by earlier builds are renamed in place rather than made again, so scenes do not fill with duplicates; and the hotkey ids are unchanged, so bindings survive. Close OBS, run the installer, start OBS: that is all.
