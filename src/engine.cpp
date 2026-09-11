@@ -1,5 +1,6 @@
 #include "engine.h"
 #include "ndi.h"
+#include <obs-frontend-api.h>
 #include <QNetworkInterface>
 #include <QFile>
 #include <QJsonDocument>
