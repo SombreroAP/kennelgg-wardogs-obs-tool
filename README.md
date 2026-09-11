@@ -27,7 +27,7 @@ people find us.
 
 ## Quick start (testers)
 
-1. Close OBS. Run `kennelgg-wardogs-obs-tool-<version>-windows-x64-installer.exe`. Windows will warn that the
+1. Close OBS. Run `kennelgg-<version>-windows-x64-installer.exe`. Windows will warn that the
    file is unsigned: *More info → Run anyway*. Keep **ClipHound** ticked if you want kill-feed clips;
    tick **DistroAV** if you will play at a LAN with other people running this.
 2. Start OBS. A short **setup wizard** opens: your name, which source shows WARDOGS (or one click to
@@ -40,7 +40,7 @@ That is all. Settings live under Tools → Kennel.gg Wardogs OBS Tool..., the do
 
 ## Install
 
-Close OBS, run `kennelgg-wardogs-obs-tool-<version>-windows-x64-installer.exe`, start OBS. The installer puts
+Close OBS, run `kennelgg-<version>-windows-x64-installer.exe`, start OBS. The installer puts
 the plugin in `C:\ProgramData\obs-studio\plugins\kennelgg` and, if you keep the ClipHound
 component ticked, the app in `C:\ProgramData\Kennel.gg\ClipHound` (self-contained, Tesseract
 included, no Python install). The plugin finds it there and starts it with OBS. Start-menu
@@ -183,4 +183,4 @@ more to you than the second it saves.
 Official [obs-plugintemplate](https://github.com/obsproject/obs-plugintemplate). GitHub Actions
 builds the plugin, then `app/build_exe.ps1` (PyInstaller + choco Tesseract) and the Inno Setup
 installer with both components, on every push: `kennelgg-<version>-windows-x64.zip`
-(plugin only) and `kennelgg-wardogs-obs-tool-<version>-windows-x64-installer.exe` (plugin + app).
+(plugin only) and `kennelgg-<version>-windows-x64-installer.exe` (plugin + app).
