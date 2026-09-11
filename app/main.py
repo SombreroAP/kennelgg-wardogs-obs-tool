@@ -116,9 +116,13 @@ def main():
     if not DRY and cfg["twitch"]["enabled"] and cfg["twitch"].get("access_token"):
         try:
             from twitch import Twitch
-            tw = Twitch(cfg["twitch"])
+            tw = Twitch(cfg["twitch"], lambda _sec: save_config(cfg))
         except Exception as e:
             print(f"[twitch] not ready ({e}); log in from the OBS plugin (ClipHound tab)")
+            if bridge is not None:
+                bridge.send({"type": "twitch_status", "state": "error",
+                             "error": f"{e}  -  no Twitch clips will be made until you log in again "
+                                      f"(ClipHound tab -> Log in to Twitch)."})
     if not DRY and cfg["obs"]["enabled"] and cfg["obs"].get("mode") == "bridge":
         from bridge import BridgeOBS
         ob = BridgeOBS(cfg["obs"], bridge)
@@ -139,12 +143,16 @@ def main():
         try:
             if not DRY and c["twitch"].get("enabled") and c["twitch"].get("access_token"):
                 from twitch import Twitch
-                state["tw"] = Twitch(c["twitch"])
+                state["tw"] = Twitch(c["twitch"], lambda _sec: save_config(c))
                 print(f"[twitch] ready as {c['twitch'].get('clipper_login', '?')} for channel {c['twitch'].get('broadcaster_login', '?')}")
             else:
                 state["tw"] = None
         except Exception as e:
             print(f"[twitch] not ready: {e}")
+            if bridge is not None:
+                bridge.send({"type": "twitch_status", "state": "error",
+                             "error": f"{e}  -  no Twitch clips will be made until you log in again "
+                                      f"(ClipHound tab -> Log in to Twitch)."})
             state["tw"] = None
     if bridge is not None:
         bridge.on_config = apply_live

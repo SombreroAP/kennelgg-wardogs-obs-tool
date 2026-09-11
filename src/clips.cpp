@@ -163,12 +163,17 @@ QString Clips::logFile() const
 
 /// OBS keeps the replay buffer's length in the profile, under whichever output mode is in use. Set
 /// both, and restart the buffer if it is running so the new length takes. Returns true if changed.
-bool Clips::setReplaySeconds(int seconds)
+/// OBS keeps the replay buffer's length in the profile, under whichever output mode is in use.
+/// Writes both and says whether the buffer has to be restarted for the new length to take - the
+/// caller does that, on a timer: obs_frontend_replay_buffer_stop() returns before the buffer has
+/// actually stopped, so starting it on the next line silently leaves it off, and then there are no
+/// clips at all.
+Clips::ReplayChange Clips::setReplaySeconds(int seconds)
 {
 	seconds = std::clamp(seconds, 5, 300);
 	config_t *prof = obs_frontend_get_profile_config();
 	if (!prof)
-		return false;
+		return ReplayChange::None;
 	bool changed = false;
 	for (const char *section : {"SimpleOutput", "AdvOut"}) {
 		if ((int)config_get_uint(prof, section, "RecRBTime") != seconds) {
@@ -177,13 +182,9 @@ bool Clips::setReplaySeconds(int seconds)
 		}
 	}
 	if (!changed)
-		return false;
+		return ReplayChange::None;
 	config_save_safe(prof, "tmp", nullptr);
-	if (obs_frontend_replay_buffer_active()) {
-		obs_frontend_replay_buffer_stop();
-		obs_frontend_replay_buffer_start();
-	}
-	return true;
+	return obs_frontend_replay_buffer_active() ? ReplayChange::NeedsRestart : ReplayChange::Written;
 }
 
 void Clips::ensureReplayBuffer()

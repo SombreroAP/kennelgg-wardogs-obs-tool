@@ -42,6 +42,7 @@ class Bridge:
         self.fps = float(cfg.get("fps", 3))
         self.ws = None
         self.connected = False
+        self._last_err = None   # so the same connection error is not printed every 3 s
         self._frame = None            # latest full frame (BGR)
         self._frame_ts = 0.0
         self._lock = threading.Lock()
@@ -61,6 +62,16 @@ class Bridge:
         self.vehicle_cfg = {"enabled": False, "roi": [0.86, 0.60, 0.14, 0.25]}   # automatic Dual POV
         threading.Thread(target=self._run, daemon=True).start()
 
+    def _on_error(self, _ws, err):
+        """Say why we cannot reach the plugin. Silence here is what made this look like a hang: the
+        app sat retrying for ever while the dock said \"starting\" and nothing explained either."""
+        msg = str(err) or err.__class__.__name__
+        if msg != self._last_err:
+            self._last_err = msg
+            print(f"[bridge] cannot reach the plugin at {self.url}: {msg}")
+            print("[bridge] is OBS running with the plugin, and is the ClipHound bridge on "
+                  "(Settings -> ClipHound)? Retrying every 3 s.")
+
     # ---- connection ----
     def _run(self):
         self._lost_at = None
@@ -70,7 +81,7 @@ class Bridge:
                 os._exit(0)
             try:
                 self.ws = websocket.WebSocketApp(self.url, on_open=self._on_open, on_message=self._on_message,
-                                                 on_close=self._on_close, on_error=lambda *_: None)
+                                                 on_close=self._on_close, on_error=self._on_error)
                 self.ws.run_forever(ping_interval=20, ping_timeout=10)
             except Exception as e:
                 print(f"[bridge] {e}")

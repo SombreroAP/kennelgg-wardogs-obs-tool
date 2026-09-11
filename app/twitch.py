@@ -7,8 +7,10 @@ HELIX = "https://api.twitch.tv/helix"
 
 
 class Twitch:
-    def __init__(self, cfg):
+    def __init__(self, cfg, on_tokens=None):
         self.cfg = cfg
+        # called with the twitch section after a refresh, so the new tokens reach config.yaml
+        self.on_tokens = on_tokens
         self.h = {"Client-Id": cfg["client_id"], "Authorization": f"Bearer {cfg['access_token']}"}
         self.broadcaster_id = cfg.get("broadcaster_id") or self._user_id(cfg["broadcaster_login"])
 
@@ -25,12 +27,26 @@ class Twitch:
         if self.cfg.get("client_secret"):
             data["client_secret"] = self.cfg["client_secret"]
         r = requests.post("https://id.twitch.tv/oauth2/token", data=data, timeout=10)
+        if r.status_code == 400:
+            # the stored refresh token has been used already or revoked - only a fresh login fixes it
+            raise RuntimeError("Twitch refused the saved login (400). Open the plugin's ClipHound tab "
+                               "and press Log in to Twitch again - no clips can be made until you do.")
         r.raise_for_status()
         tok = r.json()
         self.cfg["access_token"] = tok["access_token"]
         self.cfg["refresh_token"] = tok.get("refresh_token", self.cfg["refresh_token"])
         self.h["Authorization"] = f"Bearer {tok['access_token']}"
-        print("[twitch] token refreshed (update config.yaml with the new refresh_token if you restart)")
+        # Twitch rotates the refresh token: the one we just used is dead. Write the new pair out now
+        # or the next start fails with 400 and no clip is ever made again.
+        if self.on_tokens:
+            try:
+                self.on_tokens(self.cfg)
+                print("[twitch] token refreshed and saved")
+                return
+            except Exception as e:
+                print(f"[twitch] token refreshed but NOT saved ({e}) - log in again if clips stop")
+                return
+        print("[twitch] token refreshed but there is nowhere to save it - log in again if clips stop")
 
     def _user_id(self, login):
         d = self._get("users", login=login)

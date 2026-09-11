@@ -368,6 +368,41 @@ QString Engine::ndiStatus() const
 	return "NOT sharing" + (e.isEmpty() ? QString(" yet.") : ": " + e);
 }
 
+/// Put the clip length into OBS and, if the buffer is already running, restart it so the new length
+/// takes - stop first, start a moment later. OBS's stop is not finished when the call returns, and
+/// starting immediately leaves the buffer off, which means no clips at all until OBS is restarted.
+void Engine::applyReplaySeconds()
+{
+	if (!cfg.clipUseReplay)
+		return;
+	switch (clips.setReplaySeconds(cfg.replaySeconds)) {
+	case Clips::ReplayChange::None:
+		return;
+	case Clips::ReplayChange::Written:
+		log(QString("Clip length set to %1 s in OBS.").arg(cfg.replaySeconds));
+		return;
+	case Clips::ReplayChange::NeedsRestart:
+		log(QString("Clip length set to %1 s - restarting OBS's replay buffer so it takes.")
+			    .arg(cfg.replaySeconds));
+		obs_frontend_replay_buffer_stop();
+		QTimer::singleShot(2500, this, [this]() {
+			if (stopping_ || obs_frontend_replay_buffer_active())
+				return;
+			obs_frontend_replay_buffer_start();
+			QTimer::singleShot(1500, this, [this]() {
+				if (stopping_)
+					return;
+				log(obs_frontend_replay_buffer_active()
+					    ? "Replay buffer is running again."
+					    : "The replay buffer did not come back after the length change - start it "
+					      "in OBS (Settings -> Output -> Replay Buffer), or clips cannot save.");
+				emit stateChanged();
+			});
+		});
+		return;
+	}
+}
+
 void Engine::applyLan()
 {
 	// only tell the squad we are sharing when the output is actually up: a ticked box that failed
@@ -641,8 +676,7 @@ void Engine::start()
 				    "C:\\ProgramData\\obs-studio\\plugins\\kennel-wardogs and delete it, then "
 				    "restart OBS.")
 				    .arg(cfg.bridgePort));
-	if (cfg.clipUseReplay && clips.setReplaySeconds(cfg.replaySeconds))
-		log(QString("Replay buffer length set to %1 s in OBS.").arg(cfg.replaySeconds));
+	applyReplaySeconds();
 	if (cfg.autoStartReplay && cfg.clipUseReplay)
 		clips.ensureReplayBuffer();
 	if (cfg.launchApp)
@@ -937,8 +971,7 @@ void Engine::reloadConfig()
 		else if (!cfg.bridgeEnabled && bridge.listening())
 			bridge.close();
 	applyLan();
-	if (cfg.clipUseReplay && clips.setReplaySeconds(cfg.replaySeconds))
-		log(QString("Replay buffer length set to %1 s in OBS.").arg(cfg.replaySeconds));
+	applyReplaySeconds();
 	detGame_.threshold = cfg.threshold;
 	detRevive_.threshold = cfg.reviveThreshold;
 	detGame_.unlock();
