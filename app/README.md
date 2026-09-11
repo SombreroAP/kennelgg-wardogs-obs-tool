@@ -148,7 +148,7 @@ Until those templates exist the vehicle rules simply never fire.
 - `cooldown_s` – gap between clips; a double becoming a triple always re-fires.
 
 
-## Running with the Kennel.gg WARDOGS OBS plugin
+## Running with the Kennel.gg Wardogs OBS plugin
 
 The plugin (`../kennel-wardogs-obs`) can be ClipHound's eyes and hands: set `capture.backend: bridge`
 and `obs.mode: bridge` in `config.yaml`, and ClipHound connects to `ws://127.0.0.1:47820`, receives

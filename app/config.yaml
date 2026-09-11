@@ -3,7 +3,7 @@
 # game capture / capture-card source is screenshotted over obs-websocket and cropped to the
 # kill feed. Backend "screen" grabs a monitor instead (e.g. a fullscreen projector).
 capture:
-  backend: "bridge"        # "bridge" (frames from the Kennel WARDOGS OBS plugin, no obs-websocket) | "obs" | "screen"
+  backend: "bridge"        # "bridge" (frames from the Kennel.gg Wardogs OBS plugin, no obs-websocket) | "obs" | "screen"
   obs_source: "Game Capture"   # exact name of the OBS input carrying the game (capture card / NDI)
   monitor: 1               # screen backend only: mss monitor index. `python calibrate.py --list`
   fps: 10                  # frames per second read from the plugin. A kill is decided after ~0.75 s of
@@ -27,7 +27,7 @@ nearby:
   enabled: false
   roi: [0.80, 0.79, 0.19, 0.14]
 
-# ---- Kennel WARDOGS OBS plugin bridge ---------------------------------------
+# ---- Kennel.gg Wardogs OBS plugin bridge ---------------------------------------
 # With capture.backend "bridge" and obs.mode "bridge" the app needs no OBS password: the plugin
 # pushes frames and saves + names the replay clips itself (it also tags clips "downed" while the
 # POV swap is showing a squad mate). Install the plugin, then `pip install websocket-client`.
@@ -118,7 +118,7 @@ obs:
   reconnect_s: 10            # retry the LAN connection this often if OBS is down
   # "replay" = SaveReplayBuffer (the backtrack); OBS Replay Buffer must be started.
   # "record" = start a normal recording for record_seconds then stop.
-  mode: "bridge"         # "bridge" = let the Kennel WARDOGS OBS plugin save + name the replay (see bridge: below)
+  mode: "bridge"         # "bridge" = let the Kennel.gg Wardogs OBS plugin save + name the replay (see bridge: below)
   record_seconds: 30
   replay_delay_s: 4.0      # let the moment finish before saving the buffer
   # Clip library: replays are moved into <library>/<YYYY-MM-DD>/ with a .json sidecar each

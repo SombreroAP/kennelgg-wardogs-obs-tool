@@ -1,4 +1,4 @@
-; Kennel.gg WARDOGS OBS Tools - Windows installer (Inno Setup 6)
+; Kennel.gg Wardogs OBS Tool - Windows installer (Inno Setup 6)
 ; Installs the portable-plugin layout into OBS's shared plugin folder, which OBS 30+ scans on start:
 ;   C:\ProgramData\obs-studio\plugins\kennel-wardogs\bin\64bit\kennel-wardogs.dll  +  data\
 
@@ -17,9 +17,9 @@
 
 [Setup]
 AppId={{7C1E6B0A-4F5D-4C7B-9C0E-KENNELWD0001}
-AppName=Kennel.gg WARDOGS OBS Tools
+AppName=Kennel.gg Wardogs OBS Tool
 AppVersion={#VERSION}
-AppVerName=Kennel.gg WARDOGS OBS Tools {#VERSION}
+AppVerName=Kennel.gg Wardogs OBS Tool {#VERSION}
 AppPublisher=Sombrero / The Kennel
 AppPublisherURL=https://kennel.gg
 DefaultDirName={commonappdata}\obs-studio\plugins\kennel-wardogs
@@ -32,7 +32,7 @@ SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
-UninstallDisplayName=Kennel.gg WARDOGS OBS Tools
+UninstallDisplayName=Kennel.gg Wardogs OBS Tool
 WizardStyle=modern
 SetupLogging=yes
 
@@ -42,7 +42,7 @@ Name: "plugin"; Description: "OBS plugin only"
 Name: "custom"; Description: "Custom"; Flags: iscustom
 
 [Components]
-Name: "plugin"; Description: "Kennel WARDOGS OBS plugin (POV swap, clips)"; Types: full plugin custom; Flags: fixed
+Name: "plugin"; Description: "Kennel.gg Wardogs OBS plugin (POV swap, clips)"; Types: full plugin custom; Flags: fixed
 Name: "app"; Description: "ClipHound - kill-feed OCR clipping app (auto-started by the plugin)"; Types: full
 
 [Tasks]
@@ -62,7 +62,7 @@ Name: "{commonprograms}\Kennel WARDOGS\ClipHound"; Filename: "{commonappdata}\Ke
 
 
 [Messages]
-WelcomeLabel2=This installs the Kennel.gg WARDOGS OBS plugin into OBS Studio's plugin folder and, optionally, the ClipHound clipping app, which the plugin starts and configures from inside OBS.%n%nClose OBS before continuing. After installing, start OBS and open View > Docks > Kennel WARDOGS.
+WelcomeLabel2=This installs the Kennel.gg Wardogs OBS plugin into OBS Studio's plugin folder and, optionally, the ClipHound clipping app, which the plugin starts and configures from inside OBS.%n%nClose OBS before continuing. After installing, start OBS and open View > Docks > Kennel.gg Wardogs.%n%nMade by The Kennel [KNL], the WARDOGS community at kennel.gg - guides, Bootcamp, loadout builder, leaderboard and Discord. Free, and built from what streamers ask for.
 
 [Code]
 var

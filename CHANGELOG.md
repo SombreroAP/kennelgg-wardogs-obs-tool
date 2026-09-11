@@ -1,8 +1,9 @@
 # Changelog
 
-All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
+All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
 ## Unreleased
+- **Renamed to Kennel.gg Wardogs OBS Tool** - the window, the dock, the hotkeys, the installer and the repo. The Help tab has an **About The Kennel** section with what kennel.gg is and links to the site, Discord, Twitch and X; the installer's welcome page says who made it. The module id, plugin folder and `ProgramData\Kennel WARDOGS` path are deliberately unchanged, so nobody's settings or hotkeys are lost.
 - **Nothing of yours is muted when the POV changes, and no sound is taken from the squad mate's feed** - for everyone, including setups that had either ticked. Both are still there on the Switch tab to turn on. A Discord squad mate's audio capture follows the same rule now in every mode.
 - **NDI is shelved.** LAN discovery, the NDI share and auto-adding are off and out of sight; the code is kept, and a squad mate already set up as NDI keeps working, but NDI is not offered for new ones. It is parked until it behaves reliably.
 - **Kick and YouTube live streams** as squad-mate kinds, alongside Twitch. Kick takes the channel name; YouTube takes a channel link, @handle, channel ID or a live video link - a handle is looked up once on Save for the channel ID the player needs. With a channel, whatever they are streaming right now is shown.

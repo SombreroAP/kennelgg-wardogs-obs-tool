@@ -358,7 +358,7 @@ private:
 	{
 		QNetworkAccessManager nam;
 		QNetworkRequest req(QUrl("https://www.youtube.com/" + handle));
-		req.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Kennel WARDOGS OBS Tools)");
+		req.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Kennel.gg Wardogs OBS Tools)");
 		req.setRawHeader("Accept-Language", "en");
 		QNetworkReply *rep = nam.get(req);
 		QEventLoop loop;
@@ -585,7 +585,7 @@ static const char *kLiveScene = "(the scene that is live)";
 
 SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent), e_(engine)
 {
-	setWindowTitle("Kennel.gg WARDOGS OBS Tools");
+	setWindowTitle("Kennel.gg Wardogs OBS Tool");
 	setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowMinMaxButtonsHint);
 	setSizeGripEnabled(true);
 	setMinimumSize(560, 400); // it scrolls now, so it can be made genuinely small
@@ -676,7 +676,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 	connect(mkGame, &QPushButton::clicked, this, [this]() {
 		std::string e = e_->sw.createGameCapture(e_->cfg);
 		if (!e.empty()) {
-			QMessageBox::warning(this, "Kennel WARDOGS", QString::fromStdString(e));
+			QMessageBox::warning(this, "Kennel.gg Wardogs", QString::fromStdString(e));
 			return;
 		}
 		e_->cfg.save();
@@ -747,7 +747,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 			QStringList list;
 			for (const auto &n : mine)
 				list << QString::fromStdString(n);
-			QMessageBox box(QMessageBox::Question, "Kennel WARDOGS",
+			QMessageBox box(QMessageBox::Question, "Kennel.gg Wardogs",
 					"Remove " + QString::fromStdString(f.name) +
 						"?\n\nThese sources were made for them:\n  " + list.join("\n  "),
 					QMessageBox::NoButton, this);
@@ -829,7 +829,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 	connect(nearOn_, &QCheckBox::toggled, this, [this](bool on) {
 		if (on && !e_->appConnected()) {
 			auto r = QMessageBox::question(
-				this, "Kennel WARDOGS",
+				this, "Kennel.gg Wardogs",
 				"Closest needs ClipHound running: it reads the NEARBY list in the corner of your game. It is not running, so Closest stays off.\n\nStart it now? Tick this again once the dock says ClipHound is connected.",
 				QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Yes);
 			nearOn_->blockSignals(true);
@@ -916,19 +916,19 @@ QWidget *SettingsDialog::buildSwitchTab()
 	fl->addRow("NDI share", nsRow);
 	connect(ndiFix, &QPushButton::clicked, this, [this]() {
 		if (QMessageBox::question(
-			    this, "Kennel WARDOGS",
+			    this, "Kennel.gg Wardogs",
 			    "This writes the addresses of the squad mates on your LAN into NDI's own settings "
 			    "for this PC (ProgramData\\NDI\\ndi-config.v1.json), so NDI looks at them directly "
 			    "instead of waiting to discover them. It is NDI's own answer to a network where "
 			    "discovery does not work, and it affects every NDI program on this PC, not just "
 			    "OBS.\n\nDo it?") != QMessageBox::Yes)
 			return;
-		QMessageBox::information(this, "Kennel WARDOGS", e_->addSquadToNdiConfig());
+		QMessageBox::information(this, "Kennel.gg Wardogs", e_->addSquadToNdiConfig());
 	});
 	connect(ndiCheck, &QPushButton::clicked, this, [this]() {
 		QString r = e_->ndiReport();
 		e_->log(r);
-		QMessageBox::information(this, "Kennel WARDOGS", r);
+		QMessageBox::information(this, "Kennel.gg Wardogs", r);
 	});
 	lanStatus_ = muted("", gl);
 	fl->addRow(lanStatus_);
@@ -1215,13 +1215,13 @@ QWidget *SettingsDialog::buildDetectTab()
 		Match m = e_->lastGame();
 		QImage img = e_->grabNative();
 		if (img.isNull()) {
-			QMessageBox::warning(this, "Kennel WARDOGS",
+			QMessageBox::warning(this, "Kennel.gg Wardogs",
 					     "Could not render the game source. Pick it above first.");
 			return;
 		}
 		if (m.w <= 0 || m.score < 0.55) {
 			QMessageBox::warning(
-				this, "Kennel WARDOGS",
+				this, "Kennel.gg Wardogs",
 				QString("Nothing that looks like the damage log is on screen right now (best %1).\n\n"
 					"Press this while you are DOWNED, with the damage log showing. If it still "
 					"finds nothing, tick \"Look over the whole frame\" and try again, or use "
@@ -1261,21 +1261,21 @@ QWidget *SettingsDialog::buildDetectTab()
 			return;
 		QString err = e_->learnTemplate(img, r);
 		if (!err.isEmpty())
-			QMessageBox::warning(this, "Kennel WARDOGS", err);
+			QMessageBox::warning(this, "Kennel.gg Wardogs", err);
 		else
 			QMessageBox::information(
-				this, "Kennel WARDOGS",
+				this, "Kennel.gg Wardogs",
 				"Learned. Get downed once more and watch the bar: it should go well past the "
 				"threshold now. Put the threshold back to 0.85 if you lowered it.");
 	});
 	connect(saveFrame, &QPushButton::clicked, this, [this]() {
 		QString r = e_->saveFrame();
 		if (!r.startsWith("/") && !r.contains(":/") && !r.contains(":\\")) {
-			QMessageBox::warning(this, "Kennel WARDOGS", r);
+			QMessageBox::warning(this, "Kennel.gg Wardogs", r);
 			return;
 		}
 		QMessageBox m(this);
-		m.setWindowTitle("Kennel WARDOGS");
+		m.setWindowTitle("Kennel.gg Wardogs");
 		m.setIcon(QMessageBox::Information);
 		m.setText("Saved a picture of your game source.");
 		m.setInformativeText(
@@ -1389,7 +1389,7 @@ QWidget *SettingsDialog::buildDetectTab()
 	rvRow->addWidget(reviveLbl_);
 	f->addRow("Revive match threshold", rvRow);
 	f->addRow(muted(
-		"Hotkeys live in OBS Settings → Hotkeys: \"Kennel WARDOGS: show friend's POV / back to me\", \"...capture damage-log template\" and \"...save a clip now\". On a two-PC setup send them from the gaming PC with KeyBridge.",
+		"Hotkeys live in OBS Settings → Hotkeys: \"Kennel.gg Wardogs: show friend's POV / back to me\", \"...capture damage-log template\" and \"...save a clip now\". On a two-PC setup send them from the gaming PC with KeyBridge.",
 		g));
 	v->addWidget(g);
 
@@ -1434,7 +1434,7 @@ QWidget *SettingsDialog::buildClipsTab()
 	clipDowned_->setChecked(e_->cfg.clipOnDowned);
 	f1->addRow(clipDowned_);
 	f1->addRow(muted(
-		"Hotkey \"Kennel WARDOGS: save a clip now\" and the dock's Clip now button save one by hand. Replay length is OBS's Settings → Output → Replay Buffer.",
+		"Hotkey \"Kennel.gg Wardogs: save a clip now\" and the dock's Clip now button save one by hand. Replay length is OBS's Settings → Output → Replay Buffer.",
 		g1));
 	v->addWidget(g1);
 
@@ -1923,7 +1923,7 @@ QWidget *SettingsDialog::buildDualTab()
 			return;
 		if (on && !e_->appConnected())
 			QMessageBox::information(
-				this, "Kennel WARDOGS",
+				this, "Kennel.gg Wardogs",
 				"Automatic Dual POV needs ClipHound running - it reads the vehicle keybind list. Start it from the dock; the setting is kept.");
 		e_->cfg.dualAuto = on;
 		e_->cfg.save();
@@ -2109,7 +2109,7 @@ void SettingsDialog::refreshLogs()
 		return;
 	QString appDir = e_->cfg.appPath.empty() ? QString("C:/ProgramData/Kennel WARDOGS/ClipHound")
 						 : QFileInfo(QString::fromStdString(e_->cfg.appPath)).absolutePath();
-	QString body = QString("=== Kennel WARDOGS plugin %1 ===\n").arg(PLUGIN_VERSION);
+	QString body = QString("=== Kennel.gg Wardogs plugin %1 ===\n").arg(PLUGIN_VERSION);
 	body += QString("state: %1 | game source: %2 | squad mate: %3 | replay buffer: %4 | ClipHound: %5 | clip hotkeys: %6 | twitch: %7\n\n")
 			.arg(QString::fromStdString(e_->stateText()), QString::fromStdString(e_->cfg.gameSource),
 			     e_->cfg.active() ? QString::fromStdString(e_->cfg.active()->name) : "(none)",
@@ -2154,6 +2154,31 @@ QWidget *SettingsDialog::buildAboutTab()
 		"The check asks kennel.gg for a small file saying what the latest build is. Nothing about you is sent, there is no account, and it never installs anything: when there is a newer build the dock says so and links to the download.",
 		ver));
 	v->addWidget(ver);
+
+	// The tool is also how people find the community - so say who made it and why, up front.
+	auto *about = new QGroupBox("About The Kennel", w);
+	auto *av = new QVBoxLayout(about);
+	auto *al = new QLabel(
+		"<p><b>The Kennel [KNL]</b> is the community hub for WARDOGS, built by <b>Sombrero</b> - a place "
+		"for people who want to get better at the game and play it with others who feel the same. "
+		"<i>Community &middot; Education &middot; Progress.</i></p>"
+		"<p>At <a href=\"https://kennel.gg\">kennel.gg</a> you will find guides written from actual play, the "
+		"Bootcamp (drills on economy, roles and loadouts), a loadout builder, a leaderboard, and a Discord "
+		"where squads form, scrims get organised and questions get straight answers.</p>"
+		"<p>This plugin is one of the things we make for streamers in that community: it is free, it is ours, "
+		"and it is built from what people actually ask for. If it helps your stream, come and say so.</p>"
+		"<p><a href=\"https://kennel.gg\">kennel.gg</a> &nbsp;&middot;&nbsp; "
+		"<a href=\"https://discord.gg/vHqDR9HHcM\">Discord</a> &nbsp;&middot;&nbsp; "
+		"<a href=\"https://twitch.tv/sombrero\">twitch.tv/sombrero</a> &nbsp;&middot;&nbsp; "
+		"<a href=\"https://x.com/Smb_GG\">@Smb_GG</a></p>",
+		about);
+	al->setWordWrap(true);
+	al->setTextFormat(Qt::RichText);
+	al->setOpenExternalLinks(true);
+	al->setTextInteractionFlags(Qt::TextBrowserInteraction);
+	av->addWidget(al);
+	v->addWidget(about);
+
 	connect(checkBtn, &QPushButton::clicked, this, [this]() { e_->checkForUpdate(true); });
 	connect(updateAuto_, &QCheckBox::toggled, this, [this](bool on) {
 		if (building_)
@@ -2178,13 +2203,13 @@ QWidget *SettingsDialog::buildAboutTab()
 	l->setWordWrap(true);
 	l->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	l->setText(
-		"<h3>Kennel.gg WARDOGS OBS Tools</h3>"
+		"<h3>Kennel.gg Wardogs OBS Tool</h3>"
 		"<p>Downed in WARDOGS? Your stream shows a squad mate's POV (video and game audio) until you are back up. Your mic is never touched.</p>"
 		"<ol>"
 		"<li><b>Switch tab:</b> pick your game source, add squad mates, tick the game-audio inputs to mute.</li>"
 		"<li><b>Get downed once</b> and watch the Detect tab: the bar goes red when the damage log is found.</li>"
 		"<li><b>Look tab:</b> name tag, camcorder frame, grain, vignette. Preview them in OBS.</li>"
-		"<li>The <b>Kennel WARDOGS dock</b> (View → Docks) shows the state and has the manual buttons.</li>"
+		"<li>The <b>Kennel.gg Wardogs dock</b> (View → Docks) shows the state and has the manual buttons.</li>"
 		"</ol>"
 		"<p><b>Squad mate feeds.</b> Twitch: nothing for them to do, ~2 s behind with low-latency mode, includes their mic. "
 		"VDO.Ninja: they open one link in Chrome/Edge and share their game window with system audio, ~0.3 s, no mic. "
@@ -2380,7 +2405,7 @@ void SettingsDialog::editFriend(int row)
 	if (f.ownsSources()) {
 		std::string e = e_->sw.createFriendSources(e_->cfg, f);
 		if (!e.empty()) {
-			QMessageBox::warning(this, "Kennel WARDOGS",
+			QMessageBox::warning(this, "Kennel.gg Wardogs",
 					     "Could not set up the sources: " + QString::fromStdString(e));
 			return;
 		}
@@ -2500,7 +2525,7 @@ void SettingsDialog::testLink()
 	QString who = it ? it->data(Qt::UserRole + 1).toString() : QString();
 	if (addr.isEmpty()) {
 		QMessageBox::information(
-			this, "Kennel WARDOGS",
+			this, "Kennel.gg Wardogs",
 			"Pick a squad mate in the list first. They need this plugin running in "
 			"OBS, with \"Find squad mates on the LAN\" ticked, on version 0.5.8 or newer.");
 		return;
@@ -2517,7 +2542,7 @@ void SettingsDialog::testLink()
 		speedBtn_->setEnabled(true);
 		speedBtn_->setText("Test the link\nto this squad mate");
 		if (mbps < 0) {
-			QMessageBox::warning(this, "Kennel WARDOGS",
+			QMessageBox::warning(this, "Kennel.gg Wardogs",
 					     "Could not measure the link to " + who + ": " + note +
 						     "\n\nThey need this plugin (0.5.8 or newer) running in OBS with "
 						     "\"Find squad mates on the LAN\" ticked, and Windows Firewall "
@@ -2573,7 +2598,7 @@ void SettingsDialog::testLink()
 			       : "\nSet Share at to " + fits +
 					 " on the SENDING PC. The rest is headroom: NDI "
 					 "bursts, and a link run at its limit judders.";
-		QMessageBox::information(this, "Kennel WARDOGS", msg);
+		QMessageBox::information(this, "Kennel.gg Wardogs", msg);
 		e_->log(QString("Link to %1: %2 Mbit/s.").arg(who).arg(mbps, 0, 'f', 0));
 	});
 	e_->speed.measure(addr, (quint16)(e_->cfg.lanPort + 1), 4);
@@ -2583,13 +2608,13 @@ void SettingsDialog::testFeed()
 {
 	int r = friends_->currentRow();
 	if (r < 0 || r >= (int)e_->cfg.friends.size()) {
-		QMessageBox::information(this, "Kennel WARDOGS", "Pick a squad mate in the list first.");
+		QMessageBox::information(this, "Kennel.gg Wardogs", "Pick a squad mate in the list first.");
 		return;
 	}
 	const Friend &f = e_->cfg.friends[r];
 	std::string src = e_->cfg.sourceFor(f);
 	if (src.empty() || !e_->sw.feedHash(src)) {
-		QMessageBox::information(this, "Kennel WARDOGS",
+		QMessageBox::information(this, "Kennel.gg Wardogs",
 					 "No picture from '" + QString::fromStdString(src) +
 						 "' - it is not in the scene, or nothing is coming in yet.");
 		return;
@@ -2620,7 +2645,7 @@ void SettingsDialog::testFeed()
 				     "game. If the sender is on 60, their network or ours is not carrying it."
 				   : "\n\nThat is well under 30: the feed itself is not arriving properly. Try a "
 				     "smaller size in Share at on the sending PC, or Receive at -> low bandwidth.";
-		QMessageBox::information(this, "Kennel WARDOGS", msg);
+		QMessageBox::information(this, "Kennel.gg Wardogs", msg);
 		delete count;
 		delete last;
 		delete ticks;

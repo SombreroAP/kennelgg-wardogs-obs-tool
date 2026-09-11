@@ -1,12 +1,14 @@
-# kennel-wardogs-obs — session context
+# kennelgg-wardogs-obs-tool — session context
 
-**"Kennel.gg WARDOGS OBS Tools"** — one OBS plugin (C++ / Qt, obs-plugintemplate, module id
-`kennel-wardogs`) for Windows OBS, renamed from POVBridge on 8 Sep 2026. Two features: the **POV
+**"Kennel.gg Wardogs OBS Tool"** — one OBS plugin (C++ / Qt, obs-plugintemplate, module id
+`kennel-wardogs` - the module id, DLL, plugin folder and `ProgramData\Kennel WARDOGS` path are deliberately
+unchanged by the 11 Sep 2026 rename to "Kennel.gg Wardogs OBS Tool": changing them would orphan every
+installed user's settings and hotkeys) for Windows OBS, renamed from POVBridge on 8 Sep 2026. Two features: the **POV
 swap** (downed → show a squad mate's POV; mic untouched) and **clips** (replay-buffer save +
 rename, from hotkey/dock/downed/**ClipHound**). ClipHound (`../ClipHound`, Python) stays a separate
 app that does the kill-feed OCR and talks to the plugin over a local WebSocket bridge; the split is
 deliberate (no Tesseract inside OBS, downed detection stays native). An earlier C# tray app was
-deleted; do not resurrect it. Builds go to Google Drive `My Drive/Kennel WARDOGS OBS Tools/`.
+deleted; do not resurrect it. Builds go to Google Drive `My Drive/Kennel.gg Wardogs OBS Tools/`.
 
 | File | What |
 |---|---|

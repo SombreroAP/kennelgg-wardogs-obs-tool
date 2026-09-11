@@ -26,8 +26,8 @@ def main():
     print("=== ClipHound setup ===\n")
     bridge_mode = cfg["capture"].get("backend") == "bridge"
     if bridge_mode:
-        # frames and clips come from the Kennel WARDOGS OBS plugin: only the questions that still matter
-        print("Running with the Kennel WARDOGS OBS plugin (frames and clips come from OBS itself).")
+        # frames and clips come from the Kennel.gg Wardogs OBS plugin: only the questions that still matter
+        print("Running with the Kennel.gg Wardogs OBS plugin (frames and clips come from OBS itself).")
         if not check_only:
             cfg["detection"]["player_name"] = ask("Your in-game name as it appears in the kill feed", cfg["detection"].get("player_name"))
             cfg["obs"]["library"] = ask("Clip library folder for an index of clips (blank = none)", cfg["obs"].get("library"))

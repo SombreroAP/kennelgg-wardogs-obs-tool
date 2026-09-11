@@ -112,7 +112,7 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 		if (on && !e_->appConnected()) {
 			// the NEARBY list is read by ClipHound: without it this tick box does nothing
 			QMessageBox m((QWidget *)obs_frontend_get_main_window());
-			m.setWindowTitle("Kennel WARDOGS");
+			m.setWindowTitle("Kennel.gg Wardogs");
 			m.setIcon(QMessageBox::Information);
 			m.setText("Closest needs ClipHound running.");
 			m.setInformativeText(
@@ -352,7 +352,7 @@ void Dock::openLogs()
 {
 	auto *d = new QDialog((QWidget *)obs_frontend_get_main_window());
 	d->setAttribute(Qt::WA_DeleteOnClose);
-	d->setWindowTitle("Kennel WARDOGS - logs");
+	d->setWindowTitle("Kennel.gg Wardogs - logs");
 	d->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowMinMaxButtonsHint);
 	d->resize(820, 600);
 	auto *v = new QVBoxLayout(d);
@@ -362,7 +362,7 @@ void Dock::openLogs()
 	QString appDir = QString::fromStdString(e_->cfg.appPath).isEmpty()
 				 ? QString("C:/ProgramData/Kennel WARDOGS/ClipHound")
 				 : QFileInfo(QString::fromStdString(e_->cfg.appPath)).absolutePath();
-	QString body = QString("=== Kennel WARDOGS plugin %1 ===\n").arg(PLUGIN_VERSION);
+	QString body = QString("=== Kennel.gg Wardogs plugin %1 ===\n").arg(PLUGIN_VERSION);
 	body += QString("state: %1 | game source: %2 | squad mate: %3 | replay buffer: %4 | ClipHound: %5 | clip hotkeys: %6\n\n")
 			.arg(QString::fromStdString(e_->stateText()), QString::fromStdString(e_->cfg.gameSource),
 			     e_->cfg.active() ? QString::fromStdString(e_->cfg.active()->name) : "(none)",

@@ -1,6 +1,10 @@
-# Kennel.gg WARDOGS OBS Tools
+# Kennel.gg Wardogs OBS Tool
 
-One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional companion app:
+One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional companion app.
+Made by [The Kennel](https://kennel.gg) — the WARDOGS community: guides, Bootcamp, loadout builder,
+leaderboard and [Discord](https://discord.gg/vHqDR9HHcM). The tool is free, and it is one of the ways
+people find us.
+
 
 - **POV swap.** Downed? Your stream shows a squad mate's POV until you are back up. Their feed is
   silent by default, so you keep hearing your own game; one tick box plays theirs instead. Your mic
@@ -29,10 +33,10 @@ One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional co
 2. Start OBS. A short **setup wizard** opens: your name, which source shows WARDOGS (or one click to
    create a Game Capture), a squad mate (type a Twitch channel, or wait for LAN squad mates to appear),
    clips. Finish.
-3. Play. **Get downed once**: the Kennel WARDOGS dock turns red and your stream shows the squad mate;
+3. Play. **Get downed once**: the Kennel.gg Wardogs dock turns red and your stream shows the squad mate;
    it comes back the instant you are revived.
 
-That is all. Settings live under Tools → Kennel.gg WARDOGS OBS Tools..., the dock under View → Docks.
+That is all. Settings live under Tools → Kennel.gg Wardogs OBS Tool..., the dock under View → Docks.
 
 ## Install
 
@@ -46,8 +50,8 @@ optional installer tasks download and run the official **NDI 6 Runtime** (Vizrt)
 installers for LAN squad feeds; neither is bundled, both come from their publishers. An optional
 **DistroAV** task downloads the official DistroAV installer (GPL-2, from its GitHub release) and runs
 it; DistroAV then asks you to fetch the NDI Runtime from Vizrt, which nobody may redistribute. Settings open by
-themselves on first run; later they are under **Tools → Kennel.gg WARDOGS OBS Tools...** and the
-**Kennel WARDOGS** dock is under View → Docks. The zip has the same files for a manual install
+themselves on first run; later they are under **Tools → Kennel.gg Wardogs OBS Tool...** and the
+**Kennel.gg Wardogs** dock is under View → Docks. The zip has the same files for a manual install
 (copy its `kennel-wardogs` folder into `C:\ProgramData\obs-studio\plugins\`).
 
 ## First run
@@ -88,7 +92,7 @@ named `Kennel hide`) and muted between switches, so the switch is instant.
 The plugin saves OBS's replay buffer and renames the file with `{date} {time} {title} {tags}
 {source}`; every clip is logged to `clips.csv` in the plugin's config folder. Sources of clips:
 
-- hotkey **Kennel WARDOGS: save a clip now**, or the dock's **Clip now**;
+- hotkey **Kennel.gg Wardogs: save a clip now**, or the dock's **Clip now**;
 - **clip on downed** (Clips tab);
 - **ClipHound** over the local bridge.
 

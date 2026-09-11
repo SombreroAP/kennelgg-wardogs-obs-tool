@@ -9,7 +9,7 @@
 /// ourselves - the same library DistroAV uses, loaded from the process if it is already there -
 /// and keep one finder alive for the session.
 namespace kennelNdi {
-/// NDI names of the senders seen so far, e.g. "TOWER (Kennel WARDOGS)".
+/// NDI names of the senders seen so far, e.g. "TOWER (Kennel.gg Wardogs)".
 /// waitMs: how long to wait for the first answer; later calls return what the finder has.
 std::vector<std::string> sources(int waitMs = 1000);
 /// Addresses to look at directly, as well as whatever NDI discovers by itself. NDI's discovery is

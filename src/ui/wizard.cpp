@@ -23,7 +23,7 @@ static QLabel *note(const QString &t, QWidget *p)
 
 SetupWizard::SetupWizard(Engine *engine, QWidget *parent) : QWizard(parent), e_(engine)
 {
-	setWindowTitle("Kennel.gg WARDOGS OBS Tools - setup");
+	setWindowTitle("Kennel.gg Wardogs OBS Tool - setup");
 	setWizardStyle(QWizard::ModernStyle);
 	setOption(QWizard::NoBackButtonOnStartPage, true);
 	setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowMinMaxButtonsHint);
@@ -44,9 +44,9 @@ SetupWizard::SetupWizard(Engine *engine, QWidget *parent) : QWizard(parent), e_(
 			int n = (int)e_->cfg.friends.size();
 			summary_->setText(
 				QString("<p><b>Name:</b> %1<br><b>Game source:</b> %2<br><b>Squad mates:</b> %3<br><b>Clips:</b> replay buffer on%4</p>"
-					"<p>Press Finish, then <b>get downed once</b> with WARDOGS on screen. The dock (View → Docks → Kennel WARDOGS) turns red "
+					"<p>Press Finish, then <b>get downed once</b> with WARDOGS on screen. The dock (View → Docks → Kennel.gg Wardogs) turns red "
 					"and your stream shows the squad mate; it comes back the instant you are revived.</p>"
-					"<p>Everything here can be changed under Tools → Kennel.gg WARDOGS OBS Tools...</p>")
+					"<p>Everything here can be changed under Tools → Kennel.gg Wardogs OBS Tool...</p>")
 					.arg(name_->text().trimmed().isEmpty() ? Lan::hostName()
 									       : name_->text().trimmed(),
 					     g.isEmpty() ? "(none yet)" : g)
@@ -227,7 +227,7 @@ QWizardPage *SetupWizard::pageClips()
 			: "ClipHound was not installed. Run the installer again and tick it if you want kill-feed clips.",
 		p));
 	v->addWidget(note(
-		"Hotkey \"Kennel WARDOGS: save a clip now\" and the dock's Clip now button save one by hand. Replay length is OBS's Settings → Output → Replay Buffer.",
+		"Hotkey \"Kennel.gg Wardogs: save a clip now\" and the dock's Clip now button save one by hand. Replay length is OBS's Settings → Output → Replay Buffer.",
 		p));
 	v->addStretch(1);
 	return p;
