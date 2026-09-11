@@ -90,9 +90,9 @@ begin
     if DirExists(OldPlugin) then begin
       DelTree(OldPlugin, True, True, True);
       if DirExists(OldPlugin) then
-        MsgBox('The previous version could not be removed from' #13#10 + OldPlugin + #13#10#13#10 +
-               'That is nearly always because OBS is still running. Close OBS, delete that folder by hand, '
-               'then start OBS again - with both versions installed they fight over ClipHound''s connection '
+        MsgBox('The previous version could not be removed from' + #13#10 + OldPlugin + #13#10#13#10 +
+               'That is nearly always because OBS is still running. Close OBS, delete that folder by hand, ' +
+               'then start OBS again - with both versions installed they fight over ClipHound''s connection ' +
                'and clips never fire.', mbError, MB_OK);
     end;
   end;
