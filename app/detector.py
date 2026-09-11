@@ -55,6 +55,32 @@ class Trigger:
             parts.append(f"{len(self.events)} kills")
         return " - ".join(parts)
 
+    def headline(self) -> str:
+        """The clip's title as a person would say it, for Twitch and the clip index.
+        'Crashed my chopper' stays as it is; 'Double kill' becomes
+        'Double kill at 68m and 61m with a rifle'; a death reads 'Died to a headshot at 120m'."""
+        t = self.title.strip()
+        low = t.lower()
+        died = any(e.victim_me for e in self.events)
+        ds = [f"{e.distance_m}m" for e in self.events if e.distance_m]
+        weapons = sorted({i for e in self.events for i in e.icons if i not in ("skull", "explosion")})
+        head = any("skull" in e.icons for e in self.events)
+        bits = []
+        if died and not low.startswith(("died", "killed", "downed", "crashed")):
+            bits.append("Died" + (" to a headshot" if head else "") + (f" - {t}" if t else ""))
+        else:
+            bits.append(t[:1].upper() + t[1:] if t else "Highlight")
+            if head and "headshot" not in low:
+                bits[0] += ", headshot"
+        if ds and not any(ch.isdigit() for ch in t):
+            bits.append("at " + (ds[0] if len(ds) == 1 else ", ".join(ds[:-1]) + " and " + ds[-1]))
+        if weapons and weapons[0] not in low:
+            bits.append("with a " + weapons[0].replace("_", " "))
+        n = len(self.events)
+        if n > 1 and "kill" in low and not any(ch.isdigit() for ch in t):
+            bits.append(f"({n} kills)")
+        return " ".join(bits)[:100]
+
     @staticmethod
     def build(kind, title, events, extra=()):
         tags = {kind, *extra}

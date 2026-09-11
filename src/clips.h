@@ -35,6 +35,8 @@ public:
 	QString request(const QString &title, const QStringList &tags, const QString &source);
 	void onReplaySaved(); // wire to OBS_FRONTEND_EVENT_REPLAY_BUFFER_SAVED
 	void ensureReplayBuffer();
+	/// Write the replay buffer length into OBS's profile (both output modes). True if it changed.
+	bool setReplaySeconds(int seconds);
 	const std::deque<Entry> &history() const { return history_; }
 	QString lastPath() const { return history_.empty() ? QString() : history_.back().path; }
 

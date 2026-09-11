@@ -116,6 +116,7 @@ struct Config {
 		false; // edited while the app was not connected; push on connect // tell ClipHound to quit when OBS closes (and end it if we started it)
 	std::string clipNameTemplate = "{title}_{tags}_{date}_{time}";
 	bool autoStartReplay = true;
+	int replaySeconds = 45; // how far back a clip reaches; written into OBS's replay-buffer setting
 	bool clipOnDowned = false;            // also clip when you get downed (the moment before is in the buffer)
 	bool clipUseReplay = true;            // save OBS's own replay buffer on a clip
 	std::vector<std::string> clipHotkeys; // OBS hotkey names fired on every clip (e.g. Aitum Backtrack "save")

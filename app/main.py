@@ -155,7 +155,7 @@ def main():
         if bridge is not None:
             bridge.event(f"{trig.title}  [{', '.join(trig.tags)}]", "trigger")
         if tw:
-            threading.Timer(cfg["twitch"]["clip_delay_s"], lambda: _safe(tw.create_clip, trig.title, trig.tags)).start()
+            threading.Timer(cfg["twitch"]["clip_delay_s"], lambda: _safe(tw.create_clip, trig.headline(), trig.tags)).start()
         if ob:
             ev = trig.events[-1] if trig.events else None
             info = {"kind": trig.kind, "description": trig.describe(),

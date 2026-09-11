@@ -36,14 +36,23 @@ class Twitch:
         d = self._get("users", login=login)
         return d["data"][0]["id"]
 
-    def create_clip(self, title: str, tags: list[str] | None = None) -> dict | None:
-        r = requests.post(f"{HELIX}/clips", headers=self.h, params={
+    def create_clip(self, title: str, tags: list[str] | None = None, _with_title: bool = True) -> dict | None:
+        # Twitch names the clip after the stream unless told otherwise; the title goes with the
+        # request (Helix accepts one of up to 100 characters). Length is Twitch's to decide: the API
+        # takes the seconds leading up to the request, and its edit page trims after the fact.
+        params = {
             "broadcaster_id": self.broadcaster_id,
             "has_delay": str(self.cfg.get("has_delay", False)).lower(),
-        }, timeout=10)
+        }
+        if _with_title and title:
+            params["title"] = title[:100]
+        r = requests.post(f"{HELIX}/clips", headers=self.h, params=params, timeout=10)
         if r.status_code == 401 and self.cfg.get("refresh_token"):
             self._refresh()
-            return self.create_clip(title, tags)
+            return self.create_clip(title, tags, _with_title)
+        if r.status_code == 400 and _with_title:
+            print("[twitch] Twitch refused the title; making the clip without one")
+            return self.create_clip(title, tags, _with_title=False)
         if r.status_code == 404:
             print("[twitch] 404: channel is not live, no clip made")
             return None

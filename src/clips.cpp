@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstring>
 #include <obs-frontend-api.h>
+#include <util/config-file.h>
 #include <plugin-support.h>
 
 Clips::Clips(QObject *parent) : QObject(parent)
@@ -158,6 +159,31 @@ QString Clips::safe(QString s)
 QString Clips::logFile() const
 {
 	return QString::fromStdString(Config::configFile("clips.csv"));
+}
+
+/// OBS keeps the replay buffer's length in the profile, under whichever output mode is in use. Set
+/// both, and restart the buffer if it is running so the new length takes. Returns true if changed.
+bool Clips::setReplaySeconds(int seconds)
+{
+	seconds = std::clamp(seconds, 5, 300);
+	config_t *prof = obs_frontend_get_profile_config();
+	if (!prof)
+		return false;
+	bool changed = false;
+	for (const char *section : {"SimpleOutput", "AdvOut"}) {
+		if ((int)config_get_uint(prof, section, "RecRBTime") != seconds) {
+			config_set_uint(prof, section, "RecRBTime", (uint64_t)seconds);
+			changed = true;
+		}
+	}
+	if (!changed)
+		return false;
+	config_save_safe(prof, "tmp", nullptr);
+	if (obs_frontend_replay_buffer_active()) {
+		obs_frontend_replay_buffer_stop();
+		obs_frontend_replay_buffer_start();
+	}
+	return true;
 }
 
 void Clips::ensureReplayBuffer()

@@ -64,6 +64,7 @@ private:
 	QListWidget *onTop_ = nullptr;
 	QListWidget *mute_ = nullptr;
 	QCheckBox *warmNdi_ = nullptr;
+	QSpinBox *replaySecs_ = nullptr;
 	QCheckBox *keepWarm_, *bringFront_;
 	QCheckBox *preload_ = nullptr, *friendAudio_ = nullptr;
 	// look

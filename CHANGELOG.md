@@ -2,7 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
-## 0.7.1
+## 0.7.2
+- **Twitch clips are titled with what happened.** They used to carry the stream's title; the moment that set them off was only written to ClipHound's own index. The clip now goes to Twitch with a plain-English title - *Double kill at 68m and 61m with a rifle*, *Died to a headshot at 120m*, *Crashed my chopper* - and the same wording names the OBS replay file.
+- **Clip length is a setting: 45 seconds by default.** Clips tab -> *Clip length*. It is written straight into OBS's own replay-buffer setting for both output modes, so the plugin and OBS never disagree about how far back a clip reaches, and the buffer is restarted if it was running.
+- One honest limit: the 45 seconds is for the clips OBS saves. A Twitch clip's length is Twitch's - the API takes the seconds leading up to the request and its edit page trims afterwards; nothing the plugin sends can make one 45 s long.
+
 - **The 0.7.0 installer put the plugin in the wrong folder, so OBS never loaded it** - no dock, no Tools entry, no error. It kept the old AppId so Windows would see an upgrade, and Inno Setup then reused the previous install folder: `kennelgg.dll` ended up under `plugins\kennel-wardogs`, and OBS only loads a DLL named after its folder. 0.7.1 always installs to `plugins\kennelgg` and removes the stray folder 0.7.0 left. Nothing else changed.
 
 ## 0.7.0

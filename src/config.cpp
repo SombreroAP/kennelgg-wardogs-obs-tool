@@ -168,6 +168,7 @@ void Config::load()
 	DEFB(appConfigDirty);
 	DEFS(clipNameTemplate);
 	DEFB(autoStartReplay);
+	DEFI(replaySeconds);
 	DEFB(clipOnDowned);
 	DEFB(clipUseReplay);
 	DEFS(backtrackFolder);
@@ -274,6 +275,7 @@ void Config::load()
 	GETB(appConfigDirty);
 	GETS(clipNameTemplate);
 	GETB(autoStartReplay);
+	GETI(replaySeconds);
 	GETB(clipOnDowned);
 	GETB(clipUseReplay);
 	GETS(backtrackFolder);
@@ -496,6 +498,7 @@ void Config::save() const
 	SETB(appConfigDirty);
 	SETS(clipNameTemplate);
 	SETB(autoStartReplay);
+	SETI(replaySeconds);
 	SETB(clipOnDowned);
 	SETB(clipUseReplay);
 	SETS(backtrackFolder);

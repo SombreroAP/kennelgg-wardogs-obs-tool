@@ -624,6 +624,8 @@ void Engine::start()
 		clips.hotkeys << QString::fromStdString(h);
 	if (cfg.bridgeEnabled)
 		bridge.listen((quint16)cfg.bridgePort);
+	if (cfg.clipUseReplay && clips.setReplaySeconds(cfg.replaySeconds))
+		log(QString("Replay buffer length set to %1 s in OBS.").arg(cfg.replaySeconds));
 	if (cfg.autoStartReplay && cfg.clipUseReplay)
 		clips.ensureReplayBuffer();
 	if (cfg.launchApp)
@@ -894,6 +896,8 @@ void Engine::reloadConfig()
 	else if (!cfg.bridgeEnabled && bridge.listening())
 		bridge.close();
 	applyLan();
+	if (cfg.clipUseReplay && clips.setReplaySeconds(cfg.replaySeconds))
+		log(QString("Replay buffer length set to %1 s in OBS.").arg(cfg.replaySeconds));
 	detGame_.threshold = cfg.threshold;
 	detRevive_.threshold = cfg.reviveThreshold;
 	detGame_.unlock();
