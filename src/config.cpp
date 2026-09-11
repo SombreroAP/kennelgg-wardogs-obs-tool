@@ -90,6 +90,8 @@ void Config::load()
 	DEFB(audioDefaults3);
 	DEFB(ndiShelved);
 	DEFB(discordShared1);
+	DEFB(audioDefaults4);
+	DEFB(audioAutoPicked);
 	DEFB(rosterEnabled);
 	DEFS(rosterUrl);
 	DEFS(rosterChannel);
@@ -203,6 +205,8 @@ void Config::load()
 	GETB(audioDefaults3);
 	GETB(ndiShelved);
 	GETB(discordShared1);
+	GETB(audioDefaults4);
+	GETB(audioAutoPicked);
 	GETB(rosterEnabled);
 	GETS(rosterUrl);
 	GETS(rosterChannel);
@@ -406,6 +410,14 @@ void Config::load()
 		audioAutoPicked = true;
 		friendAudio = false;
 	}
+	// The auto-pick's "done that" flag was never written to disk, so on every start with an empty
+	// list it ticked the desktop audio again. Anything in the list now may be its doing: clear it
+	// once more, for the last time. The auto-pick itself is gone.
+	if (!audioDefaults4) {
+		audioDefaults4 = true;
+		muteWhileDowned.clear();
+		audioAutoPicked = true;
+	}
 	// NDI is shelved: LAN discovery, the share and auto-adding are off and out of the way until
 	// they are ready. Squad mates already set up as NDI keep working.
 	if (!ndiShelved) {
@@ -438,6 +450,8 @@ void Config::save() const
 	SETB(audioDefaults3);
 	SETB(ndiShelved);
 	SETB(discordShared1);
+	SETB(audioDefaults4);
+	SETB(audioAutoPicked);
 	SETB(rosterEnabled);
 	SETS(rosterUrl);
 	SETS(rosterChannel);

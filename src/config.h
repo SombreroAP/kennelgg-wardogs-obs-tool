@@ -71,6 +71,7 @@ struct Config {
 	bool audioDefaults3 = false; // ...and once more: nothing muted, and no sound taken from their feed
 	bool ndiShelved = false;     // NDI and LAN discovery off and hidden until they are ready
 	bool discordShared1 = false; // one-time move to one shared capture of the Discord window
+	bool audioDefaults4 = false; // the mute list cleared once more: the auto-pick had been refilling it
 	// Discord roster: the Kennel.gg bot publishes who is in voice and who is sharing, and squad
 	// slots fill themselves in from it. Off until an address is entered.
 	bool rosterEnabled = false;

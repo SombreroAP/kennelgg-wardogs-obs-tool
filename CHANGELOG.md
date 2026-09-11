@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.7.8
+- **Your desktop audio was being ticked to mute again on every start.** The "already done that" flag behind the old auto-pick was never saved to disk, so whenever the mute list was empty at start-up the plugin ticked your desktop audio back in, undoing you if you had cleared it. The auto-pick is gone for good: nothing of yours is muted unless you tick it in Settings -> Switch. The list is cleared once more on first start, since anything in it may have been the auto-pick's doing.
+
 ## 0.7.7
 - **Pop-out binding now covers every Discord squad mate**, including slots where you picked a specific Discord window when you added them. 0.7.6 only watched slots set to "Any Discord window", which is not what the add dialog picks by default when Discord is running, so for most people it watched nothing. The log now says at start how many slots it is watching.
 - A slot bound to a pop-out remembers the capture it came from and goes back to exactly that when the pop-out closes.

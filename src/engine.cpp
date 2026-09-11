@@ -687,15 +687,10 @@ QString Engine::saveFrame()
 
 void Engine::autoPickAudio()
 {
-	if (cfg.audioAutoPicked || !cfg.muteWhileDowned.empty())
-		return;
-	for (auto &i : Switcher::inputs())
-		if (i.second == "wasapi_output_capture")
-			cfg.muteWhileDowned.push_back(i.first);
+	// Nothing of yours is muted unless you tick it yourself (Settings -> Switch). This used to tick
+	// your desktop audio when the list was empty, and because the "done that" flag was never saved
+	// it did so again on every start, undoing anyone who had cleared the list.
 	cfg.audioAutoPicked = true;
-	if (!cfg.muteWhileDowned.empty())
-		log("Ticked your desktop audio to mute while downed (change it in Settings → Switch).");
-	cfg.save();
 }
 
 void Engine::start()
