@@ -964,7 +964,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 	lanStatus_ = muted("", gl);
 	fl->addRow(lanStatus_);
 	v->addWidget(gl);
-	v->addWidget(gr);
+	v->addWidget(gRoster);
 	lanOn_->setChecked(e_->cfg.lanEnabled);
 	ndiShare_->setChecked(e_->cfg.ndiShare);
 	connect(ndiQuality_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
@@ -996,33 +996,33 @@ QWidget *SettingsDialog::buildSwitchTab()
 	fillPeers();
 	connect(&e_->lan, &Lan::peersChanged, this, fillPeers);
 
-	auto *gr = new QGroupBox("Squad from Discord", w);
-	auto *fr = new QFormLayout(gr);
-	rosterOn_ = new QCheckBox("Fill squad slots from who is sharing in Discord", gr);
+	auto *gRoster = new QGroupBox("Squad from Discord", w);
+	auto *fRoster = new QFormLayout(gRoster);
+	rosterOn_ = new QCheckBox("Fill squad slots from who is sharing in Discord", gRoster);
 	rosterOn_->setChecked(e_->cfg.rosterEnabled);
-	fr->addRow(rosterOn_);
-	rosterUrl_ = new QLineEdit(QString::fromStdString(e_->cfg.rosterUrl), gr);
+	fRoster->addRow(rosterOn_);
+	rosterUrl_ = new QLineEdit(QString::fromStdString(e_->cfg.rosterUrl), gRoster);
 	rosterUrl_->setPlaceholderText("https://kennel.gg/api/voice-....json");
-	fr->addRow("Roster address", rosterUrl_);
-	rosterChannel_ = new QLineEdit(QString::fromStdString(e_->cfg.rosterChannel), gr);
+	fRoster->addRow("Roster address", rosterUrl_);
+	rosterChannel_ = new QLineEdit(QString::fromStdString(e_->cfg.rosterChannel), gRoster);
 	rosterChannel_->setPlaceholderText("(any voice channel)");
-	fr->addRow("Only this channel", rosterChannel_);
-	rosterSources_ = new QCheckBox("Also make their Discord capture for them", gr);
+	fRoster->addRow("Only this channel", rosterChannel_);
+	rosterSources_ = new QCheckBox("Also make their Discord capture for them", gRoster);
 	rosterSources_->setChecked(e_->cfg.rosterAddSources);
-	fr->addRow(rosterSources_);
-	rosterStatus_ = new QLabel(gr);
+	fRoster->addRow(rosterSources_);
+	rosterStatus_ = new QLabel(gRoster);
 	rosterStatus_->setWordWrap(true);
-	fr->addRow(rosterStatus_);
+	fRoster->addRow(rosterStatus_);
 	auto *rosterNote =
 		new QLabel("Discord will not tell a plugin who is in a call, so the Kennel.gg Discord bot publishes it "
 			   "instead. Ask in the server for your roster address - it carries a key, so treat it like a "
 			   "password and do not put it on stream. When somebody goes live in the call a squad slot "
 			   "appears with their Discord name on it, and it goes away again when they stop. Slots you "
 			   "added yourself are never touched.",
-			   gr);
+			   gRoster);
 	rosterNote->setWordWrap(true);
 	rosterNote->setStyleSheet("color: palette(mid);");
-	fr->addRow(rosterNote);
+	fRoster->addRow(rosterNote);
 	auto showRoster = [this]() {
 		QString s = e_->rosterStatus();
 		QStringList live;
