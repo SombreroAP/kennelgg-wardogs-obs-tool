@@ -59,6 +59,7 @@ private:
 	QTableWidget *friends_;
 	QPushButton *speedBtn_ = nullptr;
 	QLabel *ndiStatus_ = nullptr;
+	QComboBox *sceneV_ = nullptr;
 	QComboBox *lookPos_ = nullptr, *ndiQuality_ = nullptr;
 	QListWidget *onTop_ = nullptr;
 	QListWidget *mute_ = nullptr;

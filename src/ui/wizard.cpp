@@ -165,6 +165,8 @@ void SetupWizard::fillSquad()
 	for (size_t i = 0; i < e_->cfg.friends.size(); i++) {
 		auto &f = e_->cfg.friends[i];
 		QString kind = f.kind == FriendKind::Twitch     ? "Twitch"
+			       : f.kind == FriendKind::Kick     ? "Kick"
+			       : f.kind == FriendKind::YouTube  ? "YouTube"
 			       : f.kind == FriendKind::VdoNinja ? "VDO.Ninja"
 			       : f.kind == FriendKind::Discord  ? "Discord"
 			       : f.kind == FriendKind::Ndi      ? "NDI (LAN)"

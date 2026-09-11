@@ -38,6 +38,20 @@ std::string Switcher::webUrl(const Friend &f)
 		       "&solo&cleanoutput&autostart&noaudio=0&maxvideobitrate=" + std::to_string(f.vdoKbps) +
 		       "&codec=" + f.vdoCodec + "&scale=100&buffer=0&height=" + std::to_string(f.vdoHeight) +
 		       "&framerate=" + std::to_string(f.vdoFps);
+	if (f.kind == FriendKind::Kick) {
+		std::string ch = lower(f.channel);
+		if (!ch.empty() && ch[0] == '@')
+			ch.erase(0, 1);
+		return "https://player.kick.com/" + urlEncode(ch) + "?autoplay=true&muted=false";
+	}
+	if (f.kind == FriendKind::YouTube) {
+		// channel is a channel ID (UC...) - then the channel's current live stream - or a video ID
+		std::string id = f.channel;
+		if (id.rfind("UC", 0) == 0 && id.size() >= 20)
+			return "https://www.youtube.com/embed/live_stream?channel=" + urlEncode(id) +
+			       "&autoplay=1&mute=0";
+		return "https://www.youtube.com/embed/" + urlEncode(id) + "?autoplay=1&mute=0";
+	}
 	std::string ch = lower(f.channel);
 	if (!ch.empty() && ch[0] == '@')
 		ch.erase(0, 1);
@@ -582,10 +596,14 @@ obs_source_t *Switcher::sceneSource(const Config &cfg)
 }
 
 std::string Switcher::ensureBrowserSource(obs_scene_t *scene, const char *name, const std::string &url,
-					  bool rerouteAudio)
+					  bool rerouteAudio, int width, int height)
 {
 	struct obs_video_info ovi;
 	obs_get_video_info(&ovi);
+	if (width > 0 && height > 0) { // a canvas of another shape
+		ovi.base_width = (uint32_t)width;
+		ovi.base_height = (uint32_t)height;
+	}
 	obs_sceneitem_t *item = obs_scene_find_source(scene, name);
 	obs_source_t *src = obs_get_source_by_name(name);
 	if (!src) {
@@ -656,134 +674,112 @@ int Switcher::hideEverywhere(const std::string &sourceName)
 		const std::string *name;
 		int hidden = 0;
 	} ctx{&sourceName};
-	struct obs_frontend_source_list scenes = {};
-	obs_frontend_get_scenes(&scenes);
-	for (size_t i = 0; i < scenes.sources.num; i++) {
-		obs_scene_t *scene = obs_scene_from_source(scenes.sources.array[i]);
-		if (!scene)
-			continue;
-		obs_scene_enum_items(
-			scene,
-			[](obs_scene_t *, obs_sceneitem_t *item, void *data) {
-				auto *c = (Ctx *)data;
-				obs_source_t *src = obs_sceneitem_get_source(item);
-				if (src && *c->name == obs_source_get_name(src) && obs_sceneitem_visible(item)) {
-					obs_sceneitem_set_visible(item, false);
-					c->hidden++;
-				}
+	// every scene OBS has, not only the ones in the scene list: a vertical canvas's scenes are
+	// real scenes too, they just live in another plugin's dock
+	obs_enum_scenes(
+		[](void *param, obs_source_t *ss) {
+			auto *c = (Ctx *)param;
+			obs_scene_t *scene = obs_scene_from_source(ss);
+			if (!scene)
 				return true;
-			},
-			&ctx);
-	}
-	obs_frontend_source_list_free(&scenes);
+			obs_scene_enum_items(
+				scene,
+				[](obs_scene_t *, obs_sceneitem_t *item, void *p) {
+					auto *c = (Ctx *)p;
+					obs_source_t *src = obs_sceneitem_get_source(item);
+					if (src && obs_source_get_name(src) && *c->name == obs_source_get_name(src) &&
+					    obs_sceneitem_visible(item)) {
+						obs_sceneitem_set_visible(item, false);
+						c->hidden++;
+					}
+					return true;
+				},
+				c);
+			return true;
+		},
+		&ctx);
 	return ctx.hidden;
 }
 
-/// Scene items in the plugin's scene, top of the stack first: name and source type.
-/// A Discord screen share arrives inside Discord's own window: flat grey chrome down the sides and
-/// black letterboxing around the picture. This renders one frame of the source, walks in from each
-/// edge while the whole row (or column) is one flat colour, and crops the scene item to what is left,
-/// so the stream shows the game and nothing else. Called each time their feed goes up, so it follows
-/// the window being resized.
-/// A cheap fingerprint of what a source is showing right now. Sampling it quickly and counting how
-/// often it changes measures the feed's real frame rate - the only way to tell "the network is not
-/// delivering" apart from "this PC is not drawing it".
-uint64_t Switcher::feedHash(const std::string &sourceName)
+/// Scenes OBS knows about that are not in the scene list: another canvas's scenes. Aitum's
+/// vertical canvas keeps its scenes this way, and they are the ones a vertical stream shows.
+std::vector<std::string> Switcher::otherCanvasScenes()
 {
-	obs_source_t *src = obs_get_source_by_name(sourceName.c_str());
-	if (!src)
-		return 0;
-	std::vector<uint8_t> bgra;
-	int w = 0, h = 0, ls = 0;
-	uint64_t hash = 0;
-	if (hashCap_.grab(src, 64, bgra, w, h, ls) && w > 0 && h > 0) {
-		hash = 1469598103934665603ULL;
-		for (int y = 0; y < h; y++)
-			for (int x = 0; x < w * 4; x += 7) { // every other pixel or so: plenty to tell frames apart
-				hash ^= bgra[(size_t)y * ls + x];
-				hash *= 1099511628211ULL;
-			}
-	}
-	obs_source_release(src);
-	return hash;
+	std::vector<std::string> front = sceneNames(), out;
+	std::pair<std::vector<std::string> *, std::vector<std::string> *> ctx(&front, &out);
+	obs_enum_scenes(
+		[](void *param, obs_source_t *ss) {
+			auto *pr = (std::pair<std::vector<std::string> *, std::vector<std::string> *> *)param;
+			const char *n = obs_source_get_name(ss);
+			if (n && std::find(pr->first->begin(), pr->first->end(), n) == pr->first->end())
+				pr->second->push_back(n);
+			return true;
+		},
+		&ctx);
+	std::sort(out.begin(), out.end());
+	return out;
 }
 
-std::string Switcher::trimToContent(const Config &cfg, const Friend &f)
+/// The same swap, in the vertical scene: the squad mate's source full-canvas in portrait, the look
+/// overlay over it in its portrait form. The video source is the very same one the main canvas
+/// shows - a source can sit in any number of scenes - so nothing is decoded twice.
+std::string Switcher::applyVertical(const Config &cfg, bool on)
 {
-	if (f.source.empty())
+	if (cfg.sceneV.empty())
 		return "";
-	obs_source_t *ss = sceneSource(cfg);
-	if (!ss)
-		return "no scene";
-	obs_scene_t *scene = obs_scene_from_source(ss);
-	obs_sceneitem_t *item = obs_scene_find_source(scene, f.source.c_str());
-	obs_source_t *src = obs_get_source_by_name(f.source.c_str());
-	std::string err;
-	if (!item || !src) {
-		err = "'" + f.source + "' is not in the scene";
-	} else if (!f.trim) {
-		struct obs_sceneitem_crop none = {0, 0, 0, 0};
-		obs_sceneitem_set_crop(item, &none);
-	} else {
-		const int W = 320;
-		std::vector<uint8_t> bgra;
-		int w = 0, h = 0, ls = 0;
-		if (!trimCap_.grab(src, W, bgra, w, h, ls) || w < 32 || h < 32) {
-			err = "no picture from '" + f.source + "' yet";
-		} else {
-			auto lum = [&](int x, int y) {
-				const uint8_t *p = &bgra[(size_t)y * ls + (size_t)x * 4];
-				return (int)(0.114f * p[0] + 0.587f * p[1] + 0.299f * p[2]);
-			};
-			// a row or column of window chrome is one flat colour; the picture never is
-			const int kFlat = 10;
-			auto flatRow = [&](int y) {
-				int lo = 255, hi = 0;
-				for (int x = 0; x < w; x++) {
-					int v = lum(x, y);
-					lo = std::min(lo, v);
-					hi = std::max(hi, v);
-				}
-				return hi - lo <= kFlat;
-			};
-			auto flatCol = [&](int x) {
-				int lo = 255, hi = 0;
-				for (int y = 0; y < h; y++) {
-					int v = lum(x, y);
-					lo = std::min(lo, v);
-					hi = std::max(hi, v);
-				}
-				return hi - lo <= kFlat;
-			};
-			int top = 0, bottom = 0, left = 0, right = 0;
-			const int maxTB = h / 3, maxLR = w / 3; // never eat into the picture itself
-			while (top < maxTB && flatRow(top))
-				top++;
-			while (bottom < maxTB && flatRow(h - 1 - bottom))
-				bottom++;
-			while (left < maxLR && flatCol(left))
-				left++;
-			while (right < maxLR && flatCol(w - 1 - right))
-				right++;
-			uint32_t sw = obs_source_get_width(src), sh = obs_source_get_height(src);
-			struct obs_sceneitem_crop crop = {(int)std::lround((double)left * sw / w),
-							  (int)std::lround((double)top * sh / h),
-							  (int)std::lround((double)right * sw / w),
-							  (int)std::lround((double)bottom * sh / h)};
-			struct obs_sceneitem_crop had = {0, 0, 0, 0};
-			obs_sceneitem_get_crop(item, &had);
-			if (crop.left != had.left || crop.top != had.top || crop.right != had.right ||
-			    crop.bottom != had.bottom) {
-				obs_sceneitem_set_crop(item, &crop);
-				if (log && (crop.left || crop.top || crop.right || crop.bottom))
-					log("Trimmed the borders off " + f.name + "'s feed (" +
-					    std::to_string(crop.left) + "/" + std::to_string(crop.top) + "/" +
-					    std::to_string(crop.right) + "/" + std::to_string(crop.bottom) + " px).");
-			}
-		}
+	obs_source_t *ss = obs_get_source_by_name(cfg.sceneV.c_str());
+	obs_scene_t *scene = ss ? obs_scene_from_source(ss) : nullptr;
+	if (!scene) {
+		if (ss)
+			obs_source_release(ss);
+		return "vertical scene '" + cfg.sceneV + "' is not there";
 	}
-	if (src)
-		obs_source_release(src);
+	// the portrait canvas's size: a scene reports its canvas's base size
+	uint32_t cw = obs_source_get_width(ss), ch = obs_source_get_height(ss);
+	if (cw == 0 || ch == 0) {
+		cw = 1080;
+		ch = 1920;
+	}
+	std::string err;
+	const Friend *f = cfg.active();
+	if (f) {
+		std::string name = cfg.sourceFor(*f);
+		obs_source_t *src = obs_get_source_by_name(name.c_str());
+		if (src) {
+			obs_sceneitem_t *item = obs_scene_find_source(scene, name.c_str());
+			bool fresh = !item;
+			if (!item)
+				item = obs_scene_add(scene, src);
+			if (item) {
+				if (fresh) {
+					// full height of the portrait canvas, centred: the sides of a 16:9 feed fall away
+					struct vec2 pos = {0, 0}, bounds = {(float)cw, (float)ch};
+					obs_sceneitem_set_pos(item, &pos);
+					obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_OUTER);
+					obs_sceneitem_set_bounds_alignment(item, OBS_ALIGN_CENTER);
+					obs_sceneitem_set_bounds(item, &bounds);
+				}
+				if (on)
+					moveToTop(item);
+				obs_sceneitem_set_visible(item, on);
+			}
+			obs_source_release(src);
+		} else if (on)
+			err = "'" + name + "' does not exist yet";
+	}
+	// the look overlay, portrait
+	const char *lookName = Config::overlaySourceNameV();
+	if (on && (cfg.lookName || cfg.lookCam || cfg.lookGrain || cfg.lookVignette)) {
+		std::string e = ensureBrowserSource(scene, lookName, overlayUrl(cfg, f ? f->name : "") + "&v=1", false,
+						    (int)cw, (int)ch);
+		if (!e.empty() && err.empty())
+			err = e;
+		if (obs_sceneitem_t *it = obs_scene_find_source(scene, lookName)) {
+			moveToTop(it);
+			obs_sceneitem_set_visible(it, true);
+		}
+	} else
+		hideEverywhere(lookName);
 	obs_source_release(ss);
 	return err;
 }
@@ -967,6 +963,7 @@ int Switcher::hideAllFriends(const Config &cfg)
 		}
 	}
 	n += hideEverywhere(Config::overlaySourceName());
+	n += hideEverywhere(Config::overlaySourceNameV());
 	return n;
 }
 
@@ -1168,11 +1165,9 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 		obs_source_t *a = obs_get_source_by_name(f->audioSource.c_str());
 		obs_sceneitem_t *ai = obs_scene_find_source(scene, f->audioSource.c_str());
 		if (a && ai) {
-			if (cfg.keepWarm) {
-				obs_sceneitem_set_visible(ai, true);
-				obs_source_set_muted(a, !(on && cfg.friendAudio));
-			} else
-				obs_sceneitem_set_visible(ai, on);
+			// muted unless "play the squad mate's own game audio" is ticked, in every mode
+			obs_source_set_muted(a, !(on && cfg.friendAudio));
+			obs_sceneitem_set_visible(ai, cfg.keepWarm || on);
 		}
 		if (a)
 			obs_source_release(a);

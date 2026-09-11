@@ -124,7 +124,7 @@ uint16 height, uint64 timestamp ms (little endian), then JPEG.
 
 | Tab | What is there |
 |---|---|
-| Switch | game source and scene; squad mates (kind, in-game name, VDO.Ninja quality); **Show whoever is closest** with Wait between swaps and the 50 m range; squad-mate sound and what of yours to mute; LAN discovery and NDI share; Extras: keep warm, preload every feed |
+| Switch | game source and scene; squad mates (Twitch, Kick, YouTube live, VDO.Ninja, Discord or an OBS source; in-game name), the vertical scene for a portrait canvas; **Show whoever is closest** with Wait between swaps and the 50 m range; squad-mate sound and what of yours to mute; LAN discovery and NDI share; Extras: keep warm, preload every feed |
 | Dual POV | on/off, crew mate, vehicle and seat preset or a dragged box, opacity |
 | Look | name tag, plate, camcorder frame, grain, vignette; preview |
 | Detect | live picture with the damage-log match, the header box and the blue **NEARBY box**; **Test read**; the match threshold and **Hold down to**, confirm frames, the 2 s delay before showing and the delay before coming back |

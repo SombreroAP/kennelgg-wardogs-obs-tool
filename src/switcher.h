@@ -25,6 +25,10 @@ public:
 	std::string updateLook(const Config &cfg, bool on);
 
 	static std::vector<std::string> sceneNames();
+	/// Scenes of another canvas (Aitum Vertical's), which the scene list does not show.
+	static std::vector<std::string> otherCanvasScenes();
+	/// The swap and the look overlay in the vertical scene, if one is set. "" or a problem.
+	std::string applyVertical(const Config &cfg, bool on);
 	/// Scene items in the plugin's scene, topmost first: name and source type.
 	std::vector<std::pair<std::string, std::string>> sceneItems(const Config &cfg);
 	/// Fingerprint of what a source shows right now; sample it fast to measure its real frame rate.
@@ -92,8 +96,8 @@ public:
 private:
 	std::map<std::string, bool> prevMute_;
 	obs_source_t *sceneSource(const Config &cfg); // +ref
-	std::string ensureBrowserSource(obs_scene_t *scene, const char *name, const std::string &url,
-					bool rerouteAudio);
+	std::string ensureBrowserSource(obs_scene_t *scene, const char *name, const std::string &url, bool rerouteAudio,
+					int width = 0, int height = 0);
 	std::string ensureHideFilter(obs_source_t *src);
 	static void moveToTop(obs_sceneitem_t *item) { obs_sceneitem_set_order(item, OBS_ORDER_MOVE_TOP); }
 };

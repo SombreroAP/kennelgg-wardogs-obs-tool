@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-enum class FriendKind { Twitch = 0, VdoNinja = 1, ObsSource = 2, Discord = 3, Ndi = 4 };
+enum class FriendKind { Twitch = 0, VdoNinja = 1, ObsSource = 2, Discord = 3, Ndi = 4, Kick = 5, YouTube = 6 };
 
 struct Friend {
 	std::string name;
@@ -16,7 +16,11 @@ struct Friend {
 	bool trim = true;     // Discord: crop the window's flat borders away, leaving the game picture
 	int ndiBw = 0;        // NDI: 0 = full quality, 1 = low bandwidth (a small, gentler stream)
 	int ndiSync = 0;      // timing: 0 leave DistroAV alone, 1 frame sync, 2 timestamps, 3 timecode, 4 none
-	bool isWeb() const { return kind == FriendKind::Twitch || kind == FriendKind::VdoNinja; }
+	bool isWeb() const
+	{
+		return kind == FriendKind::Twitch || kind == FriendKind::VdoNinja || kind == FriendKind::Kick ||
+		       kind == FriendKind::YouTube;
+	}
 	const std::string &nearName() const { return gameName.empty() ? name : gameName; }
 	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }
 };
@@ -31,20 +35,24 @@ struct Config {
 	/// Sources that stay above everything the plugin adds: the streamer's camera, their alerts.
 	/// First in the list is the topmost.
 	std::vector<std::string> onTop;
-	bool onTopV1 = false;            // seeded once from what is in the scene
-	bool warmNdi = false;            // keep an NDI feed connected while you are alive (constant bandwidth)
-	std::string lookPos = "ml";      // where the POV tag sits: tl tc ml mc bl br
-	int ndiShareHeight = 1080; // what we send over NDI: 0 = the full canvas
-	int ndiShareFps = 0;       // always 0 now: the share runs at OBS's own rate
-	bool ndiShareV1 = false; // 0.5.4 scaled the share to 720p30 by default
-	bool ndiShareV2 = false;   // ...0.5.6 moved it to 1080p30 and gave every size a 60 as well
-	bool lookPosV1 = false;          // one-time move off the bottom-left corner
+	bool onTopV1 = false; // seeded once from what is in the scene
+	bool warmNdi = false; // keep an NDI feed connected while you are alive (constant bandwidth)
+	// A second, portrait canvas (Aitum Vertical): the swap and the look overlay happen there too.
+	std::string sceneV;           // the vertical scene the swap is applied in ("" = off)
+	std::string lookPos = "ml";   // where the POV tag sits: tl tc ml mc bl br
+	int ndiShareHeight = 1080;    // what we send over NDI: 0 = the full canvas
+	int ndiShareFps = 0;          // always 0 now: the share runs at OBS's own rate
+	bool ndiShareV1 = false;      // 0.5.4 scaled the share to 720p30 by default
+	bool ndiShareV2 = false;      // ...0.5.6 moved it to 1080p30 and gave every size a 60 as well
+	bool lookPosV1 = false;       // one-time move off the bottom-left corner
 	bool audioAutoPicked = false; // desktop audio was ticked automatically once
 	bool bringToFront = true;
 	bool keepWarm = true;
 	bool preloadFeeds = false;   // every squad mate's feed loaded and playing, hidden and silent
 	bool friendAudio = false;    // play the squad mate's own game audio while showing them
 	bool audioDefaults2 = false; // one-time move to "nothing of yours is muted by default"
+	bool audioDefaults3 = false; // ...and once more: nothing muted, and no sound taken from their feed
+	bool ndiShelved = false;     // NDI and LAN discovery off and hidden until they are ready
 	int vdoBitrateKbps = 12000;  // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
 
 	// dual POV: a squad mate's feed in a small window over your own POV (tank / chopper crews)
@@ -74,11 +82,11 @@ struct Config {
 	int grainAmount = 40;
 
 	// squad on the LAN
-	std::string playerName; // shown to squad mates; defaults to the PC name
-	bool lanEnabled = true; // announce myself and listen for squad mates (UDP 47821)
+	std::string playerName;  // shown to squad mates; defaults to the PC name
+	bool lanEnabled = false; // announce myself and listen for squad mates (UDP 47821) - shelved
 	int lanPort = 47821;
-	bool ndiShare = true;     // publish my game feed over NDI (DistroAV) for squad mates, without my mic
-	bool autoAddPeers = true; // squad mates found on the LAN are added to the list by themselves
+	bool ndiShare = false;     // publish my game feed over NDI (DistroAV) for squad mates - shelved
+	bool autoAddPeers = false; // squad mates found on the LAN are added to the list by themselves
 
 	// companion app / bridge / clips
 	int bridgePort = 47820;
@@ -143,6 +151,7 @@ struct Config {
 		return preloadFeeds ? std::string(webSourceName()) + " - " + f.name : webSourceName();
 	}
 	static const char *overlaySourceName() { return "Kennel look"; }
+	static const char *overlaySourceNameV() { return "Kennel look (vertical)"; }
 	static const char *hideFilterName() { return "Kennel hide"; }
 	std::string sourceFor(const Friend &f) const { return f.isWeb() ? webSourceFor(f) : f.source; }
 	const Friend *active() const

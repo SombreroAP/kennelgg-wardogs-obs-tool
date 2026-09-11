@@ -1564,6 +1564,11 @@ void Engine::applyNow(bool on, const QString &why)
 	}
 	applying_ = true;
 	auto errors = sw.apply(cfg, on);
+	{
+		std::string ev = sw.applyVertical(cfg, on); // the same swap on the portrait canvas, if set
+		if (!ev.empty())
+			errors.push_back("vertical: " + ev);
+	}
 	if (!on) {
 		// your own POV takes priority when you are up: every squad mate and the look overlay go, in every scene
 		int n = sw.hideAllFriends(cfg);
@@ -1757,6 +1762,13 @@ void Engine::previewLook(bool on)
 {
 	lookPreview_ = on && !applied_;
 	std::string e = sw.updateLook(cfg, lookPreview_ || applied_);
+	if (!cfg.sceneV.empty()) {
+		// the portrait overlay previews too, on its own, without moving a squad mate's feed about
+		bool show = lookPreview_ || applied_;
+		std::string ev = sw.applyVertical(cfg, show);
+		if (!ev.empty() && e.empty())
+			e = ev;
+	}
 	log(!e.empty() ? QString::fromStdString("Look: " + e)
 		       : (lookPreview_ ? "Look overlay showing in OBS." : "Look overlay hidden."));
 }

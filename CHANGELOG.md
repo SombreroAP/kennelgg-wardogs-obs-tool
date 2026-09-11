@@ -2,6 +2,12 @@
 
 All notable changes to Kennel.gg WARDOGS OBS Tools. Release notes on GitHub are taken from here.
 
+## Unreleased
+- **Nothing of yours is muted when the POV changes, and no sound is taken from the squad mate's feed** - for everyone, including setups that had either ticked. Both are still there on the Switch tab to turn on. A Discord squad mate's audio capture follows the same rule now in every mode.
+- **NDI is shelved.** LAN discovery, the NDI share and auto-adding are off and out of sight; the code is kept, and a squad mate already set up as NDI keeps working, but NDI is not offered for new ones. It is parked until it behaves reliably.
+- **Kick and YouTube live streams** as squad-mate kinds, alongside Twitch. Kick takes the channel name; YouTube takes a channel link, @handle, channel ID or a live video link - a handle is looked up once on Save for the channel ID the player needs. With a channel, whatever they are streaming right now is shown.
+- **The swap on a vertical canvas too.** Switch tab -> *Vertical scene*: pick the scene your portrait stream (Aitum Vertical) shows, and the squad mate's feed is shown there as well - full height, sides cropped - with the look overlay in a portrait form: everything sized to the narrow canvas and the POV tag across the top, where the cropped feed has no HUD. Same source in both scenes, so nothing is decoded twice; the *at* box on the Look tab still moves the tag.
+
 ## 0.6.6
 - **A squad mate's NDI feed is no longer streaming the whole time you are alive.** Keeping a feed warm leaves the source running so a swap is instant - which for NDI means their full stream crossing the network and being decoded on both PCs continuously, for something you need only when you go down. At 1440p that is around 240 Mbit running permanently, and it is enough on its own to make everything judder. NDI feeds are now connected only while they are shown; there is a tick box on the Switch tab (Extras) to keep one connected if you would rather have the instant swap and can spare the bandwidth. Browser and Discord feeds are unchanged.
 - If the picture still judders, the size being sent is the next thing: **Share at** on the *sending* PC. A full 1440p canvas is about 240 Mbit of nearly-raw video; 1080p is about a third of that and 720p a tenth.

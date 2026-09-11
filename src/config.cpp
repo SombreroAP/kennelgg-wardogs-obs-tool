@@ -76,6 +76,9 @@ void Config::load()
 	DEFB(preloadFeeds);
 	DEFB(friendAudio);
 	DEFB(audioDefaults2);
+	DEFB(audioDefaults3);
+	DEFB(ndiShelved);
+	DEFS(sceneV);
 	DEFI(vdoBitrateKbps);
 	DEFB(dualEnabled);
 	DEFI(dualFriend);
@@ -179,6 +182,9 @@ void Config::load()
 	GETB(preloadFeeds);
 	GETB(friendAudio);
 	GETB(audioDefaults2);
+	GETB(audioDefaults3);
+	GETB(ndiShelved);
+	GETS(sceneV);
 	GETI(vdoBitrateKbps);
 	GETB(dualEnabled);
 	GETI(dualFriend);
@@ -354,6 +360,22 @@ void Config::load()
 		muteWhileDowned.clear();
 		audioAutoPicked = true;
 	}
+	// once more, and this time for everyone: nothing of yours is muted when the POV changes, and no
+	// sound is taken from the squad mate's feed. Both are still there to tick on.
+	if (!audioDefaults3) {
+		audioDefaults3 = true;
+		muteWhileDowned.clear();
+		audioAutoPicked = true;
+		friendAudio = false;
+	}
+	// NDI is shelved: LAN discovery, the share and auto-adding are off and out of the way until
+	// they are ready. Squad mates already set up as NDI keep working.
+	if (!ndiShelved) {
+		ndiShelved = true;
+		lanEnabled = false;
+		ndiShare = false;
+		autoAddPeers = false;
+	}
 	if (clipNameTemplate == "{date}_{time}_{tags}")
 		clipNameTemplate = "{title}_{tags}_{date}_{time}"; // what happened first, then when
 	obs_data_release(d);
@@ -373,6 +395,9 @@ void Config::save() const
 	SETB(preloadFeeds);
 	SETB(friendAudio);
 	SETB(audioDefaults2);
+	SETB(audioDefaults3);
+	SETB(ndiShelved);
+	SETS(sceneV);
 	SETI(vdoBitrateKbps);
 	SETB(dualEnabled);
 	SETI(dualFriend);

@@ -1,6 +1,10 @@
 #include "ui/settings-dialog.h"
 #include "ndi.h"
 #include <algorithm>
+#include <QEventLoop>
+#include <QNetworkReply>
+#include <QNetworkAccessManager>
+#include <QStandardItemModel>
 #include <QScrollArea>
 #include <QNetworkInterface>
 #include <QJsonArray>
@@ -170,13 +174,30 @@ public:
 		kind_ = new QComboBox(this);
 		kind_->addItems({"Twitch stream (~2 s, nothing for them to set up)",
 				 "VDO.Ninja / WebRTC (~0.3 s, they open one link)", "OBS source I already have",
-				 "Discord Go Live (~0.5-1 s, they Go Live in the call)", "NDI on the LAN (DistroAV)"});
+				 "Discord Go Live (~0.5-1 s, they Go Live in the call)", "NDI on the LAN (shelved)",
+				 "Kick stream (~2 s, nothing for them to set up)",
+				 "YouTube live stream (~5 s+, nothing for them to set up)"});
+		// NDI is shelved: the row stays so an existing NDI squad mate still edits, but nobody new
+		// is offered it
+		if (result.kind != FriendKind::Ndi) {
+			auto *m = qobject_cast<QStandardItemModel *>(kind_->model());
+			if (m && m->item((int)FriendKind::Ndi))
+				m->item((int)FriendKind::Ndi)->setEnabled(false);
+		}
 		form_->addRow("Comes in as", kind_);
 
 		// Twitch
 		twitch_ = new QLineEdit(this);
 		twitch_->setPlaceholderText("channel name, e.g. sombrero");
 		form_->addRow("Twitch channel", twitch_);
+		// Kick
+		kick_ = new QLineEdit(this);
+		kick_->setPlaceholderText("channel name, as in kick.com/<name>");
+		form_->addRow("Kick channel", kick_);
+		// YouTube
+		yt_ = new QLineEdit(this);
+		yt_->setPlaceholderText("channel link, @handle, channel ID (UC...) or a live video link");
+		form_->addRow("YouTube", yt_);
 		// VDO.Ninja
 		streamId_ = new QLineEdit(this);
 		streamId_->setPlaceholderText("any word you both agree on, e.g. pup-pov");
@@ -275,6 +296,10 @@ public:
 		// load
 		if (result.kind == FriendKind::Twitch)
 			twitch_->setText(QString::fromStdString(result.channel));
+		if (result.kind == FriendKind::Kick)
+			kick_->setText(QString::fromStdString(result.channel));
+		if (result.kind == FriendKind::YouTube)
+			yt_->setText(QString::fromStdString(result.channel));
 		if (result.kind == FriendKind::VdoNinja)
 			streamId_->setText(QString::fromStdString(result.channel));
 		res_->setCurrentIndex(result.vdoHeight >= 1440 ? 2 : result.vdoHeight >= 1080 ? 1 : 0);
@@ -288,7 +313,7 @@ public:
 
 private:
 	QFormLayout *form_;
-	QLineEdit *name_, *gameName_, *twitch_, *streamId_, *link_;
+	QLineEdit *name_, *gameName_, *twitch_, *streamId_, *link_, *kick_ = nullptr, *yt_ = nullptr;
 	QComboBox *kind_, *source_, *pick_, *res_, *fps_, *codec_;
 	QSpinBox *kbps_;
 	QWidget *qualityRow_, *linkWidget_, *pickWidget_;
@@ -296,6 +321,63 @@ private:
 	QCheckBox *trim_ = nullptr;
 	QComboBox *ndiBw_ = nullptr, *ndiSync_ = nullptr;
 	FriendKind kind() const { return (FriendKind)kind_->currentIndex(); }
+	/// "kick.com/pup", "@pup", "PUP" -> "pup"
+	static std::string kickSlug(QString v)
+	{
+		v = v.trimmed();
+		int i = v.lastIndexOf('/');
+		if (i >= 0)
+			v = v.mid(i + 1);
+		v = v.section('?', 0, 0).remove('@').toLower();
+		return v.toStdString();
+	}
+	/// Whatever they pasted -> a channel ID (UC...), an @handle to look up, or a video ID.
+	static std::string youTubeId(QString v)
+	{
+		v = v.trimmed();
+		if (v.isEmpty())
+			return "";
+		QRegularExpression rxCh("(UC[A-Za-z0-9_-]{20,})"),
+			rxVid("(?:v=|/live/|youtu\\.be/|/embed/)([A-Za-z0-9_-]{11})"),
+			rxHandle("@([A-Za-z0-9._-]{3,})");
+		QRegularExpressionMatch m;
+		if ((m = rxCh.match(v)).hasMatch())
+			return m.captured(1).toStdString();
+		if ((m = rxVid.match(v)).hasMatch())
+			return m.captured(1).toStdString();
+		if ((m = rxHandle.match(v)).hasMatch())
+			return ("@" + m.captured(1)).toStdString();
+		if (v.contains("youtube.com") || v.contains("youtu.be"))
+			return ""; // a link we do not understand
+		if (QRegularExpression("^[A-Za-z0-9_-]{11}$").match(v).hasMatch())
+			return v.toStdString(); // a bare video ID
+		return ("@" + v).toStdString(); // a bare name: treat as a handle
+	}
+	/// The channel page carries its ID; one blocking fetch with a short timeout.
+	static QString resolveYouTubeHandle(const QString &handle)
+	{
+		QNetworkAccessManager nam;
+		QNetworkRequest req(QUrl("https://www.youtube.com/" + handle));
+		req.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Kennel WARDOGS OBS Tools)");
+		req.setRawHeader("Accept-Language", "en");
+		QNetworkReply *rep = nam.get(req);
+		QEventLoop loop;
+		QTimer::singleShot(8000, &loop, &QEventLoop::quit);
+		QObject::connect(rep, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+		loop.exec();
+		QString id;
+		if (rep->isFinished() && rep->error() == QNetworkReply::NoError) {
+			QString page = QString::fromUtf8(rep->readAll());
+			QRegularExpressionMatch m =
+				QRegularExpression("\"(?:channelId|externalId)\":\"(UC[A-Za-z0-9_-]{20,})\"")
+					.match(page);
+			if (m.hasMatch())
+				id = m.captured(1);
+		}
+		rep->abort();
+		rep->deleteLater();
+		return id;
+	}
 	Friend draft() const
 	{
 		Friend f = result;
@@ -311,6 +393,10 @@ private:
 		f.vdoCodec = codec_->currentText().toStdString();
 		if (f.kind == FriendKind::Twitch)
 			f.channel = twitch_->text().trimmed().toLower().remove('@').toStdString();
+		else if (f.kind == FriendKind::Kick)
+			f.channel = kickSlug(kick_->text());
+		else if (f.kind == FriendKind::YouTube)
+			f.channel = youTubeId(yt_->text());
 		else if (f.kind == FriendKind::VdoNinja)
 			f.channel = streamId_->text().trimmed().toStdString();
 		else if (f.kind == FriendKind::ObsSource)
@@ -387,6 +473,8 @@ private:
 	{
 		FriendKind k = kind();
 		form_->setRowVisible(twitch_, k == FriendKind::Twitch);
+		form_->setRowVisible(kick_, k == FriendKind::Kick);
+		form_->setRowVisible(yt_, k == FriendKind::YouTube);
 		form_->setRowVisible(streamId_, k == FriendKind::VdoNinja);
 		form_->setRowVisible(qualityRow_, k == FriendKind::VdoNinja);
 		form_->setRowVisible(linkWidget_, k == FriendKind::VdoNinja);
@@ -414,7 +502,15 @@ private:
 			break;
 		case FriendKind::Ndi:
 			hint_->setText(
-				"Lowest latency, on the LAN or over a VPN such as Tailscale. They run OBS with DistroAV's NDI output or NDI Screen Capture; pick their NDI source and it is created in your scene on Save.");
+				"NDI is shelved for now: this squad mate keeps working as set up, but NDI is not offered for new ones. Lowest latency on a LAN when it behaves; it did not, reliably, and it is parked until it does.");
+			break;
+		case FriendKind::Kick:
+			hint_->setText(
+				"Kick's own player in a browser source, like Twitch. Type the channel as it appears in the address bar (kick.com/<name>). They just need to be live. Their stream includes their mic; its sound is not played unless you tick that on the Switch tab.");
+			break;
+		case FriendKind::YouTube:
+			hint_->setText(
+				"YouTube's player in a browser source. Paste their channel link, @handle, channel ID or a link to the live video. With a channel, whatever they are streaming right now is shown; a video link shows that one stream. YouTube adds several seconds of delay of its own, and the channel has to allow embedding (most do).");
 			break;
 		default:
 			hint_->setText(
@@ -439,6 +535,28 @@ private:
 		if (f.kind == FriendKind::Twitch && f.channel.empty()) {
 			err_->setText("Type the Twitch channel name.");
 			return;
+		}
+		if (f.kind == FriendKind::Kick && f.channel.empty()) {
+			err_->setText("Type the Kick channel name.");
+			return;
+		}
+		if (f.kind == FriendKind::YouTube && f.channel.empty()) {
+			err_->setText(
+				"That does not look like a YouTube channel link, @handle, channel ID or video link.");
+			return;
+		}
+		if (f.kind == FriendKind::YouTube && f.channel[0] == '@') {
+			// a handle is only a name; the player needs the channel's ID, which the channel page
+			// carries. One fetch, here, once.
+			err_->setText("Looking up the channel ID for " + QString::fromStdString(f.channel) + "...");
+			QString id = resolveYouTubeHandle(QString::fromStdString(f.channel));
+			if (id.isEmpty()) {
+				err_->setText("Could not find the channel ID for that handle (no internet, or YouTube "
+					      "changed its page). Paste the channel ID (starts UC...) or a link to "
+					      "the live video instead.");
+				return;
+			}
+			f.channel = id.toStdString();
 		}
 		if (f.kind == FriendKind::VdoNinja && f.channel.empty()) {
 			err_->setText("Type a stream ID (any word you both agree on).");
@@ -567,6 +685,13 @@ QWidget *SettingsDialog::buildSwitchTab()
 	});
 	f1->addRow("Your game source", gr);
 	f1->addRow("Scene", scene_);
+	sceneV_ = new QComboBox(g1);
+	f1->addRow("Vertical scene", sceneV_);
+	f1->addRow(muted(
+		"For a second, portrait canvas (Aitum Vertical): pick the vertical scene your stream shows and the "
+		"swap happens there as well - the squad mate's feed full-height, sides cropped, and the look overlay "
+		"in its portrait form with the POV tag across the top. Same source, so nothing is decoded twice.",
+		g1));
 	f1->addRow(muted(
 		"The game source is watched for the damage log (rendered on its own, so it can stay under the friend). Squad mates are shown on top of it in this scene. Browser sources for Twitch / VDO.Ninja and the look overlay are created here when first needed.",
 		g1));
@@ -581,6 +706,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 		saveAndApply();
 	});
 	connect(scene_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { saveAndApply(); });
+	connect(sceneV_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
 
 	auto *g2 = new QGroupBox("Squad mates", w);
 	auto *h2 = new QHBoxLayout(g2);
@@ -731,7 +857,8 @@ QWidget *SettingsDialog::buildSwitchTab()
 		}
 	});
 
-	auto *gl = new QGroupBox("Squad on this network", w);
+	auto *gl = new QGroupBox("Squad on this network  (NDI - shelved)", w);
+	gl->setVisible(false); // shelved: the widgets exist so settings still round-trip, but nobody sees them
 	auto *fl = new QFormLayout(gl);
 	playerName_ = new QLineEdit(QString::fromStdString(e_->cfg.playerName), gl);
 	playerName_->setPlaceholderText(Lan::hostName());
@@ -891,6 +1018,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 				 "time. Leave it off if anything judders.",
 				 g4);
 	warmNdi_->setChecked(e_->cfg.warmNdi);
+	warmNdi_->setVisible(false); // NDI is shelved
 	v4->addWidget(warmNdi_);
 	connect(warmNdi_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	v->addWidget(g4);
@@ -2141,6 +2269,18 @@ void SettingsDialog::fillSources()
 	for (auto &s : scenes)
 		scene_->addItem(QString::fromStdString(s));
 	scene_->setCurrentText(e_->cfg.sceneName.empty() ? kLiveScene : QString::fromStdString(e_->cfg.sceneName));
+	if (sceneV_) {
+		sceneV_->blockSignals(true);
+		sceneV_->clear();
+		sceneV_->addItem("(none)", "");
+		for (const auto &sn : Switcher::otherCanvasScenes())
+			sceneV_->addItem(QString::fromStdString(sn), QString::fromStdString(sn));
+		if (!e_->cfg.sceneV.empty() && sceneV_->findData(QString::fromStdString(e_->cfg.sceneV)) < 0)
+			sceneV_->addItem(QString::fromStdString(e_->cfg.sceneV) + "  (not found now)",
+					 QString::fromStdString(e_->cfg.sceneV));
+		sceneV_->setCurrentIndex(std::max(0, sceneV_->findData(QString::fromStdString(e_->cfg.sceneV))));
+		sceneV_->blockSignals(false);
+	}
 	mute_->clear();
 	for (auto &i : inputs) {
 		if (i.first == Config::webSourceName() || i.first == Config::overlaySourceName())
@@ -2211,7 +2351,11 @@ void SettingsDialog::fillFriends()
 		friends_->insertRow(r);
 		QString name = QString::fromStdString(f.name) + ((int)i == e_->cfg.activeFriend ? "   ●" : "");
 		const char *kind = f.kind == FriendKind::Twitch     ? "Twitch stream"
+				   : f.kind == FriendKind::Kick     ? "Kick stream"
+				   : f.kind == FriendKind::YouTube  ? "YouTube live"
 				   : f.kind == FriendKind::VdoNinja ? "VDO.Ninja (WebRTC)"
+				   : f.kind == FriendKind::Discord  ? "Discord Go Live"
+				   : f.kind == FriendKind::Ndi      ? "NDI (shelved)"
 								    : "OBS source";
 		friends_->setItem(r, 0, new QTableWidgetItem(name));
 		friends_->setItem(r, 1, new QTableWidgetItem(kind));
@@ -2277,6 +2421,8 @@ void SettingsDialog::collect()
 			c.muteWhileDowned.push_back(mute_->item(i)->data(Qt::UserRole).toString().toStdString());
 	c.bringToFront = bringFront_->isChecked();
 	c.playerName = playerName_->text().trimmed().toStdString();
+	if (sceneV_)
+		c.sceneV = sceneV_->currentData().toString().toStdString();
 	c.lanEnabled = lanOn_->isChecked();
 	c.ndiShare = ndiShare_->isChecked();
 	c.autoAddPeers = autoAdd_->isChecked();
