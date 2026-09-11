@@ -964,7 +964,6 @@ QWidget *SettingsDialog::buildSwitchTab()
 	lanStatus_ = muted("", gl);
 	fl->addRow(lanStatus_);
 	v->addWidget(gl);
-	v->addWidget(gRoster);
 	lanOn_->setChecked(e_->cfg.lanEnabled);
 	ndiShare_->setChecked(e_->cfg.ndiShare);
 	connect(ndiQuality_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
@@ -1035,6 +1034,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 	connect(&e_->roster, &Roster::changed, this, showRoster);
 	connect(&e_->roster, &Roster::polled, this, showRoster);
 	showRoster();
+	v->addWidget(gRoster);
 
 	auto *g3 = new QGroupBox("Sound while a squad mate is on screen", w);
 	auto *v3 = new QVBoxLayout(g3);
