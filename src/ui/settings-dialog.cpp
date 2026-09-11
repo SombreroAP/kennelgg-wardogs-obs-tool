@@ -2739,8 +2739,8 @@ void SettingsDialog::testFeed()
 		QString msg = QString("%1's feed is delivering about %2 new pictures a second.")
 				      .arg(QString::fromStdString(name))
 				      .arg(fps, 0, 'f', 0);
-		msg += fps >= 50 ? "\n\nThat is a full-rate feed. If it still looks choppy the feed is fine and "
-				   "the drawing is not: check this PC's OBS Stats for rendering lag, and its GPU load."
+		msg += fps >= 50   ? "\n\nThat is a full-rate feed. If it still looks choppy the feed is fine and "
+				     "the drawing is not: check this PC's OBS Stats for rendering lag, and its GPU load."
 		       : fps >= 25 ? "\n\nThat is a 30-ish feed. It will look like half frames next to your own "
 				     "game. If the sender is on 60, their network or ours is not carrying it."
 				   : "\n\nThat is well under 30: the feed itself is not arriving properly. Try a "
