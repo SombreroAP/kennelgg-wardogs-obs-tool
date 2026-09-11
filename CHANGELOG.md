@@ -5,6 +5,7 @@ All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are t
 ## 0.7.3
 - **Replay files are named the same as the Twitch clip.** ClipHound now hands the plugin the same plain-English headline it gives Twitch, and the default file name is that headline followed by the date and time - `Double kill at 68m and 61m with a rifle - 2026-09-11 21-04-33.mkv`. The tag list has gone from the default name (it is still in the clip index, and `{tags}` still works in a template of your own). A template you typed yourself is left alone.
 
+## 0.7.2
 - **Twitch clips are titled with what happened.** They used to carry the stream's title; the moment that set them off was only written to ClipHound's own index. The clip now goes to Twitch with a plain-English title - *Double kill at 68m and 61m with a rifle*, *Died to a headshot at 120m*, *Crashed my chopper* - and the same wording names the OBS replay file.
 - **Clip length is a setting: 45 seconds by default.** Clips tab -> *Clip length*. It is written straight into OBS's own replay-buffer setting for both output modes, so the plugin and OBS never disagree about how far back a clip reaches, and the buffer is restarted if it was running.
 - One honest limit: the 45 seconds is for the clips OBS saves. A Twitch clip's length is Twitch's - the API takes the seconds leading up to the request and its edit page trims afterwards; nothing the plugin sends can make one 45 s long.
