@@ -23,6 +23,10 @@ AppVerName=Kennel.gg Wardogs OBS Tool {#VERSION}
 AppPublisher=Sombrero / The Kennel
 AppPublisherURL=https://kennel.gg
 DefaultDirName={commonappdata}\obs-studio\plugins\kennelgg
+; The AppId is the same as before 0.7.0 so Windows sees an upgrade, not a second program - but Inno
+; then reuses the PREVIOUS install folder by default, which put 0.7.0 back into plugins\kennel-wardogs
+; where OBS cannot find a module called kennelgg. Always install where DefaultDirName says.
+UsePreviousAppDir=no
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 OutputDir={#OUTDIR}
