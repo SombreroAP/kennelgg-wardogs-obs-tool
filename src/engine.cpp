@@ -371,6 +371,54 @@ QString Engine::ndiStatus() const
 /// Put the clip length into OBS and, if the buffer is already running, restart it so the new length
 /// takes - stop first, start a moment later. OBS's stop is not finished when the call returns, and
 /// starting immediately leaves the buffer off, which means no clips at all until OBS is restarted.
+/// ClipHound reads the bridge port from its own config.yaml, so changing it in the plugin used to
+/// orphan the app for good: it went on knocking at the old port for ever while the dock said
+/// "starting" and no clips or NEARBY readings arrived. Write the number into its config too.
+void Engine::syncAppPort()
+{
+	if (cfg.appPath.empty())
+		return;
+	QString yaml = QFileInfo(QString::fromStdString(cfg.appPath)).absolutePath() + "/config.yaml";
+	QFile f(yaml);
+	if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+		return;
+	QStringList lines = QString::fromUtf8(f.readAll()).split('\n');
+	f.close();
+	// the port under the "bridge:" block, left exactly as it is written otherwise
+	bool inBridge = false, changed = false;
+	static const QRegularExpression rxPort("^(\\s+port:\\s*)(\\d+)(.*)$");
+	for (QString &l : lines) {
+		if (!l.startsWith(' ') && !l.startsWith('\t'))
+			inBridge = l.startsWith("bridge:");
+		if (!inBridge)
+			continue;
+		QRegularExpressionMatch m = rxPort.match(l);
+		if (m.hasMatch() && m.captured(2).toInt() != cfg.bridgePort) {
+			l = m.captured(1) + QString::number(cfg.bridgePort) + m.captured(3);
+			changed = true;
+		}
+	}
+	if (!changed)
+		return;
+	QFile out(yaml);
+	if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+		log("Could not write ClipHound's config.yaml, so it still expects the old bridge port - put "
+		    "the port back, or edit " +
+		    yaml + " by hand.");
+		return;
+	}
+	out.write(lines.join('\n').toUtf8());
+	out.close();
+	log(QString("ClipHound's port updated to %1; restarting it so it reconnects.").arg(cfg.bridgePort));
+	if (cfg.launchApp) {
+		stopApp();
+		QTimer::singleShot(2000, this, [this]() {
+			if (!stopping_ && cfg.launchApp)
+				launchApp();
+		});
+	}
+}
+
 void Engine::applyReplaySeconds()
 {
 	if (!cfg.clipUseReplay)
@@ -964,12 +1012,13 @@ void Engine::reloadConfig()
 	clips.hotkeys.clear();
 	for (auto &h : cfg.clipHotkeys)
 		clips.hotkeys << QString::fromStdString(h);
-	if (cfg.bridgeEnabled && (!bridge.listening() || bridge.port() != cfg.bridgePort))
+	if (cfg.bridgeEnabled && (!bridge.listening() || bridge.port() != cfg.bridgePort)) {
+		syncAppPort(); // ClipHound has to be told, or it knocks at the old port for ever
 		if (!bridge.listen((quint16)cfg.bridgePort))
 			log(QString("ClipHound's bridge could not open port %1 (something else has it).")
 				    .arg(cfg.bridgePort));
-		else if (!cfg.bridgeEnabled && bridge.listening())
-			bridge.close();
+	} else if (!cfg.bridgeEnabled && bridge.listening())
+		bridge.close();
 	applyLan();
 	applyReplaySeconds();
 	detGame_.threshold = cfg.threshold;

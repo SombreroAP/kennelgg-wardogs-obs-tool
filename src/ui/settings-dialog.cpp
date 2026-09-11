@@ -583,6 +583,27 @@ private:
 
 static const char *kLiveScene = "(the scene that is live)";
 
+namespace {
+/// A mouse wheel over the settings window used to change whatever spin box or drop-down happened to
+/// be under the pointer - which is how a bridge port quietly became 47821 mid-session and ClipHound
+/// could never connect again. Scrolling now moves the page; a control takes the wheel only once it
+/// has been clicked into.
+class WheelGuard : public QObject {
+public:
+	using QObject::QObject;
+	bool eventFilter(QObject *o, QEvent *e) override
+	{
+		if (e->type() != QEvent::Wheel)
+			return false;
+		auto *w = qobject_cast<QWidget *>(o);
+		if (!w || w->hasFocus())
+			return false;
+		e->ignore();
+		return true; // let it fall through to the scroll area instead
+	}
+};
+} // namespace
+
 SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent), e_(engine)
 {
 	setWindowTitle("Kennel.gg Wardogs OBS Tool");
@@ -611,6 +632,16 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	scrolled(buildAppTab(), "ClipHound");
 	tabs->addTab(buildLogsTab(), "Logs"); // already a scrolling text view
 	scrolled(buildAboutTab(), "Help");
+	// every spin box and drop-down: no accidental changes from a scroll (see WheelGuard)
+	{
+		auto *guard = new WheelGuard(this);
+		for (QWidget *w : findChildren<QWidget *>())
+			if (qobject_cast<QSpinBox *>(w) || qobject_cast<QDoubleSpinBox *>(w) ||
+			    qobject_cast<QComboBox *>(w) || qobject_cast<QSlider *>(w)) {
+				w->setFocusPolicy(Qt::StrongFocus);
+				w->installEventFilter(guard);
+			}
+	}
 	building_ = false;
 	fillSources(); // again, now that every tab that shows a source list exists
 	v->addWidget(tabs, 1);
@@ -1496,6 +1527,11 @@ QWidget *SettingsDialog::buildClipsTab()
 	bridgePort_->setValue(e_->cfg.bridgePort);
 	br->addWidget(bridgeOn_);
 	br->addWidget(bridgePort_);
+	br->addWidget(muted("47820 unless something else on this PC wants it. ClipHound is told the new "
+			    "number and restarted when you change it - if it is running. If it is not, put "
+			    "this back to 47820.",
+			    g2),
+		      1);
 	br->addStretch(1);
 	f2->addRow(br);
 	auto *ap = new QHBoxLayout();

@@ -36,6 +36,7 @@ public:
 	QString playerName() const;
 	void applyLan();
 	void applyReplaySeconds();
+	void syncAppPort();
 	void checkNdiShare();
 	bool ndiWasSharing_ = false, ndiWarned_ = false; // (re)start discovery + NDI share from cfg
 	QString appStatus() const { return appStatus_; }
