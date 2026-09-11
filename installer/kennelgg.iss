@@ -71,7 +71,7 @@ Source: "{#APPSRC}\config.default.yaml"; DestDir: "{commonappdata}\Kennel.gg\Cli
 // then take the old folder away so nothing stale is left running from it.
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  OldDir, NewDir: String;
+  OldDir, NewDir, OldPlugin: String;
 begin
   if CurStep = ssInstall then begin
     OldDir := ExpandConstant('{commonappdata}\Kennel WARDOGS\ClipHound');
@@ -82,6 +82,18 @@ begin
         FileCopy(OldDir + '\config.yaml', NewDir + '\config.yaml', False);
       end;
       DelTree(ExpandConstant('{commonappdata}\Kennel WARDOGS'), True, True, True);
+    end;
+    // Two copies of the plugin both load and fight over ClipHound's bridge port; InstallDelete
+    // cannot remove a DLL that a still-running OBS has open, so say so plainly rather than leave
+    // someone with a plugin that sits at "starting" for ever.
+    OldPlugin := ExpandConstant('{commonappdata}\obs-studio\plugins\kennel-wardogs');
+    if DirExists(OldPlugin) then begin
+      DelTree(OldPlugin, True, True, True);
+      if DirExists(OldPlugin) then
+        MsgBox('The previous version could not be removed from' #13#10 + OldPlugin + #13#10#13#10 +
+               'That is nearly always because OBS is still running. Close OBS, delete that folder by hand, '
+               'then start OBS again - with both versions installed they fight over ClipHound''s connection '
+               'and clips never fire.', mbError, MB_OK);
     end;
   end;
 end;

@@ -436,6 +436,17 @@ void Engine::launchApp()
 		appPid_ = pid;
 		appStartedAt_ = QDateTime::currentDateTime();
 		appCrashReported_ = false;
+		QTimer::singleShot(25000, this, [this]() {
+			if (stopping_ || bridge.clients() > 0 || !appRunning())
+				return;
+			// alive but never said hello: its own log is the only thing that knows why
+			log("ClipHound has been starting for 25 s without connecting. The last lines of its log:");
+			for (const QString &l : appLogTail(12))
+				log("  " + l);
+			log("If those lines say nothing useful, check that no older copy of this plugin is "
+			    "installed (C:\\ProgramData\\obs-studio\\plugins\\kennel-wardogs).");
+			emit stateChanged();
+		});
 		QTimer::singleShot(6000, this, [this]() {
 			if (bridge.clients() == 0 && !appRunning() && !appCrashReported_) {
 				appCrashReported_ = true;
@@ -623,7 +634,13 @@ void Engine::start()
 	for (auto &h : cfg.clipHotkeys)
 		clips.hotkeys << QString::fromStdString(h);
 	if (cfg.bridgeEnabled)
-		bridge.listen((quint16)cfg.bridgePort);
+		if (!bridge.listen((quint16)cfg.bridgePort))
+			log(QString("ClipHound's bridge could NOT open port %1 - something else is already on it, "
+				    "usually an older copy of this plugin still installed. ClipHound will sit at "
+				    "\"starting\" and no clips will fire until that is sorted: check for "
+				    "C:\\ProgramData\\obs-studio\\plugins\\kennel-wardogs and delete it, then "
+				    "restart OBS.")
+				    .arg(cfg.bridgePort));
 	if (cfg.clipUseReplay && clips.setReplaySeconds(cfg.replaySeconds))
 		log(QString("Replay buffer length set to %1 s in OBS.").arg(cfg.replaySeconds));
 	if (cfg.autoStartReplay && cfg.clipUseReplay)
@@ -631,6 +648,15 @@ void Engine::start()
 	if (cfg.launchApp)
 		launchApp();
 	sw.migrateNames(cfg); // sources a build before 0.7.0 made, under their old names
+#ifdef _WIN32
+	// Two copies of this plugin both load, and the second one gets no bridge port: ClipHound then
+	// connects to the wrong one and everything looks like it is "starting" for ever.
+	if (QFileInfo::exists("C:/ProgramData/obs-studio/plugins/kennel-wardogs"))
+		log("An older copy of this plugin is still installed at "
+		    "C:\\ProgramData\\obs-studio\\plugins\\kennel-wardogs. Close OBS, delete that folder, "
+		    "and start OBS again - with both installed they fight over ClipHound's bridge and clips "
+		    "never fire.");
+#endif
 	applyLan();
 #ifdef _WIN32
 	// Say this once, unprompted: a reserved port range silently stops NDI working for anyone not
@@ -789,6 +815,19 @@ void Engine::twitchLogout()
 	bridge.sendJson(o);
 }
 
+/// The last few lines of ClipHound's own log, for when it starts but never says hello.
+QStringList Engine::appLogTail(int lines) const
+{
+	QString dir = cfg.appPath.empty() ? QString("C:/ProgramData/Kennel.gg/ClipHound")
+					  : QFileInfo(QString::fromStdString(cfg.appPath)).absolutePath();
+	QFile f(dir + "/cliphound.log");
+	if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+		return {"(no cliphound.log at " + dir + " - it may not have got far enough to write one)"};
+	QStringList all = QString::fromUtf8(f.readAll()).split('\n', Qt::SkipEmptyParts);
+	f.close();
+	return all.mid(std::max(0, (int)all.size() - lines));
+}
+
 bool Engine::appRunning() const
 {
 #ifdef _WIN32
@@ -892,9 +931,11 @@ void Engine::reloadConfig()
 	for (auto &h : cfg.clipHotkeys)
 		clips.hotkeys << QString::fromStdString(h);
 	if (cfg.bridgeEnabled && (!bridge.listening() || bridge.port() != cfg.bridgePort))
-		bridge.listen((quint16)cfg.bridgePort);
-	else if (!cfg.bridgeEnabled && bridge.listening())
-		bridge.close();
+		if (!bridge.listen((quint16)cfg.bridgePort))
+			log(QString("ClipHound's bridge could not open port %1 (something else has it).")
+				    .arg(cfg.bridgePort));
+		else if (!cfg.bridgeEnabled && bridge.listening())
+			bridge.close();
 	applyLan();
 	if (cfg.clipUseReplay && clips.setReplaySeconds(cfg.replaySeconds))
 		log(QString("Replay buffer length set to %1 s in OBS.").arg(cfg.replaySeconds));

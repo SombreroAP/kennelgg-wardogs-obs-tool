@@ -41,11 +41,13 @@ public:
 	bool appConnected() const { return bridge.clients() > 0; }
 	void onReplaySaved() { clips.onReplaySaved(); }
 	void launchApp();
-	void closeApp();          // on OBS exit
-	void stopApp();           // user pressed Stop
-	bool appRunning() const;  // process alive (even if not connected yet)
-	QString appState() const; // "connected" | "starting" | "crashed" | "stopped"
-	void pushAppConfig();     // send the ClipHound settings to the app
+	void closeApp(); // on OBS exit
+	void stopApp();  // user pressed Stop
+	bool appRunning() const; // process alive (even if not connected yet)
+	/// The last lines of ClipHound's log.
+	QStringList appLogTail(int lines = 12) const;
+	QString appState() const;                     // "connected" | "starting" | "crashed" | "stopped"
+	void pushAppConfig();                         // send the ClipHound settings to the app
 
 	/// One line of the game's NEARBY list, as ClipHound read it.
 	struct NearbyEntry {

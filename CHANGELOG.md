@@ -2,7 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
-## 0.7.3
+## 0.7.4
+- **ClipHound stuck on "starting", and no clips: now it tells you why.** If two copies of the plugin are installed, both load and the second one cannot open ClipHound's bridge port - ClipHound then connects to the wrong one and sits at "starting" for ever, with no clips. That failure only ever reached OBS's own log, so from the dock it looked like nothing at all. It now says so in the plugin's log, names the old folder to delete, and the installer removes `plugins\kennel-wardogs` itself - or says plainly that it could not, which almost always means OBS was still open.
+- **And if ClipHound starts but never connects**, after 25 seconds the plugin prints the last lines of ClipHound's own log into its own, instead of leaving "starting" on screen with no explanation.
+
 - **Replay files are named the same as the Twitch clip.** ClipHound now hands the plugin the same plain-English headline it gives Twitch, and the default file name is that headline followed by the date and time - `Double kill at 68m and 61m with a rifle - 2026-09-11 21-04-33.mkv`. The tag list has gone from the default name (it is still in the clip index, and `{tags}` still works in a template of your own). A template you typed yourself is left alone.
 
 ## 0.7.2
