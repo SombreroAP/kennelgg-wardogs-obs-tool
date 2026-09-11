@@ -376,6 +376,8 @@ std::vector<std::string> Switcher::friendSourceNames(const Config &cfg, const Fr
 	if (f.ownsSources()) { // Discord and NDI: we created these
 		if (!f.source.empty())
 			names.push_back(f.source);
+		if (!f.baseSource.empty() && f.baseSource != f.source) // parked while a pop-out is bound
+			names.push_back(f.baseSource);
 		if (!f.audioSource.empty())
 			names.push_back(f.audioSource);
 	}
@@ -612,7 +614,7 @@ std::vector<Switcher::Popout> Switcher::discordPopouts()
 
 std::string Switcher::bindPopout(const Config &cfg, Friend &f, const Popout &p)
 {
-	std::string mine = "Kennel.gg · " + (f.name.empty() ? std::string("squad mate") : f.name);
+	std::string mine = "Kennel.gg · " + (f.name.empty() ? std::string("squad mate") : f.name) + " pop-out";
 	obs_data_t *st = obs_data_create();
 	obs_data_set_string(st, "window", p.window.c_str());
 	obs_data_set_int(st, "method", 2);
@@ -623,7 +625,10 @@ std::string Switcher::bindPopout(const Config &cfg, Friend &f, const Popout &p)
 	obs_data_release(st);
 	if (!e.empty())
 		return e;
-	f.source = mine; // the shared call capture stays for everyone else; their audio stays shared too
+	if (!f.onPopout())
+		f.baseSource = f.source; // where to go back to; their audio capture stays as it is
+	f.source = mine;
+	f.popout = p.window;
 	return "";
 }
 
@@ -632,7 +637,11 @@ void Switcher::unbindPopout(const Config &cfg, Friend &f)
 	if (!f.onPopout())
 		return;
 	std::string mine = f.source;
-	f.source = Friend::discordCallSourceName();
+	f.source = !f.baseSource.empty()   ? f.baseSource
+		   : f.sharesDiscordCall() ? std::string(Friend::discordCallSourceName())
+					   : "Kennel.gg · " + (f.name.empty() ? std::string("squad mate") : f.name);
+	f.baseSource.clear();
+	f.popout.clear();
 	int users = 0;
 	for (const auto &g : cfg.friends)
 		if (g.source == mine)

@@ -33,8 +33,10 @@ struct Friend {
 	/// up this way is looking at the same window, so they share one capture.
 	static const char *anyDiscordWindow() { return "Discord:Chrome_WidgetWin_1:Discord.exe"; }
 	bool sharesDiscordCall() const { return kind == FriendKind::Discord && channel == anyDiscordWindow(); }
-	/// Bound to their own popped-out window right now (the source is theirs, not the shared one).
-	bool onPopout() const { return sharesDiscordCall() && !source.empty() && source != discordCallSourceName(); }
+	/// Their popped-out window, when the plugin has found one: OBS's "title:class:exe" spelling.
+	/// While set, `source` is a capture of that window and `baseSource` is the one to go back to.
+	std::string popout, baseSource;
+	bool onPopout() const { return kind == FriendKind::Discord && !popout.empty(); }
 	static const char *discordCallSourceName() { return "Kennel.gg · Discord call"; }
 	static const char *discordCallAudioName() { return "Kennel.gg · Discord call audio"; }
 	bool ownsSources() const { return kind == FriendKind::Discord || kind == FriendKind::Ndi; }

@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.7.7
+- **Pop-out binding now covers every Discord squad mate**, including slots where you picked a specific Discord window when you added them. 0.7.6 only watched slots set to "Any Discord window", which is not what the add dialog picks by default when Discord is running, so for most people it watched nothing. The log now says at start how many slots it is watching.
+- A slot bound to a pop-out remembers the capture it came from and goes back to exactly that when the pop-out closes.
+
 ## 0.7.6
 - **Pop-outs bind themselves.** Pop a squad mate's share out of Discord (right-click their tile, Pop Out) and within two seconds their slot is showing that window and nothing else. Close it and the slot goes back to the Discord window. Two or three pop-outs give you two or three separate feeds. The log says whose window it found and what it was called.
   - Discord titles a popped-out tile with the person's username, so the roster now carries usernames too. If a pop-out shows up that matches nobody, the log names it so you can see why.

@@ -325,6 +325,8 @@ void Config::load()
 			f.trim = obs_data_get_bool(it, "trim");
 			f.fromRoster = obs_data_get_bool(it, "fromRoster");
 			f.handle = obs_data_get_string(it, "handle");
+			f.popout = obs_data_get_string(it, "popout");
+			f.baseSource = obs_data_get_string(it, "baseSource");
 			f.ndiBw = (int)obs_data_get_int(it, "ndiBw");
 			f.ndiSync = (int)obs_data_get_int(it, "ndiSync");
 			if (obs_data_has_user_value(it, "vdoHeight")) {
@@ -552,6 +554,8 @@ void Config::save() const
 		obs_data_set_bool(it, "trim", f.trim);
 		obs_data_set_bool(it, "fromRoster", f.fromRoster);
 		obs_data_set_string(it, "handle", f.handle.c_str());
+		obs_data_set_string(it, "popout", f.popout.c_str());
+		obs_data_set_string(it, "baseSource", f.baseSource.c_str());
 		obs_data_set_int(it, "ndiBw", f.ndiBw);
 		obs_data_set_int(it, "ndiSync", f.ndiSync);
 		obs_data_set_int(it, "vdoHeight", f.vdoHeight);

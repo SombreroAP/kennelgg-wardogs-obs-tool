@@ -1124,15 +1124,21 @@ void Engine::syncRoster()
 
 void Engine::armPopoutWatch()
 {
-	bool any = false;
+	int n = 0;
 	for (const auto &f : cfg.friends)
-		if (f.sharesDiscordCall())
-			any = true;
-	if (any && !popoutTimer_.isActive()) {
+		if (f.kind == FriendKind::Discord)
+			n++;
+	if (n && !popoutTimer_.isActive()) {
 		popoutTimer_.start();
+		log(QString("Pop-out watch on for %1 Discord squad mate%2: pop a share out of Discord and their slot "
+			    "takes that window by itself.")
+			    .arg(n)
+			    .arg(n == 1 ? "" : "s"));
 		watchPopouts();
-	} else if (!any && popoutTimer_.isActive())
+	} else if (!n && popoutTimer_.isActive()) {
 		popoutTimer_.stop();
+		log("Pop-out watch off: no Discord squad mates.");
+	}
 }
 
 void Engine::watchPopouts()
@@ -1147,14 +1153,14 @@ void Engine::watchPopouts()
 	bool changed = false;
 	const Friend *active = cfg.active();
 	std::string activeName = active ? active->name : "";
-	int liveShared = 0; // squad mates watching the call who are not on a pop-out yet
+	int liveShared = 0; // Discord squad mates who are not on a pop-out yet
 	for (const auto &f : cfg.friends)
-		if (f.sharesDiscordCall() && !f.onPopout())
+		if (f.kind == FriendKind::Discord && !f.onPopout())
 			liveShared++;
 
 	// 1. everyone: is their window still there, or is there one for them now
 	for (auto &f : cfg.friends) {
-		if (!f.sharesDiscordCall())
+		if (f.kind != FriendKind::Discord)
 			continue;
 		QString name = lower(f.name), handle = lower(f.handle);
 		int hit = -1;
@@ -1192,7 +1198,8 @@ void Engine::watchPopouts()
 				    QString::fromStdString(wins[hit].title) + "\") - showing that window for them.");
 				changed = true;
 				if (applied_ && f.name == activeName) {
-					Switcher::hideEverywhere(Friend::discordCallSourceName());
+					if (!f.baseSource.empty())
+						Switcher::hideEverywhere(f.baseSource);
 					applyNow(true, "their pop-out appeared");
 				}
 			}
