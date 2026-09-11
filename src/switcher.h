@@ -55,6 +55,8 @@ public:
 	static std::vector<std::string> friendSourceNames(const Config &cfg, const Friend &f);
 	/// Take those out of every scene and delete them. Returns how many went.
 	int removeFriendSources(const Config &cfg, const Friend &f);
+	/// Rename what builds before 0.7.0 created, once. Returns how many sources moved.
+	int migrateNames(Config &cfg);
 	/// Sources a squad mate needs, created and placed. Fills f.source / f.audioSource.
 	std::string createFriendSources(const Config &cfg, Friend &f);
 	std::string createGameCapture(Config &cfg);

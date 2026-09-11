@@ -1,9 +1,10 @@
 # kennelgg-wardogs-obs-tool — session context
 
 **"Kennel.gg Wardogs OBS Tool"** — one OBS plugin (C++ / Qt, obs-plugintemplate, module id
-`kennel-wardogs` - the module id, DLL, plugin folder and `ProgramData\Kennel WARDOGS` path are deliberately
-unchanged by the 11 Sep 2026 rename to "Kennel.gg Wardogs OBS Tool": changing them would orphan every
-installed user's settings and hotkeys) for Windows OBS, renamed from POVBridge on 8 Sep 2026. Two features: the **POV
+`kennelgg` since 0.7.0 - the DLL, plugin folder and `ProgramData\Kennel.gg\ClipHound` follow it; the
+installer removes the old `plugins\kennel-wardogs` and carries ClipHound's config over, `Config::load` picks up
+the old `plugin_config\kennel-wardogs\config.json`, and `Switcher::migrateNames` renames "Kennel ..." sources
+to "Kennel.gg ..." once. Hotkey ids `kennel.*` are unchanged so bindings survive) for Windows OBS, renamed from POVBridge on 8 Sep 2026. Two features: the **POV
 swap** (downed → show a squad mate's POV; mic untouched) and **clips** (replay-buffer save +
 rename, from hotkey/dock/downed/**ClipHound**). ClipHound (`../ClipHound`, Python) stays a separate
 app that does the kill-feed OCR and talks to the plugin over a local WebSocket bridge; the split is
@@ -57,4 +58,4 @@ Python/numpy on the user's three screenshots (`My Drive/screenshots/`), frames r
 | `src/engine.cpp` NEARBY block | ClipHound reads the game's NEARBY panel and sends `nearby {list:[{name,dist,match}]}`; `pickClosest()` makes the nearest configured squad mate active when the damage log appears and (with `nearFollow`) while the swap is on screen, with a 15 m margin and a 4 s floor so it cannot flap. `feed*` is picked on the ClipHound tab, `near*` on the Detect tab, both pushed in `app_config.set`; the plugin is authoritative for them |
 | `app/` | ClipHound (Python). `app/bridge.py` = client of the plugin bridge; `app/nearby.py` = NEARBY panel reader (chip found by eroding the Otsu mask, names and chips OCR'd as one stacked sheet each, names cached by glyph overlap); `app/cliphound.spec` + `app/build_exe.ps1` = PyInstaller bundle with Tesseract copied in (CI, Windows job) |
 | Update check | the plugin GETs `https://kennel.gg/obs-tools/latest.json` (`{version, url, notes}`) 15 s after start-up; **publish that file from `kennel-gg/website/obs-tools/` on every release** or nobody is told. Repo is private, so the GitHub API is not an option |
-| `installer/kennel-wardogs.iss` | Inno Setup: component `plugin` → ProgramData\obs-studio\plugins, component `app` → ProgramData\Kennel WARDOGS\ClipHound (users-modify), config.yaml kept on upgrade, Start-menu shortcuts, optional post-install setup run |
+| `installer/kennelgg.iss` | Inno Setup: component `plugin` → ProgramData\obs-studio\plugins, component `app` → ProgramData\Kennel.gg\ClipHound (users-modify), config.yaml kept on upgrade, Start-menu shortcuts, optional post-install setup run |

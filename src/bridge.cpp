@@ -98,7 +98,7 @@ bool Bridge::handshake(Client *c)
 	c->upgraded = true;
 	QJsonObject hello;
 	hello["type"] = "hello";
-	hello["plugin"] = "kennel-wardogs";
+	hello["plugin"] = "kennelgg";
 	hello["version"] = PLUGIN_VERSION;
 	hello["protocol"] = 1;
 	sendRaw(c, 1, QJsonDocument(hello).toJson(QJsonDocument::Compact));

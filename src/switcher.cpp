@@ -407,9 +407,54 @@ int Switcher::removeFriendSources(const Config &cfg, const Friend &f)
 	return gone;
 }
 
+/// Builds before 0.7.0 named everything "Kennel ..."; it is all "Kennel.gg ..." now. Rename what is
+/// there rather than make it again, so nobody's scenes fill with duplicates. Returns how many moved.
+int Switcher::migrateNames(Config &cfg)
+{
+	int moved = 0;
+	auto rename = [&](const std::string &from, const std::string &to) {
+		if (from == to)
+			return;
+		obs_source_t *src = obs_get_source_by_name(from.c_str());
+		if (!src)
+			return;
+		obs_source_t *clash = obs_get_source_by_name(to.c_str());
+		if (clash) { // both exist: leave the old one alone, the new one wins
+			obs_source_release(clash);
+			obs_source_release(src);
+			return;
+		}
+		obs_source_set_name(src, to.c_str());
+		obs_source_release(src);
+		moved++;
+	};
+	rename("Kennel web", Config::webSourceName());
+	rename("Kennel look", Config::overlaySourceName());
+	rename("Kennel look (vertical)", Config::overlaySourceNameV());
+	rename("Kennel dual", Config::dualSceneName());
+	rename("Kennel dual feed", Config::dualFeedName());
+	bool cfgChanged = false;
+	for (auto &f : cfg.friends) {
+		rename("Kennel web - " + f.name, std::string(Config::webSourceName()) + " - " + f.name);
+		for (std::string *field : {&f.source, &f.audioSource}) {
+			if (field->rfind("Kennel · ", 0) == 0) {
+				std::string to = "Kennel.gg · " + field->substr(std::string("Kennel · ").size());
+				rename(*field, to);
+				*field = to;
+				cfgChanged = true;
+			}
+		}
+	}
+	if (cfgChanged)
+		cfg.save();
+	if (moved && log)
+		log("Renamed " + std::to_string(moved) + " source(s) from \"Kennel ...\" to \"Kennel.gg ...\".");
+	return moved;
+}
+
 std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 {
-	std::string base = "Kennel · " + (f.name.empty() ? std::string("squad mate") : f.name);
+	std::string base = "Kennel.gg · " + (f.name.empty() ? std::string("squad mate") : f.name);
 	if (f.kind == FriendKind::Discord) {
 		// their popped-out Go Live window, captured with the Windows 10 method so it survives being covered
 		obs_data_t *st = obs_data_create();
@@ -517,7 +562,7 @@ std::string Switcher::startNdiShare(const std::string &ndiName, int shareHeight,
 	obs_data_set_string(st, "ndi_name", ndiName.c_str());
 	obs_data_set_bool(st, "uses_video", true);
 	obs_data_set_bool(st, "uses_audio", true);
-	ndiOut_ = obs_output_create("ndi_output", "Kennel NDI share", st, nullptr);
+	ndiOut_ = obs_output_create("ndi_output", "Kennel.gg NDI share", st, nullptr);
 	obs_data_release(st);
 	if (!ndiOut_)
 		return "could not create the NDI output";
@@ -653,6 +698,11 @@ std::string Switcher::ensureBrowserSource(obs_scene_t *scene, const char *name, 
 std::string Switcher::ensureHideFilter(obs_source_t *src)
 {
 	obs_source_t *f = obs_source_get_filter_by_name(src, Config::hideFilterName());
+	if (!f) { // made by a build before 0.7.0: keep it, under its new name
+		f = obs_source_get_filter_by_name(src, "Kennel hide");
+		if (f)
+			obs_source_set_name(f, Config::hideFilterName());
+	}
 	if (f) {
 		obs_source_release(f);
 		return "";
@@ -1065,11 +1115,11 @@ std::string Switcher::applyDual(const Config &cfg, bool on)
 		&inner);
 	// opacity
 	{
-		obs_source_t *fl = obs_source_get_filter_by_name(dualSrc, "Kennel dual opacity");
+		obs_source_t *fl = obs_source_get_filter_by_name(dualSrc, "Kennel.gg dual opacity");
 		obs_data_t *st = obs_data_create();
 		obs_data_set_double(st, "opacity", std::clamp(cfg.dualOpacity, 10, 100) / 100.0);
 		if (!fl) {
-			fl = obs_source_create_private("color_filter_v2", "Kennel dual opacity", st);
+			fl = obs_source_create_private("color_filter_v2", "Kennel.gg dual opacity", st);
 			if (fl)
 				obs_source_filter_add(dualSrc, fl);
 		} else

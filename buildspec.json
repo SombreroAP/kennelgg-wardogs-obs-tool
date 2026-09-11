@@ -36,9 +36,9 @@
             "bundleId": "gg.kennel.wardogs"
         }
     },
-    "name": "kennel-wardogs",
+    "name": "kennelgg",
     "displayName": "Kennel.gg Wardogs OBS Tool",
-    "version": "0.6.6",
+    "version": "0.7.0",
     "author": "Sombrero / The Kennel",
     "website": "https://kennel.gg",
     "email": "sombrero.ap@gmail.com"

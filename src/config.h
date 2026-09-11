@@ -64,8 +64,8 @@ struct Config {
 	bool dualKeep = false; // leave the window up when you get out of the vehicle
 	bool dualAuto = false; // ClipHound reads the vehicle keybind list and turns the window on / off
 	double vehX = 0.86, vehY = 0.60, vehW = 0.14, vehH = 0.25; // where that list is (fractions)
-	static const char *dualSceneName() { return "Kennel dual"; }
-	static const char *dualFeedName() { return "Kennel dual feed"; }
+	static const char *dualSceneName() { return "Kennel.gg dual"; }
+	static const char *dualFeedName() { return "Kennel.gg dual feed"; }
 	const Friend *dual() const
 	{
 		return dualFriend >= 0 && dualFriend < (int)friends.size() ? &friends[dualFriend] : nullptr;
@@ -143,16 +143,19 @@ struct Config {
 	double customTemplateWidthFrac = 0; // 0 = built-in damage-log template
 	double boxX = 0.84, boxY = 0.62, boxW = 0.13, boxH = 0.035; // capture box for a custom template
 
-	static const char *webSourceName() { return "Kennel web"; }
+	static const char *webSourceName() { return "Kennel.gg web"; }
 	/// Browser source a web feed lives in. With preloading each squad mate gets their own, so
 	/// every stream is already playing when the swap happens; otherwise they share one.
 	std::string webSourceFor(const Friend &f) const
 	{
 		return preloadFeeds ? std::string(webSourceName()) + " - " + f.name : webSourceName();
 	}
-	static const char *overlaySourceName() { return "Kennel look"; }
-	static const char *overlaySourceNameV() { return "Kennel look (vertical)"; }
-	static const char *hideFilterName() { return "Kennel hide"; }
+	static const char *overlaySourceName() { return "Kennel.gg look"; }
+	static const char *overlaySourceNameV() { return "Kennel.gg look (vertical)"; }
+	static const char *hideFilterName() { return "Kennel.gg hide"; }
+	/// Source names as builds before 0.7.0 made them; renamed once on start.
+	static const char *oldPrefix() { return "Kennel "; }
+	static const char *newPrefix() { return "Kennel.gg "; }
 	std::string sourceFor(const Friend &f) const { return f.isWeb() ? webSourceFor(f) : f.source; }
 	const Friend *active() const
 	{

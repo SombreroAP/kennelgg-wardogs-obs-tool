@@ -410,7 +410,7 @@ void Engine::launchApp()
 		return;
 	}
 	QString p = QString::fromStdString(cfg.appPath);
-	const QString def = "C:/ProgramData/Kennel WARDOGS/ClipHound/ClipHound.exe";
+	const QString def = "C:/ProgramData/Kennel.gg/ClipHound/ClipHound.exe";
 	if (p.isEmpty() && QFileInfo::exists(def)) {
 		p = def;
 		cfg.appPath = def.toStdString();
@@ -605,7 +605,7 @@ void Engine::start()
 	autoPickAudio();
 	if (cfg.appPath.empty()) {
 		// the installer puts ClipHound here; adopt it once so the app starts with OBS
-		QString def = "C:/ProgramData/Kennel WARDOGS/ClipHound/ClipHound.exe";
+		QString def = "C:/ProgramData/Kennel.gg/ClipHound/ClipHound.exe";
 		if (QFileInfo::exists(def)) {
 			cfg.appPath = def.toStdString();
 			cfg.launchApp = true;
@@ -628,6 +628,7 @@ void Engine::start()
 		clips.ensureReplayBuffer();
 	if (cfg.launchApp)
 		launchApp();
+	sw.migrateNames(cfg); // sources a build before 0.7.0 made, under their old names
 	applyLan();
 #ifdef _WIN32
 	// Say this once, unprompted: a reserved port range silently stops NDI working for anyone not
@@ -735,7 +736,7 @@ void Engine::checkForUpdate(bool manual)
 	updateState_ = "checking...";
 	emit updateChecked();
 	QNetworkRequest req{QUrl(url)};
-	req.setHeader(QNetworkRequest::UserAgentHeader, QString("KennelWardogsOBS/%1").arg(PLUGIN_VERSION));
+	req.setHeader(QNetworkRequest::UserAgentHeader, QString("KennelggWardogsOBSTool/%1").arg(PLUGIN_VERSION));
 	req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 	QNetworkReply *r = net_->get(req);
 	QTimer::singleShot(8000, r, [r]() {

@@ -150,7 +150,7 @@ Until those templates exist the vehicle rules simply never fire.
 
 ## Running with the Kennel.gg Wardogs OBS plugin
 
-The plugin (`../kennel-wardogs-obs`) can be ClipHound's eyes and hands: set `capture.backend: bridge`
+The plugin (`../kennel-wardogs-obs`, the Kennel.gg Wardogs OBS Tool) can be ClipHound's eyes and hands: set `capture.backend: bridge`
 and `obs.mode: bridge` in `config.yaml`, and ClipHound connects to `ws://127.0.0.1:47820`, receives
 the game frames from inside OBS (no obs-websocket, no password) and asks the plugin to save and name
 the replay clips. Clips fired while you are downed get a `downed` tag. The plugin's Clips tab can

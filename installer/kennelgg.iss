@@ -1,12 +1,12 @@
 ; Kennel.gg Wardogs OBS Tool - Windows installer (Inno Setup 6)
 ; Installs the portable-plugin layout into OBS's shared plugin folder, which OBS 30+ scans on start:
-;   C:\ProgramData\obs-studio\plugins\kennel-wardogs\bin\64bit\kennel-wardogs.dll  +  data\
+;   C:\ProgramData\obs-studio\plugins\kennelgg\bin\64bit\kennelgg.dll  +  data\
 
 #ifndef VERSION
   #define VERSION "0.0.0"
 #endif
 #ifndef SRC
-  #define SRC "..\release\RelWithDebInfo\kennel-wardogs"
+  #define SRC "..\release\RelWithDebInfo\kennelgg"
 #endif
 #ifndef OUTDIR
   #define OUTDIR "..\release"
@@ -22,11 +22,11 @@ AppVersion={#VERSION}
 AppVerName=Kennel.gg Wardogs OBS Tool {#VERSION}
 AppPublisher=Sombrero / The Kennel
 AppPublisherURL=https://kennel.gg
-DefaultDirName={commonappdata}\obs-studio\plugins\kennel-wardogs
+DefaultDirName={commonappdata}\obs-studio\plugins\kennelgg
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 OutputDir={#OUTDIR}
-OutputBaseFilename=kennel-wardogs-{#VERSION}-windows-x64-installer
+OutputBaseFilename=kennelgg-wardogs-obs-tool-{#VERSION}-windows-x64-installer
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
@@ -49,16 +49,41 @@ Name: "app"; Description: "ClipHound - kill-feed OCR clipping app (auto-started 
 Name: "distroav"; Description: "Download and install DistroAV 6.2.1 (NDI for OBS, GPL-2) so squad mates on the same network can share feeds"; Flags: unchecked
 Name: "ndiruntime"; Description: "Download and install the NDI 6 Runtime from Vizrt (required by DistroAV; you accept Vizrt's licence in its installer)"; Flags: unchecked
 
+[InstallDelete]
+; the plugin used to live under its old module id; two copies would both load
+Type: filesandordirs; Name: "{commonappdata}\obs-studio\plugins\kennel-wardogs"
+Type: filesandordirs; Name: "{commonprograms}\Kennel WARDOGS"
+
 [Dirs]
-Name: "{commonappdata}\Kennel WARDOGS\ClipHound"; Permissions: users-modify; Components: app
+Name: "{commonappdata}\Kennel.gg\ClipHound"; Permissions: users-modify; Components: app
 
 [Files]
 Source: "{#SRC}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: plugin
-Source: "{#APPSRC}\*"; DestDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; Excludes: "config.yaml"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
-Source: "{#APPSRC}\config.default.yaml"; DestDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; DestName: "config.yaml"; Flags: onlyifdoesntexist uninsneveruninstall; Components: app
+Source: "{#APPSRC}\*"; DestDir: "{commonappdata}\Kennel.gg\ClipHound"; Excludes: "config.yaml"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: app
+Source: "{#APPSRC}\config.default.yaml"; DestDir: "{commonappdata}\Kennel.gg\ClipHound"; DestName: "config.yaml"; Flags: onlyifdoesntexist uninsneveruninstall; Components: app
+
+[Code]
+// ClipHound moved from ProgramData\Kennel WARDOGS to ProgramData\Kennel.gg: carry its config over once,
+// then take the old folder away so nothing stale is left running from it.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  OldDir, NewDir: String;
+begin
+  if CurStep = ssInstall then begin
+    OldDir := ExpandConstant('{commonappdata}\Kennel WARDOGS\ClipHound');
+    NewDir := ExpandConstant('{commonappdata}\Kennel.gg\ClipHound');
+    if DirExists(OldDir) then begin
+      if FileExists(OldDir + '\config.yaml') and not FileExists(NewDir + '\config.yaml') then begin
+        ForceDirectories(NewDir);
+        FileCopy(OldDir + '\config.yaml', NewDir + '\config.yaml', False);
+      end;
+      DelTree(ExpandConstant('{commonappdata}\Kennel WARDOGS'), True, True, True);
+    end;
+  end;
+end;
 
 [Icons]
-Name: "{commonprograms}\Kennel WARDOGS\ClipHound"; Filename: "{commonappdata}\Kennel WARDOGS\ClipHound\ClipHound.exe"; WorkingDir: "{commonappdata}\Kennel WARDOGS\ClipHound"; Components: app
+Name: "{commonprograms}\Kennel.gg\ClipHound"; Filename: "{commonappdata}\Kennel.gg\ClipHound\ClipHound.exe"; WorkingDir: "{commonappdata}\Kennel.gg\ClipHound"; Components: app
 
 
 [Messages]

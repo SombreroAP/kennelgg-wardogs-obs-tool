@@ -65,6 +65,16 @@ void Config::load()
 {
 	std::string path = configFile("config.json");
 	obs_data_t *d = obs_data_create_from_json_file(path.c_str());
+	if (!d) {
+		// the module id changed with 0.7.0, and OBS keeps a plugin's settings under that id: pick
+		// up the old file, once, so nobody sets everything up again
+		std::string dir = configDir();
+		size_t cut = dir.find_last_of("/\\", dir.size() - 2);
+		std::string oldPath = (cut == std::string::npos ? dir : dir.substr(0, cut + 1)) + "kennel-wardogs/config.json";
+		d = obs_data_create_from_json_file(oldPath.c_str());
+		if (d)
+			obs_log(LOG_INFO, "settings carried over from %s", oldPath.c_str());
+	}
 	if (!d)
 		d = obs_data_create();
 	// defaults come from the current field values (constructor defaults)
@@ -359,6 +369,15 @@ void Config::load()
 		audioDefaults2 = true;
 		muteWhileDowned.clear();
 		audioAutoPicked = true;
+	}
+	// ClipHound moved with the rename; a saved path to the old folder points at nothing now
+	{
+		size_t k = appPath.find("Kennel WARDOGS/ClipHound");
+		if (k != std::string::npos)
+			appPath.replace(k, std::string("Kennel WARDOGS/ClipHound").size(), "Kennel.gg/ClipHound");
+		k = appPath.find("Kennel WARDOGS\\ClipHound");
+		if (k != std::string::npos)
+			appPath.replace(k, std::string("Kennel WARDOGS\\ClipHound").size(), "Kennel.gg\\ClipHound");
 	}
 	// once more, and this time for everyone: nothing of yours is muted when the POV changes, and no
 	// sound is taken from the squad mate's feed. Both are still there to tick on.

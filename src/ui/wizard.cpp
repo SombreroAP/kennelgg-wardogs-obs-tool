@@ -215,7 +215,7 @@ QWizardPage *SetupWizard::pageClips()
 	clipDowned_ = new QCheckBox("Save a clip whenever I get downed", p);
 	clipDowned_->setChecked(e_->cfg.clipOnDowned);
 	v->addWidget(clipDowned_);
-	bool appInstalled = QFileInfo::exists("C:/ProgramData/Kennel WARDOGS/ClipHound/ClipHound.exe") ||
+	bool appInstalled = QFileInfo::exists("C:/ProgramData/Kennel.gg/ClipHound/ClipHound.exe") ||
 			    !e_->cfg.appPath.empty();
 	launchApp_ = new QCheckBox("Start ClipHound with OBS (reads the kill feed and clips notable kills)", p);
 	launchApp_->setChecked(appInstalled && (e_->cfg.launchApp || e_->cfg.appPath.empty()));
@@ -256,7 +256,7 @@ void SetupWizard::accept()
 	c.clipOnDowned = clipDowned_->isChecked();
 	c.launchApp = launchApp_->isChecked();
 	if (c.launchApp && c.appPath.empty())
-		c.appPath = "C:/ProgramData/Kennel WARDOGS/ClipHound/ClipHound.exe";
+		c.appPath = "C:/ProgramData/Kennel.gg/ClipHound/ClipHound.exe";
 	c.save();
 	e_->reloadConfig();
 	if (c.launchApp)

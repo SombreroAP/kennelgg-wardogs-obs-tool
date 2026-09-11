@@ -137,7 +137,7 @@ bool obs_module_load(void)
 	auto *main = (QMainWindow *)obs_frontend_get_main_window();
 	g_engine = new Engine(main);
 	g_dock = new Dock(g_engine);
-	obs_frontend_add_dock_by_id("kennel_wardogs_dock", obs_module_text("KennelWardogs"), g_dock);
+	obs_frontend_add_dock_by_id("kennelgg_dock", obs_module_text("KennelWardogs"), g_dock);
 	obs_frontend_add_tools_menu_item(
 		obs_module_text("KennelWardogs.Settings"),
 		[](void *) {
