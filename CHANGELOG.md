@@ -2,6 +2,13 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.7.5
+- **Squad slots fill themselves in from Discord.** Somebody goes live in your voice channel and a slot appears with their Discord name on it, their capture already made. They stop sharing and the slot goes away again. Slots you added yourself are never touched.
+  - Turn it on in Settings -> Squad, under **Squad from Discord**, and paste the roster address from the server. It carries a key, so treat it like a password and keep it off stream.
+  - Discord will not tell a plugin who is in a call - the client's own interface for that is gated behind a permission Discord grants application by application, by hand. The Kennel.gg Discord bot publishes the roster instead, which is why this only works for our server.
+  - Only people actually sharing get a slot. Discord puts every share inside the one window, so a slot for somebody who is not live could never show anything.
+  - Popping a share out is still a click in Discord. Nothing here moves your mouse for you.
+
 ## 0.7.4
 - **ClipHound stuck on "starting" with no clips and no NEARBY, explained and fixed.** From a user's OBS log: the bridge was on `47820` and everything worked, then two hours later `bridge: listening on ws://127.0.0.1:47821` and ClipHound never connected again. Nothing was pressed - a mouse wheel over the settings window had rolled the **Bridge port** spin box by one. ClipHound reads that port from its own config.yaml, and the plugin never told it, so it went on knocking at the old number for ever.
   - **A scroll no longer changes a setting.** Spin boxes, sliders and drop-downs ignore the wheel until you click into them; scrolling moves the page, as it should.
