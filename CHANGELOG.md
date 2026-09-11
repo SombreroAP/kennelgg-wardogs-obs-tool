@@ -2,6 +2,12 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.7.6
+- **Pop-outs bind themselves.** Pop a squad mate's share out of Discord (right-click their tile, Pop Out) and within two seconds their slot is showing that window and nothing else. Close it and the slot goes back to the Discord window. Two or three pop-outs give you two or three separate feeds. The log says whose window it found and what it was called.
+  - Discord titles a popped-out tile with the person's username, so the roster now carries usernames too. If a pop-out shows up that matches nobody, the log names it so you can see why.
+  - A pop-out that is minimised freezes; the log tells you to restore it. It can sit behind the game, just not minimised.
+- **One capture of the Discord call, not one per squad mate.** 0.7.5 made every squad mate their own capture and audio capture of the same Discord window. Five squad mates meant five captures of one window, all showing the same picture. They share one now. Existing slots are moved over on first start.
+
 ## 0.7.5
 - **Squad slots fill themselves in from Discord.** Somebody goes live in your voice channel and a slot appears with their Discord name on it, their capture already made. They stop sharing and the slot goes away again. Slots you added yourself are never touched.
   - Turn it on in Settings -> Squad, under **Squad from Discord**, and paste the roster address from the server. It carries a key, so treat it like a password and keep it off stream.
