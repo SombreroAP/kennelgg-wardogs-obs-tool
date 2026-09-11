@@ -163,7 +163,7 @@ def main():
                     "distance_m": ev.distance_m if ev else 0,
                     "killer": ev.killer if ev else "", "victim": ev.victim if ev else "",
                     "icons": ev.icons if ev else [], "kills": len(trig.events)}
-            threading.Timer(cfg["obs"]["replay_delay_s"], lambda: _safe(ob.trigger, trig.title, trig.tags, info)).start()
+            threading.Timer(cfg["obs"]["replay_delay_s"], lambda: _safe(ob.trigger, trig.headline(), trig.tags, info)).start()
 
     if cfg["capture"].get("debug_dump"):
         os.makedirs("debug", exist_ok=True)

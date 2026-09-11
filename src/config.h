@@ -114,7 +114,7 @@ struct Config {
 	int nearTtlS = 20;     // a reading older than this is stale and ignored
 	bool appConfigDirty =
 		false; // edited while the app was not connected; push on connect // tell ClipHound to quit when OBS closes (and end it if we started it)
-	std::string clipNameTemplate = "{title}_{tags}_{date}_{time}";
+	std::string clipNameTemplate = "{title} - {date} {time}"; // the same words as the Twitch clip, then when
 	bool autoStartReplay = true;
 	int replaySeconds = 45; // how far back a clip reaches; written into OBS's replay-buffer setting
 	bool clipOnDowned = false;            // also clip when you get downed (the moment before is in the buffer)

@@ -397,8 +397,10 @@ void Config::load()
 		ndiShare = false;
 		autoAddPeers = false;
 	}
-	if (clipNameTemplate == "{date}_{time}_{tags}")
-		clipNameTemplate = "{title}_{tags}_{date}_{time}"; // what happened first, then when
+	// the file is named with the same plain-English title as the Twitch clip; only a template
+	// someone typed themselves is left alone
+	if (clipNameTemplate == "{date}_{time}_{tags}" || clipNameTemplate == "{title}_{tags}_{date}_{time}")
+		clipNameTemplate = "{title} - {date} {time}";
 	obs_data_release(d);
 }
 
