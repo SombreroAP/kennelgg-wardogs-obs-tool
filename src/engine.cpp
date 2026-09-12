@@ -2111,7 +2111,9 @@ void Engine::applyNow(bool on, const QString &why)
 		});
 	}
 	if (dualOn_)
-		sw.applyDual(cfg, !on); // the small window makes way for the full-screen swap, and returns
+		// the small window makes way for the full-screen swap, and returns. Not re-armed on the way
+		// down: the swap has just shown that capture, and warm would make it transparent again.
+		sw.applyDual(cfg, !on, false);
 	sendPov(on ? "downed" : "up");
 	events_ << QDateTime::currentDateTime().toString("HH:mm:ss") +
 			   (on ? "  DOWNED - showing " + QString::fromStdString(cfg.active()->name) : "  back up");

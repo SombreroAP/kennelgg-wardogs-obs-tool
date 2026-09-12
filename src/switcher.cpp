@@ -1218,6 +1218,8 @@ void Switcher::armWarm(const Config &cfg)
 void Switcher::armOne(const Config &cfg, const Friend &f)
 {
 	std::string name = cfg.sourceFor(f);
+	if (!dualInner_.empty() && name == dualInner_)
+		return; // it is showing in the dual window right now; warm would blank it
 	obs_source_t *ss = sceneSource(cfg);
 	if (!ss)
 		return;
@@ -1310,7 +1312,7 @@ void Switcher::shutdown()
 	}
 }
 
-std::string Switcher::applyDual(const Config &cfg, bool on)
+std::string Switcher::applyDual(const Config &cfg, bool on, bool rearm)
 {
 	const Friend *f = cfg.dual();
 	if (on && !f)
@@ -1324,6 +1326,10 @@ std::string Switcher::applyDual(const Config &cfg, bool on)
 		if (item)
 			obs_sceneitem_set_visible(item, false);
 		hideEverywhere(Config::dualSceneName());
+		// their capture went into the window bare; back to warm-and-hidden unless the swap has it
+		dualInner_.clear();
+		if (rearm && f && !f->isWeb() && cfg.keepWarm)
+			armOne(cfg, *f);
 		obs_source_release(ss);
 		return "";
 	}
@@ -1366,7 +1372,19 @@ std::string Switcher::applyDual(const Config &cfg, bool on)
 				obs_sceneitem_set_bounds_type(it, OBS_BOUNDS_SCALE_INNER);
 				obs_sceneitem_set_bounds(it, &bounds);
 			}
+			// The same capture is what the warm state keeps in the main scene, transparent under
+			// its hide filter - and a filter is on the source, so it made the window transparent
+			// too. Take the filter off and hide the main-scene item instead: rendering inside the
+			// window keeps the capture just as warm.
+			obs_source_t *hf = obs_source_get_filter_by_name(src, Config::hideFilterName());
+			if (hf) {
+				obs_source_set_enabled(hf, false);
+				obs_source_release(hf);
+			}
+			if (obs_sceneitem_t *main = obs_scene_find_source(scene, inner.c_str()))
+				obs_sceneitem_set_visible(main, false);
 			obs_source_release(src);
+			dualInner_ = inner;
 		}
 	}
 	// a small frame and their name over the feed, drawn by the same page as the main look, told

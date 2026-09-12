@@ -19,7 +19,9 @@ public:
 	void armWarm(const Config &cfg);
 	void armOne(const Config &cfg, const Friend &f);
 	/// The dual-POV window: a squad mate's feed, small, over your own POV. Creates what it needs.
-	std::string applyDual(const Config &cfg, bool on);
+	/// The small window. `rearm`: when taking it down while you are alive, put the squad mate's
+	/// capture back into its warm state; false while the full-screen swap is showing them instead.
+	std::string applyDual(const Config &cfg, bool on, bool rearm = true);
 	void shutdown(); // on OBS exit, before modules unload
 	/// Look overlay on/off (also used for preview).
 	std::string updateLook(const Config &cfg, bool on);
@@ -108,6 +110,7 @@ public:
 
 private:
 	std::map<std::string, bool> prevMute_;
+	std::string dualInner_; // the capture inside the dual window while it is up: never re-armed
 	obs_source_t *sceneSource(const Config &cfg); // +ref
 	std::string ensureBrowserSource(obs_scene_t *scene, const char *name, const std::string &url, bool rerouteAudio,
 					int width = 0, int height = 0);

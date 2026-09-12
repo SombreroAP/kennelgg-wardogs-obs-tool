@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.4
+- **The dual window showed nothing for a Discord squad mate.** Their capture sits in the main scene under the "warm" hide filter while you are alive, and the small window used the same capture, so it came up transparent there too. The filter now comes off while the window is up and the main-scene copy is hidden instead, which keeps the capture just as warm. Twitch and other web feeds were not affected.
+
 ## 0.8.3
 - **The Discord window list shows pop-outs only.** When you add a squad mate by hand, the window picker lists only popped-out streams (Discord titles those with "Stream"), with "Any Discord window" at the bottom for the not-popped-out case. If nothing is popped out it says so instead of offering the wrong windows.
 - **Add tells you what it saw.** When Add finds nothing to add, the panel and the log list every Discord window that was open, by title, so a pop-out that is named differently from what the plugin expects can be read straight off the panel.
