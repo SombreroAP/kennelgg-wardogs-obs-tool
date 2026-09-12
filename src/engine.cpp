@@ -1148,10 +1148,13 @@ void Engine::syncRoster()
 /// on a real PC: "sombrero's Stream"); a camera tile's is the bare username. Lower case.
 static QString popoutOwner(const std::string &title)
 {
-	QString t = QString::fromStdString(title).toLower();
-	const QString suffix = "'s stream";
-	if (t.endsWith(suffix))
-		t.chop(suffix.size());
+	QString t = QString::fromStdString(title).toLower().trimmed();
+	// "<username>'s Stream", with whichever apostrophe Discord's font hands out, and "<name>' Stream"
+	// for a name ending in s; whatever is left in front of that is the owner
+	static const QRegularExpression suffix(QStringLiteral("\\s*(?:['\u2019\u2018]s?)?\\s*stream\\s*$"));
+	QRegularExpressionMatch m = suffix.match(t);
+	if (m.hasMatch() && m.capturedStart() > 0)
+		t = t.left(m.capturedStart());
 	return t.trimmed();
 }
 
@@ -1236,6 +1239,16 @@ QString Engine::addPopouts(QStringList *addedOut)
 	if (out.isEmpty())
 		out << "No popped-out Discord stream found. In Discord, right-click a squad mate's stream and "
 		       "choose Pop Out, then press Add.";
+	// nothing was added: say exactly which Discord windows were seen, so a title that does not look
+	// the way this expects can be read straight off the panel
+	if (added.isEmpty()) {
+		QStringList seen;
+		for (const auto &w : wins)
+			seen << "\"" + QString::fromStdString(w.title) + "\"";
+		out << (seen.isEmpty() ? QString("No Discord window other than the main one is open.")
+				       : "Discord windows seen: " + seen.join(", ") + ".");
+		log("Squad: Add found nothing to add. " + out.last());
+	}
 	return out.join(" ");
 }
 

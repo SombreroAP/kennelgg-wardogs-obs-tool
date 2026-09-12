@@ -419,19 +419,29 @@ private:
 		pick_->clear();
 		FriendKind k = kind();
 		if (k == FriendKind::Discord) {
-			int firstDiscord = -1;
+			// only popped-out streams: Discord titles those "<username>'s Stream", and every other
+			// Discord window (the main one, the updater, a screen-share picker) is the wrong choice
+			int first = -1;
 			for (auto &w : Switcher::listProperty("window_capture", "window")) {
 				QString v = QString::fromStdString(w.second), n = QString::fromStdString(w.first);
-				bool discord = v.contains("discord", Qt::CaseInsensitive) ||
-					       n.contains("discord", Qt::CaseInsensitive);
-				if (discord && firstDiscord < 0)
-					firstDiscord = pick_->count();
-				pick_->addItem((discord ? "Discord: " : "") + n, v);
+				bool discord = v.endsWith("Discord.exe", Qt::CaseInsensitive);
+				if (!discord || !n.contains("stream", Qt::CaseInsensitive))
+					continue;
+				if (first < 0)
+					first = pick_->count();
+				pick_->addItem("Pop-out: " + n.mid(n.indexOf("]: ") + 3), v);
 			}
-			// always offer the by-executable match: works before the pop-out exists and follows it when it appears
-			pick_->insertItem(0, "Any Discord window (matched by Discord.exe, recommended)",
-					  "Discord:Chrome_WidgetWin_1:Discord.exe");
-			pick_->setCurrentIndex(firstDiscord >= 0 ? firstDiscord + 1 : 0);
+			if (first < 0) {
+				pick_->addItem(
+					"(no popped-out stream open - in Discord, right-click their stream and Pop Out)",
+					"");
+				first = 0;
+			}
+			// the by-executable match is still there, at the bottom: it follows whichever Discord
+			// window is up, which is what "not popped out" means
+			pick_->addItem("Any Discord window (not popped out: the Discord window itself)",
+				       Friend::anyDiscordWindow());
+			pick_->setCurrentIndex(first);
 		} else if (k == FriendKind::Ndi) {
 			// Never ask a throwaway ndi_source for this list: DistroAV's finder signals the
 			// source that asked, after we have released it, and OBS goes down with it.
@@ -560,6 +570,12 @@ private:
 		}
 		if (f.kind == FriendKind::VdoNinja && f.channel.empty()) {
 			err_->setText("Type a stream ID (any word you both agree on).");
+			return;
+		}
+		if (f.kind == FriendKind::Discord && f.channel.empty()) {
+			err_->setText(
+				"No popped-out stream to pick. In Discord, right-click their stream and choose Pop "
+				"Out, then open this again - or choose \"Any Discord window\".");
 			return;
 		}
 		if (f.kind == FriendKind::Ndi && f.channel.empty()) {

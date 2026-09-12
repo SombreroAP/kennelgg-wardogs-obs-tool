@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.3
+- **The Discord window list shows pop-outs only.** When you add a squad mate by hand, the window picker lists only popped-out streams (Discord titles those with "Stream"), with "Any Discord window" at the bottom for the not-popped-out case. If nothing is popped out it says so instead of offering the wrong windows.
+- **Add tells you what it saw.** When Add finds nothing to add, the panel and the log list every Discord window that was open, by title, so a pop-out that is named differently from what the plugin expects can be read straight off the panel.
+- The owner of a pop-out is read with whichever apostrophe Discord uses, and for names ending in s.
+
 ## 0.8.2
 - **Force Dual POV.** The dock button is now a forced toggle: press it and your squad mate is in the small window until you press it again, whatever the vehicle detector thinks. The detector still opens and closes the window by itself when the forced toggle is off, and the button says which of the two is holding it up.
 - **The dual window has a frame and their name.** A thin edge round the picture and a small name plate bottom-left, drawn by the same look as the main swap so it matches, and scaled down because the window is. Off and on with the look effects, or by its own tick on the Dual POV tab.
