@@ -825,6 +825,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 			box.exec();
 			if (box.clickedButton() != both && box.clickedButton() != justOne)
 				return;
+			e_->releasePopout(f);
 			if (box.clickedButton() == both)
 				e_->sw.removeFriendSources(e_->cfg, f);
 		}

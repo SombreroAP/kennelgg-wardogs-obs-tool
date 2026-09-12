@@ -64,6 +64,20 @@ SquadPanel::SquadPanel(Engine *engine, QWidget *parent) : QDialog(parent), e_(en
 		if (!on)
 			refresh();
 	});
+	auto *tuck = new QCheckBox("Keep pop-outs drawing: pin them on top, tucked to the screen edge", this);
+	tuck->setChecked(e_->cfg.popoutTuck);
+	tuck->setToolTip("Discord stops drawing a window the game completely covers, and its capture goes black. "
+			 "Tucked to the edge with a few pixels showing it keeps drawing, and the capture still gets "
+			 "the whole window. Needs the game in borderless windowed mode.");
+	form->addRow(tuck);
+	connect(tuck, &QCheckBox::toggled, this, [this](bool on) {
+		e_->cfg.popoutTuck = on;
+		e_->cfg.save();
+		if (on)
+			e_->watchPopouts();
+		else
+			e_->releaseAllPopouts();
+	});
 	rosterState_ = new QLabel(this);
 	rosterState_->setStyleSheet("color: palette(mid);");
 	form->addRow(rosterState_);
@@ -217,6 +231,7 @@ void SquadPanel::removeSelected()
 		return;
 	if (e_->applied() && r == e_->cfg.activeFriend)
 		e_->applyNow(false, "squad mate removed");
+	e_->releasePopout(f);
 	e_->sw.removeFriendSources(e_->cfg, f);
 	e_->cfg.friends.erase(e_->cfg.friends.begin() + r);
 	if (e_->cfg.activeFriend >= (int)e_->cfg.friends.size())

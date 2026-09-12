@@ -2,6 +2,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <cstdint>
 #include <vector>
 #include <obs.h>
 #include "capture.h"
@@ -40,7 +41,15 @@ public:
 	struct Popout {
 		std::string title, cls, window; // window: OBS's "title:class:exe" spelling, ready to set
 		bool minimized = false;
+		uintptr_t hwnd = 0;
 	};
+	/// Discord stops drawing a window that is completely covered, and the capture goes black. Pin
+	/// the pop-out above other windows and tuck it to the edge of its screen with a few pixels
+	/// showing: Discord then keeps drawing all of it, and the capture takes all of it. Returns
+	/// true if the window was moved this call (false: already tucked, or no window).
+	static bool tuckPopout(const Popout &p);
+	/// The opposite: off the top, back fully on screen.
+	static void untuckPopout(const Popout &p);
 	static std::vector<Popout> discordPopouts();
 	/// Give a squad mate their own capture of this pop-out, bound by exact title. "" or a problem.
 	std::string bindPopout(const Config &cfg, Friend &f, const Popout &p);

@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.6
+- **Pop-outs no longer go black when the game covers them.** Discord stops drawing a window that is completely hidden, and the capture went black with it. Every bound pop-out is now pinned above other windows and tucked to the right edge of its screen with a few pixels showing. Discord keeps drawing all of it, and the capture takes all of it. On by default; the tick is in the Squad panel, and turning it off puts the windows back.
+  - Needs the game in borderless windowed mode. In exclusive fullscreen nothing can sit on top of the game, so a covered pop-out still goes black. The log says so when it tucks one.
+  - Removing a squad mate puts their pop-out back where it was.
+
 ## 0.8.5
 - **Both Add buttons do the same thing.** The Add on the Settings Squad tab now adds every popped-out Discord stream by itself first, exactly like the Squad panel, and only opens the by-hand dialog if there is nothing to add or you ask for it. Your log showed Add working three times and then a slot called "Discord" appearing from the by-hand dialog: that was its default name when the name box is left empty.
 - **The by-hand dialog names a pop-out after its owner.** Pick "Pop-out: superfs1's Stream" and leave the name empty and the slot is called superfs1, with the username set so the watcher and the NEARBY matcher know who it is.

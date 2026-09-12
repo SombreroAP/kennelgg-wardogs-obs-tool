@@ -98,6 +98,7 @@ void Config::load()
 	DEFS(rosterChannel);
 	DEFI(rosterPollS);
 	DEFB(rosterAddSources);
+	DEFB(popoutTuck);
 	DEFS(sceneV);
 	DEFI(vdoBitrateKbps);
 	DEFB(dualEnabled);
@@ -215,6 +216,7 @@ void Config::load()
 	GETS(rosterChannel);
 	GETI(rosterPollS);
 	GETB(rosterAddSources);
+	GETB(popoutTuck);
 	GETS(sceneV);
 	GETI(vdoBitrateKbps);
 	GETB(dualEnabled);
@@ -462,6 +464,7 @@ void Config::save() const
 	SETS(rosterChannel);
 	SETI(rosterPollS);
 	SETB(rosterAddSources);
+	SETB(popoutTuck);
 	SETS(sceneV);
 	SETI(vdoBitrateKbps);
 	SETB(dualEnabled);

@@ -86,7 +86,10 @@ struct Config {
 	std::string rosterChannel;    // only this voice channel ("" = whichever one people are in)
 	int rosterPollS = 6;          // how often to ask
 	bool rosterAddSources = true; // create the Discord capture for whoever goes live
-	int vdoBitrateKbps = 12000;   // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
+	/// Pin every bound pop-out above other windows, tucked to the screen edge with a sliver showing,
+	/// so Discord keeps drawing it while the game covers it. Needs the game in borderless windowed.
+	bool popoutTuck = true;
+	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
 
 	// dual POV: a squad mate's feed in a small window over your own POV (tank / chopper crews)
 	bool dualEnabled = false;

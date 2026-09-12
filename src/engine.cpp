@@ -1252,6 +1252,21 @@ QString Engine::addPopouts(QStringList *addedOut)
 	return out.join(" ");
 }
 
+void Engine::releasePopout(const Friend &f)
+{
+	if (!f.onPopout())
+		return;
+	for (const auto &p : Switcher::discordPopouts())
+		if (p.window == f.popout)
+			Switcher::untuckPopout(p);
+}
+
+void Engine::releaseAllPopouts()
+{
+	for (const auto &f : cfg.friends)
+		releasePopout(f);
+}
+
 void Engine::armPopoutWatch()
 {
 	int n = 0;
@@ -1344,6 +1359,11 @@ void Engine::watchPopouts()
 					applyNow(true, "their pop-out appeared");
 				}
 			}
+			if (cfg.popoutTuck && !wins[hit].minimized && Switcher::tuckPopout(wins[hit]))
+				log("Squad: " + QString::fromStdString(f.name) +
+				    "'s pop-out pinned on top and tucked to the right edge of its screen, so Discord "
+				    "keeps drawing it while the game covers it. If it still goes black, the game is in "
+				    "exclusive fullscreen: switch it to borderless windowed.");
 			QString minKey = QString::fromStdString(f.name) + "/min";
 			if (wins[hit].minimized && popoutNote_ != minKey) {
 				popoutNote_ = minKey;

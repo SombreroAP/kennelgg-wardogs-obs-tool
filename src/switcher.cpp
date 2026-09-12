@@ -599,9 +599,61 @@ static BOOL CALLBACK popoutEnum(HWND hwnd, LPARAM lp)
 		return TRUE;
 	p.window = obsWindowString(p.title, p.cls, exe);
 	p.minimized = IsIconic(hwnd) != 0;
+	p.hwnd = reinterpret_cast<uintptr_t>(hwnd);
 	out->push_back(p);
 	return TRUE;
 }
+
+static const int kSliver = 12; // pixels of the pop-out left on screen: enough for Chromium to call it visible
+
+bool Switcher::tuckPopout(const Popout &p)
+{
+	HWND hwnd = reinterpret_cast<HWND>(p.hwnd);
+	if (!hwnd || !IsWindow(hwnd) || IsIconic(hwnd))
+		return false;
+	HMONITOR mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+	MONITORINFO mi = {};
+	mi.cbSize = sizeof(mi);
+	if (!GetMonitorInfoW(mon, &mi))
+		return false;
+	RECT r = {};
+	GetWindowRect(hwnd, &r);
+	int w = r.right - r.left, h = r.bottom - r.top;
+	if (w <= 0 || h <= 0)
+		return false;
+	int x = mi.rcMonitor.right - kSliver;
+	int y = std::clamp((int)r.top, (int)mi.rcMonitor.top, (int)std::max(mi.rcMonitor.top, mi.rcMonitor.bottom - h));
+	bool topmost = (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+	if (topmost && r.left == x && r.top == y)
+		return false; // already where it should be
+	SetWindowPos(hwnd, HWND_TOPMOST, x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+	return true;
+}
+
+void Switcher::untuckPopout(const Popout &p)
+{
+	HWND hwnd = reinterpret_cast<HWND>(p.hwnd);
+	if (!hwnd || !IsWindow(hwnd))
+		return;
+	HMONITOR mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+	MONITORINFO mi = {};
+	mi.cbSize = sizeof(mi);
+	if (!GetMonitorInfoW(mon, &mi))
+		return;
+	RECT r = {};
+	GetWindowRect(hwnd, &r);
+	int w = r.right - r.left;
+	int x = std::max((int)mi.rcMonitor.left, (int)mi.rcMonitor.right - w - 40);
+	SetWindowPos(hwnd, HWND_NOTOPMOST, x, r.top, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+}
+#endif
+
+#ifndef _WIN32
+bool Switcher::tuckPopout(const Popout &)
+{
+	return false;
+}
+void Switcher::untuckPopout(const Popout &) {}
 #endif
 
 std::vector<Switcher::Popout> Switcher::discordPopouts()
