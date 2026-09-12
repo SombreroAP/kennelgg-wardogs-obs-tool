@@ -1153,19 +1153,40 @@ void Engine::watchPopouts()
 		if (f.kind == FriendKind::Discord && !f.onPopout())
 			liveShared++;
 
+	// A Go Live pop-out is titled "<username>'s Stream" (seen on a real PC: "sombrero's Stream");
+	// a camera tile's is the bare username. Either way the owner is the title with that suffix off.
+	auto ownerOf = [&](const std::string &title) {
+		QString t = lower(title);
+		const QString suffix = "'s stream";
+		if (t.endsWith(suffix))
+			t.chop(suffix.size());
+		return t.trimmed();
+	};
+
 	// 1. everyone: is their window still there, or is there one for them now
 	for (auto &f : cfg.friends) {
 		if (f.kind != FriendKind::Discord)
 			continue;
 		QString name = lower(f.name), handle = lower(f.handle);
 		int hit = -1;
+		// exact owner first, so "bryan" can never take "bryanx's Stream"
 		for (size_t i = 0; i < wins.size() && hit < 0; ++i) {
 			if (taken[i])
 				continue;
-			QString t = lower(wins[i].title);
-			if (t == "discord popout") // not drawn yet, so not named yet
+			QString owner = ownerOf(wins[i].title);
+			if (owner == "discord popout") // not drawn yet, so not named yet
 				continue;
-			if ((!handle.isEmpty() && t.contains(handle)) || (name.size() >= 3 && t.contains(name)))
+			if ((!handle.isEmpty() && owner == handle) || owner == name)
+				hit = (int)i;
+		}
+		// then a looser look for slots named by hand: the slot name inside the owner's username
+		for (size_t i = 0; hit < 0 && i < wins.size(); ++i) {
+			if (taken[i])
+				continue;
+			QString owner = ownerOf(wins[i].title);
+			if (owner == "discord popout")
+				continue;
+			if (name.size() >= 4 && owner.contains(name))
 				hit = (int)i;
 		}
 		// the one pop-out that has no name yet: if exactly one of the squad is on the shared call
@@ -1215,7 +1236,7 @@ void Engine::watchPopouts()
 		}
 	}
 
-	// 2. a named pop-out nobody matched: say so once, it usually means the roster has no username
+	// 2. a named pop-out nobody matched: say whose it is, once. Your own stream lands here too.
 	for (size_t i = 0; i < wins.size(); ++i) {
 		if (taken[i])
 			continue;
@@ -1224,9 +1245,12 @@ void Engine::watchPopouts()
 			continue;
 		if (popoutNote_ != t) {
 			popoutNote_ = t;
-			log("Squad: a Discord pop-out titled \"" + t +
-			    "\" is open but matches nobody in the squad. If it is a squad mate's, their name in "
-			    "the slot needs to appear in that title.");
+			QString owner = ownerOf(wins[i].title);
+			bool me = !cfg.playerName.empty() && owner == lower(cfg.playerName);
+			log("Squad: a pop-out of Discord user '" + owner + "' is open (\"" + t + "\")" +
+			    (me ? ", which is you, so no slot takes it."
+				: ", but no slot is named that. Name their slot with their Discord username, or turn "
+				  "on Squad from Discord and it fills itself in."));
 		}
 	}
 	if (changed) {

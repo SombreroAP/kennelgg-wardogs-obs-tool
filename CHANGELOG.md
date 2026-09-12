@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.7.9
+- **Pop-outs are matched on their owner exactly.** A real PC showed a Go Live pop-out is titled "<username>'s Stream". The plugin now reads the username out of that and binds a slot whose Discord username, or slot name, is exactly that person, so a slot called Bryan can never take bryanx's window. A hand-named slot still matches if its name is inside the username.
+- When a pop-out belongs to nobody in the squad the log names the Discord user it belongs to, and says when that user is you.
+
 ## 0.7.8
 - **Your desktop audio was being ticked to mute again on every start.** The "already done that" flag behind the old auto-pick was never saved to disk, so whenever the mute list was empty at start-up the plugin ticked your desktop audio back in, undoing you if you had cleared it. The auto-pick is gone for good: nothing of yours is muted unless you tick it in Settings -> Switch. The list is cleared once more on first start, since anything in it may have been the auto-pick's doing.
 
