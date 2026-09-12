@@ -75,7 +75,14 @@ struct Config {
 	// Discord roster: the Kennel.gg bot publishes who is in voice and who is sharing, and squad
 	// slots fill themselves in from it. Off until an address is entered.
 	bool rosterEnabled = false;
-	std::string rosterUrl;        // https://kennel.gg/api/voice-<key>.json
+	std::string rosterUrl = kennelRosterUrl(); // the Kennel.gg one unless somebody runs their own bot
+	/// Your own Discord username. Says which voice channel is yours in the roster, and keeps your own
+	/// stream from being added as a squad mate. Optional.
+	std::string myDiscord;
+	static const char *kennelRosterUrl()
+	{
+		return "https://kennel.gg/api/voice-KHc1U8CRGy8Ixq2JAeKj6JNAjdo8mDDu.json";
+	}
 	std::string rosterChannel;    // only this voice channel ("" = whichever one people are in)
 	int rosterPollS = 6;          // how often to ask
 	bool rosterAddSources = true; // create the Discord capture for whoever goes live

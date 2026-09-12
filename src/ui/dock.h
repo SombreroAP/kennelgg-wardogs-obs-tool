@@ -21,6 +21,7 @@ public slots:
 	void openSettings();
 	void openWizard();
 	void openLogs();
+	void openSquad();
 
 private:
 	Engine *e_;
@@ -37,4 +38,5 @@ private:
 	bool filling_ = false;
 	QPointer<QDialog> settings_;
 	QPointer<QWidget> wizard_;
+	QPointer<QDialog> squad_;
 };

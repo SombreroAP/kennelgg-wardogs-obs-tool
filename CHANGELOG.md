@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.0
+- **Squad button on the dock, and the flow is now: pop it out, press Add.** Open OBS, join Discord voice, watch a squad mate's stream and pop it out. Press **Squad** on the dock, then **Add popped-out Discord streams**: every popped-out stream becomes a squad mate named by their Discord username, bound to that window by exact title, with their in-game name set to match. Already-added people are skipped. The panel also lists the squad with what each one is showing, and has Make active and Remove for mid-broadcast.
+- **Window title must match.** A slot made from a pop-out, or from a specific Discord window you picked, is matched on that exact title only. Matching by executable was how a slot ended up on the wrong Discord window; it is now used only for "Any Discord window".
+- **Squad mates who go live in Kennel.gg voice can add themselves.** One tick in the Squad panel. The roster address is built in, nothing to paste. Slots are named by Discord username so they line up with pop-outs and in-game names. Put your own Discord username in the panel and only the channel you are sitting in counts, and your own stream is never added.
+
 ## 0.7.9
 - **Pop-outs are matched on their owner exactly.** A real PC showed a Go Live pop-out is titled "<username>'s Stream". The plugin now reads the username out of that and binds a slot whose Discord username, or slot name, is exactly that person, so a slot called Bryan can never take bryanx's window. A hand-named slot still matches if its name is inside the username.
 - When a pop-out belongs to nobody in the squad the log names the Discord user it belongs to, and says when that user is you.

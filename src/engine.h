@@ -44,6 +44,11 @@ public:
 	/// squad mate their own capture of theirs, and take it back when the window goes.
 	void watchPopouts();
 	void armPopoutWatch();
+	/// Every popped-out Discord stream on this PC becomes a squad mate named by its Discord
+	/// username, bound to that window. Returns what happened, for the Squad panel.
+	QString addPopouts();
+	/// Is this Discord username you (your own stream is never a squad mate).
+	bool isMe(const QString &discordUser) const;
 	QString rosterStatus() const { return roster.status(); }
 	void applyLan();
 	void applyReplaySeconds();

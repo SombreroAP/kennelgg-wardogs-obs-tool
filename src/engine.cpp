@@ -1043,6 +1043,23 @@ void Engine::syncRoster()
 	// capture each for feeds that do not exist, and Discord puts every share inside the one
 	// window anyway - a slot for somebody who is not live could never show anything.
 	QList<Roster::Member> live = roster.streamers();
+	// "with you": when your Discord username is known, only the channel you are sitting in counts
+	if (!cfg.myDiscord.empty()) {
+		QString me = QString::fromStdString(cfg.myDiscord).toLower(), myChan;
+		for (const auto &m : roster.members())
+			if (m.handle.toLower() == me)
+				myChan = m.channel;
+		QList<Roster::Member> here;
+		for (const auto &m : live)
+			if (!myChan.isEmpty() && m.channel == myChan && m.handle.toLower() != me)
+				here.append(m);
+		live = here;
+	}
+	auto same = [](const Roster::Member &m, const Friend &f) {
+		QString h = m.handle.toLower(), n = m.name.toLower();
+		QString fh = QString::fromStdString(f.handle).toLower(), fn = QString::fromStdString(f.name).toLower();
+		return (!h.isEmpty() && (h == fh || h == fn)) || n == fn;
+	};
 	QString activeName = (cfg.activeFriend >= 0 && cfg.activeFriend < (int)cfg.friends.size())
 				     ? QString::fromStdString(cfg.friends[cfg.activeFriend].name)
 				     : QString();
@@ -1055,7 +1072,7 @@ void Engine::syncRoster()
 			continue; // yours, not ours
 		bool still = false;
 		for (const auto &m : live)
-			if (m.name.compare(QString::fromStdString(f.name), Qt::CaseInsensitive) == 0)
+			if (same(m, f))
 				still = true;
 		if (still)
 			continue;
@@ -1071,7 +1088,7 @@ void Engine::syncRoster()
 	for (const auto &m : live) {
 		bool known = false;
 		for (auto &f : cfg.friends)
-			if (m.name.compare(QString::fromStdString(f.name), Qt::CaseInsensitive) == 0) {
+			if (same(m, f)) {
 				known = true;
 				if (f.handle.empty() && !m.handle.isEmpty()) {
 					f.handle = m.handle.toStdString(); // an older slot learns the username
@@ -1079,9 +1096,13 @@ void Engine::syncRoster()
 				}
 			}
 		if (known)
-			continue; // already there, by hand or from an earlier poll
+			continue; // already there, by hand, from a pop-out, or from an earlier poll
+		if (isMe(m.handle))
+			continue;
 		Friend f;
-		f.name = m.name.toStdString();
+		// the slot is called what Discord calls them (the username, not "Private Gazreyn"): it is
+		// what a pop-out is titled with and what their in-game name is matched against
+		f.name = (m.handle.isEmpty() ? m.name : m.handle).toStdString();
 		f.handle = m.handle.toStdString();
 		f.kind = FriendKind::Discord;
 		// matched by executable, so it follows the Go Live window whether or not it is popped out
@@ -1099,7 +1120,7 @@ void Engine::syncRoster()
 		}
 		cfg.friends.push_back(f);
 		changed = true;
-		log("Squad: " + m.name + " is sharing in Discord - slot added.");
+		log("Squad: " + QString::fromStdString(f.name) + " is sharing in Discord voice - slot added.");
 	}
 
 	if (!changed)
@@ -1115,6 +1136,99 @@ void Engine::syncRoster()
 		sw.armWarm(cfg);
 	armPopoutWatch();
 	emit stateChanged();
+}
+
+/// Whose window a Discord pop-out is. A Go Live pop-out is titled "<username>'s Stream" (seen
+/// on a real PC: "sombrero's Stream"); a camera tile's is the bare username. Lower case.
+static QString popoutOwner(const std::string &title)
+{
+	QString t = QString::fromStdString(title).toLower();
+	const QString suffix = "'s stream";
+	if (t.endsWith(suffix))
+		t.chop(suffix.size());
+	return t.trimmed();
+}
+
+bool Engine::isMe(const QString &discordUser) const
+{
+	QString u = discordUser.toLower();
+	if (u.isEmpty())
+		return false;
+	if (!cfg.myDiscord.empty() && u == QString::fromStdString(cfg.myDiscord).toLower())
+		return true;
+	if (!cfg.playerName.empty() && u == QString::fromStdString(cfg.playerName).toLower())
+		return true;
+	QString tw = twitch_.value("login").toString().toLower();
+	return !tw.isEmpty() && u == tw;
+}
+
+QString Engine::addPopouts()
+{
+	std::vector<Switcher::Popout> wins = Switcher::discordPopouts();
+	QStringList added, already, failed;
+	int unnamed = 0, mine = 0;
+	for (const auto &w : wins) {
+		QString owner = popoutOwner(w.title);
+		if (owner == "discord popout") {
+			unnamed++; // Discord has not titled it yet; a second later it will have
+			continue;
+		}
+		if (isMe(owner)) {
+			mine++;
+			continue;
+		}
+		bool known = false;
+		for (const auto &f : cfg.friends)
+			if (owner == QString::fromStdString(f.handle).toLower() ||
+			    owner == QString::fromStdString(f.name).toLower())
+				known = true;
+		if (known) {
+			already << owner;
+			continue;
+		}
+		Friend f;
+		f.name = owner.toStdString();   // the slot is called what Discord calls them...
+		f.handle = owner.toStdString(); // ...and that is also what the game's NEARBY list is matched on
+		f.kind = FriendKind::Discord;
+		f.channel = Friend::anyDiscordWindow(); // the Discord window is where it goes back to
+		std::string err = sw.createFriendSources(cfg, f);
+		if (err.empty())
+			err = sw.bindPopout(cfg, f, w); // and their own window, by exact title, is what it shows
+		if (!err.empty()) {
+			failed << owner + " (" + QString::fromStdString(err) + ")";
+			continue;
+		}
+		cfg.friends.push_back(f);
+		added << owner;
+		log("Squad: added " + owner + " from their popped-out Discord stream (\"" +
+		    QString::fromStdString(w.title) + "\").");
+	}
+	if (!added.isEmpty()) {
+		if (cfg.friends.size() == added.size())
+			cfg.activeFriend = 0;
+		cfg.save();
+		if (cfg.keepWarm && !applied_)
+			sw.armWarm(cfg);
+		armPopoutWatch();
+		emit stateChanged();
+	}
+	QStringList out;
+	if (!added.isEmpty())
+		out << "Added " + added.join(", ") + ".";
+	if (!already.isEmpty())
+		out << already.join(", ") + (already.size() == 1 ? " is" : " are") + " already in the squad.";
+	if (!failed.isEmpty())
+		out << "Could not add " + failed.join("; ") + ".";
+	if (unnamed)
+		out << QString("%1 pop-out%2 not titled yet - give Discord a second and press Add again.")
+				.arg(unnamed)
+				.arg(unnamed == 1 ? " is" : "s are");
+	if (mine)
+		out << "Your own stream is popped out; it is not added.";
+	if (out.isEmpty())
+		out << "No popped-out Discord stream found. In Discord, right-click a squad mate's stream and "
+		       "choose Pop Out, then press Add.";
+	return out.join(" ");
 }
 
 void Engine::armPopoutWatch()
@@ -1153,16 +1267,6 @@ void Engine::watchPopouts()
 		if (f.kind == FriendKind::Discord && !f.onPopout())
 			liveShared++;
 
-	// A Go Live pop-out is titled "<username>'s Stream" (seen on a real PC: "sombrero's Stream");
-	// a camera tile's is the bare username. Either way the owner is the title with that suffix off.
-	auto ownerOf = [&](const std::string &title) {
-		QString t = lower(title);
-		const QString suffix = "'s stream";
-		if (t.endsWith(suffix))
-			t.chop(suffix.size());
-		return t.trimmed();
-	};
-
 	// 1. everyone: is their window still there, or is there one for them now
 	for (auto &f : cfg.friends) {
 		if (f.kind != FriendKind::Discord)
@@ -1173,7 +1277,7 @@ void Engine::watchPopouts()
 		for (size_t i = 0; i < wins.size() && hit < 0; ++i) {
 			if (taken[i])
 				continue;
-			QString owner = ownerOf(wins[i].title);
+			QString owner = popoutOwner(wins[i].title);
 			if (owner == "discord popout") // not drawn yet, so not named yet
 				continue;
 			if ((!handle.isEmpty() && owner == handle) || owner == name)
@@ -1183,7 +1287,7 @@ void Engine::watchPopouts()
 		for (size_t i = 0; hit < 0 && i < wins.size(); ++i) {
 			if (taken[i])
 				continue;
-			QString owner = ownerOf(wins[i].title);
+			QString owner = popoutOwner(wins[i].title);
 			if (owner == "discord popout")
 				continue;
 			if (name.size() >= 4 && owner.contains(name))
@@ -1245,7 +1349,7 @@ void Engine::watchPopouts()
 			continue;
 		if (popoutNote_ != t) {
 			popoutNote_ = t;
-			QString owner = ownerOf(wins[i].title);
+			QString owner = popoutOwner(wins[i].title);
 			bool me = !cfg.playerName.empty() && owner == lower(cfg.playerName);
 			log("Squad: a pop-out of Discord user '" + owner + "' is open (\"" + t + "\")" +
 			    (me ? ", which is you, so no slot takes it."

@@ -480,8 +480,9 @@ std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 		obs_data_t *st = obs_data_create();
 		obs_data_set_string(st, "window", f.channel.c_str());
 		obs_data_set_int(st, "method", 2); // Windows 10 capture: survives the window being covered
-		obs_data_set_int(st, "priority",
-				 f.channel.find("Discord.exe") != std::string::npos ? 2 : 1); // 2 = match by executable
+		// exact title unless they chose "any Discord window": every Discord window string ends in
+		// Discord.exe, and matching on the executable is how a slot ended up on the wrong window
+		obs_data_set_int(st, "priority", shared ? 2 : 1); // 2 = by executable, 1 = this title only
 		obs_data_set_bool(st, "cursor", false);
 		obs_data_set_bool(st, "client_area", true);
 		std::string e = createInScene(cfg, "window_capture", video, st, true, false);

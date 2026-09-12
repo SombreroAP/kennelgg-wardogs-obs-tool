@@ -1,6 +1,7 @@
 #include "ui/dock.h"
 #include "ui/settings-dialog.h"
 #include "ui/wizard.h"
+#include "ui/squad.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QDialog>
@@ -157,14 +158,18 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	btns->addWidget(dual_);
 	connect(dual_, &QPushButton::clicked, this, [this](bool on) { e_->setDual(on, "dock"); });
 	pause_ = new QPushButton("Pause", this);
+	auto *squad = new QPushButton("Squad", this);
+	squad->setToolTip("Turn popped-out Discord streams into squad mates, and manage them mid-broadcast.");
 	auto *settings = new QPushButton("Settings...", this);
 	auto *wiz = new QPushButton("Setup", this);
 	auto *logs = new QPushButton("Logs", this);
+	btns2->addWidget(squad);
 	btns2->addWidget(pause_);
 	btns2->addWidget(wiz);
 	btns2->addWidget(settings);
 	btns2->addWidget(logs);
 	connect(logs, &QPushButton::clicked, this, &Dock::openLogs);
+	connect(squad, &QPushButton::clicked, this, &Dock::openSquad);
 	connect(wiz, &QPushButton::clicked, this, &Dock::openWizard);
 	v->addLayout(btns2);
 	connect(pause_, &QPushButton::clicked, this, [this]() { e_->setEnabled(!e_->cfg.enabled); });
@@ -398,6 +403,19 @@ void Dock::openLogs()
 	connect(cfgFolder, &QPushButton::clicked, d,
 		[]() { QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(Config::configDir()))); });
 	showOnScreen(d);
+}
+
+void Dock::openSquad()
+{
+	if (squad_) {
+		squad_->raise();
+		squad_->activateWindow();
+		return;
+	}
+	auto *dlg = new SquadPanel(e_, (QWidget *)obs_frontend_get_main_window());
+	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	squad_ = dlg;
+	showOnScreen(dlg);
 }
 
 void Dock::openSettings()

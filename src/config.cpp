@@ -94,6 +94,7 @@ void Config::load()
 	DEFB(audioAutoPicked);
 	DEFB(rosterEnabled);
 	DEFS(rosterUrl);
+	DEFS(myDiscord);
 	DEFS(rosterChannel);
 	DEFI(rosterPollS);
 	DEFB(rosterAddSources);
@@ -209,6 +210,7 @@ void Config::load()
 	GETB(audioAutoPicked);
 	GETB(rosterEnabled);
 	GETS(rosterUrl);
+	GETS(myDiscord);
 	GETS(rosterChannel);
 	GETI(rosterPollS);
 	GETB(rosterAddSources);
@@ -454,6 +456,7 @@ void Config::save() const
 	SETB(audioAutoPicked);
 	SETB(rosterEnabled);
 	SETS(rosterUrl);
+	SETS(myDiscord);
 	SETS(rosterChannel);
 	SETI(rosterPollS);
 	SETB(rosterAddSources);
