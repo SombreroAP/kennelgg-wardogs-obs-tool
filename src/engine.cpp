@@ -1312,7 +1312,8 @@ void Engine::watchPopouts()
 	};
 	std::vector<bool> taken(wins.size(), false);
 	bool changed = false;
-	int parked = 0; // stacking order on the parking monitor
+	int parked = 0;               // stacking order on the parking monitor, or down the tucked edge
+	int bound = (int)wins.size(); // how many pop-outs there are to place, for the spacing
 	const Friend *active = cfg.active();
 	std::string activeName = active ? active->name : "";
 	int liveShared = 0; // Discord squad mates who are not on a pop-out yet
@@ -1379,12 +1380,12 @@ void Engine::watchPopouts()
 			}
 			if (cfg.popoutTuck && !popoutsShown_ && !wins[hit].minimized) {
 				if (cfg.popoutMonitor >= 0) {
-					if (Switcher::parkPopout(wins[hit], cfg.popoutMonitor, parked++))
+					if (Switcher::parkPopout(wins[hit], cfg.popoutMonitor, parked++, bound))
 						log("Squad: " + QString::fromStdString(f.name) +
 						    QString("'s pop-out parked on monitor %1, on top and fully visible, so "
 							    "Discord keeps drawing it and its controls stay in reach.")
 							    .arg(cfg.popoutMonitor + 1));
-				} else if (Switcher::tuckPopout(wins[hit]))
+				} else if (Switcher::tuckPopout(wins[hit], parked++))
 					log("Squad: " + QString::fromStdString(f.name) +
 					    "'s pop-out pinned on top and tucked to the right edge of its screen, so "
 					    "Discord keeps drawing it while other windows cover it. Press Show pop-outs "

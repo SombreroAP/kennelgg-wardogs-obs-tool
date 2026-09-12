@@ -47,10 +47,13 @@ public:
 	/// the pop-out above other windows and tuck it to the edge of its screen with a few pixels
 	/// showing: Discord then keeps drawing all of it, and the capture takes all of it. Returns
 	/// true if the window was moved this call (false: already tucked, or no window).
-	static bool tuckPopout(const Popout &p);
-	/// Park the pop-out on monitor `mon` (0-based), fully visible, on top, `slot` places from the
-	/// top; a window wider than the monitor is shrunk to fit. Returns true if it moved.
-	static bool parkPopout(const Popout &p, int mon, int slot);
+	/// `slot` staggers them down the edge: two pop-outs on the same spot would cover each other's
+	/// sliver and Discord would stop drawing the one underneath.
+	static bool tuckPopout(const Popout &p, int slot);
+	/// Park the pop-out on monitor `mon` (0-based), fully visible, on top, `slot` of `total` places
+	/// from the top; a window wider than the monitor is shrunk to fit, and more windows than fit are
+	/// staggered rather than stacked on one spot. Returns true if it moved.
+	static bool parkPopout(const Popout &p, int mon, int slot, int total);
 	/// The opposite: off the top, back fully on screen.
 	static void untuckPopout(const Popout &p);
 	/// The monitors, as "2560x1600 at 0,0" strings in the order parkPopout counts them.

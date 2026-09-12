@@ -631,7 +631,7 @@ static void popoutSize(int maxW, int maxH, int &w, int &h)
 	}
 }
 
-bool Switcher::tuckPopout(const Popout &p)
+bool Switcher::tuckPopout(const Popout &p, int slot)
 {
 	HWND hwnd = reinterpret_cast<HWND>(p.hwnd);
 	if (!hwnd || !IsWindow(hwnd) || IsIconic(hwnd))
@@ -649,7 +649,10 @@ bool Switcher::tuckPopout(const Popout &p)
 	int w, h;
 	popoutSize(kPopW, mi.rcMonitor.bottom - mi.rcMonitor.top, w, h);
 	int x = mi.rcMonitor.right - kSliver;
-	int y = std::clamp((int)r.top, (int)mi.rcMonitor.top, (int)std::max(mi.rcMonitor.top, mi.rcMonitor.bottom - h));
+	// each one lower than the last, so every sliver keeps a stretch nothing else sits on
+	const int step = 220;
+	int y = std::clamp((int)mi.rcMonitor.top + slot * step, (int)mi.rcMonitor.top,
+			   (int)std::max(mi.rcMonitor.top, mi.rcMonitor.bottom - step));
 	bool topmost = (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
 	if (topmost && r.left == x && r.top == y && r.right - r.left == w && r.bottom - r.top == h)
 		return false; // already where and how it should be
@@ -680,7 +683,7 @@ std::vector<std::string> Switcher::monitors()
 	return out;
 }
 
-bool Switcher::parkPopout(const Popout &p, int mon, int slot)
+bool Switcher::parkPopout(const Popout &p, int mon, int slot, int total)
 {
 	HWND hwnd = reinterpret_cast<HWND>(p.hwnd);
 	if (!hwnd || !IsWindow(hwnd) || IsIconic(hwnd))
@@ -698,9 +701,15 @@ bool Switcher::parkPopout(const Popout &p, int mon, int slot)
 	// 16:9 and as large as the screen allows: a portrait screen gets them at its full width
 	int w, h;
 	popoutSize((m.right - m.left) - 2 * gap, (m.bottom - m.top) - 2 * gap, w, h);
-	int x = m.left + gap, y = m.top + gap + slot * (h + gap);
-	if (y + h > m.bottom) // more pop-outs than the screen has room for: overlap from the bottom
-		y = std::max((int)m.top + gap, (int)m.bottom - h - gap);
+	// stacked when they fit; when they do not, staggered so each keeps a band of its own showing,
+	// never piled on one spot where the top one would hide the rest from Discord
+	int avail = (m.bottom - m.top) - 2 * gap;
+	int step = h + gap;
+	if (total > 1 && slot >= 0 && total * h + (total - 1) * gap > avail)
+		step = std::max(160, (avail - h) / (total - 1));
+	int x = m.left + gap, y = m.top + gap + std::max(0, slot) * step;
+	if (y + h > m.bottom + h / 2) // never mostly off the bottom
+		y = std::max((int)m.top + gap, (int)m.bottom - h / 2);
 	bool topmost = (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
 	if (topmost && r.left == x && r.top == y && r.right - r.left == w && r.bottom - r.top == h)
 		return false;
@@ -727,11 +736,11 @@ void Switcher::untuckPopout(const Popout &p)
 #endif
 
 #ifndef _WIN32
-bool Switcher::tuckPopout(const Popout &)
+bool Switcher::tuckPopout(const Popout &, int)
 {
 	return false;
 }
-bool Switcher::parkPopout(const Popout &, int, int)
+bool Switcher::parkPopout(const Popout &, int, int, int)
 {
 	return false;
 }
