@@ -154,11 +154,19 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	auto *btns2 = new QHBoxLayout();
 	dual_ = new QPushButton("Force Dual POV", this);
 	dual_->setCheckable(true);
-	dual_->setToolTip("Your squad mate's feed in the small Dual POV window, now, and it stays up until you press "
-			  "this again. The vehicle detector (Dual POV tab) still opens and closes the window by "
-			  "itself when this is off.");
+	dual_->setToolTip("The squad mate picked in the drop-down goes in the small Dual POV window, now, and stays "
+			  "until you press this again. Change the drop-down afterwards and the full-screen swap "
+			  "follows it while the window keeps its person. The vehicle detector (Dual POV tab) still "
+			  "opens and closes the window by itself when this is off.");
 	btns->addWidget(dual_);
-	connect(dual_, &QPushButton::clicked, this, [this](bool on) { e_->setDual(on, "dock"); });
+	connect(dual_, &QPushButton::clicked, this, [this](bool on) {
+		// forced: the squad mate the drop-down shows right now goes in the window. The drop-down
+		// can move on afterwards for the full-screen swap without moving the window.
+		if (on && e_->cfg.active())
+			e_->showInDual(e_->cfg.activeFriend, "dock");
+		else
+			e_->setDual(on, "dock");
+	});
 	pause_ = new QPushButton("Pause", this);
 	auto *squad = new QPushButton("Squad", this);
 	squad->setToolTip("Turn popped-out Discord streams into squad mates, and manage them mid-broadcast.");

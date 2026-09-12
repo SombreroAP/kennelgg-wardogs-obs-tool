@@ -51,7 +51,7 @@ public:
 	void releasePopout(const Friend &f);
 	void releaseAllPopouts();
 	/// Put this squad mate in the dual window and keep it there until it is turned off by hand.
-	void showInDual(int idx);
+	void showInDual(int idx, const QString &why = "squad panel");
 	/// Is this Discord username you (your own stream is never a squad mate).
 	bool isMe(const QString &discordUser) const;
 	QString rosterStatus() const { return roster.status(); }

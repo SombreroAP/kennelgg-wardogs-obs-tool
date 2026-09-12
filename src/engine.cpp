@@ -2154,7 +2154,7 @@ void Engine::applyNow(bool on, const QString &why)
 	emit stateChanged();
 }
 
-void Engine::showInDual(int idx)
+void Engine::showInDual(int idx, const QString &why)
 {
 	if (idx < 0 || idx >= (int)cfg.friends.size())
 		return;
@@ -2162,7 +2162,9 @@ void Engine::showInDual(int idx)
 		cfg.dualFriend = idx;
 		cfg.save();
 	}
-	setDual(true, "squad panel");
+	if (dualOn_)
+		sw.applyDual(cfg, false, false); // swap the person inside the window, not just the label
+	setDual(true, why);
 }
 
 void Engine::setDual(bool on, const QString &why)
@@ -2239,7 +2241,11 @@ void Engine::onVehicle(const QString &seat)
 
 void Engine::toggleDual()
 {
-	setDual(!dualOn_, "hotkey");
+	// forced on by hotkey: whoever the dock's drop-down shows goes in the window
+	if (!dualOn_ && cfg.active())
+		showInDual(cfg.activeFriend, "hotkey");
+	else
+		setDual(!dualOn_, "hotkey");
 }
 
 void Engine::toggle()

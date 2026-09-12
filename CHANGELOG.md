@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.8
+- **Force Dual POV shows the squad mate in the dock's drop-down.** Pick them, press the button, they are in the small window. The drop-down can move on afterwards for the full-screen swap and the window keeps its person. The hotkey does the same. The Squad panel's Show in Dual POV still puts whoever is selected there in the window, and swaps the person if the window is already up.
+
 ## 0.8.7
 - **Add says exactly why when it cannot add someone, and the log keeps the whole line.** A source that was deleted moments earlier but still held somewhere kept its name and blocked a new one with that name; the plugin now moves the ghost aside and makes a fresh source. If a scene refuses the source, the message names the scene.
 
