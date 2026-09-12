@@ -36,6 +36,7 @@ struct Friend {
 	/// Their popped-out window, when the plugin has found one: OBS's "title:class:exe" spelling.
 	/// While set, `source` is a capture of that window and `baseSource` is the one to go back to.
 	std::string popout, baseSource;
+	long long popoutMissingMs = 0; // how long the window has been gone, runtime only
 	bool onPopout() const { return kind == FriendKind::Discord && !popout.empty(); }
 	static const char *discordCallSourceName() { return "Kennel.gg · Discord call"; }
 	static const char *discordCallAudioName() { return "Kennel.gg · Discord call audio"; }

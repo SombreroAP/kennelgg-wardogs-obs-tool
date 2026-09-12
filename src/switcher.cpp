@@ -781,26 +781,12 @@ void Switcher::unbindPopout(const Config &cfg, Friend &f)
 					   : "Kennel.gg · " + (f.name.empty() ? std::string("squad mate") : f.name);
 	f.baseSource.clear();
 	f.popout.clear();
-	int users = 0;
-	for (const auto &g : cfg.friends)
-		if (g.source == mine)
-			users++;
-	if (users) // someone else is somehow on it; leave it
-		return;
-	obs_source_t *src = obs_get_source_by_name(mine.c_str());
-	if (!src)
-		return;
+	f.popoutMissingMs = 0;
+	// The capture itself stays: hidden, still in the scene, still bound to that exact title. When the
+	// pop-out comes back OBS re-hooks it by itself, and binding again is a rename, not a re-create.
+	// Deleting it here left ghosts that blocked the name for the next bind. It goes with the slot.
 	hideEverywhere(mine);
-	struct obs_frontend_source_list scenes = {};
-	obs_frontend_get_scenes(&scenes);
-	for (size_t i = 0; i < scenes.sources.num; i++) {
-		obs_scene_t *scene = obs_scene_from_source(scenes.sources.array[i]);
-		if (obs_sceneitem_t *it = scene ? obs_scene_find_source(scene, mine.c_str()) : nullptr)
-			obs_sceneitem_remove(it);
-	}
-	obs_frontend_source_list_free(&scenes);
-	obs_source_remove(src);
-	obs_source_release(src);
+	(void)cfg;
 }
 
 std::string Switcher::createGameCapture(Config &cfg)

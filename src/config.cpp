@@ -597,7 +597,18 @@ void Config::save() const
 	obs_data_set_array(d, "friends", arr);
 	obs_data_array_release(arr);
 	std::string path = configFile("config.json");
-	if (!obs_data_save_json_safe(d, path.c_str(), "tmp", "bak"))
-		obs_log(LOG_WARNING, "could not save %s", path.c_str());
+	// a sync client (Google Drive was seen doing it) holds the file for a moment while it uploads
+	// it, and the rename inside obs_data_save_json_safe fails: try again a few times before giving up
+	bool ok = false;
+	for (int attempt = 0; attempt < 5 && !ok; attempt++) {
+		if (attempt)
+			os_sleep_ms(120 * attempt);
+		ok = obs_data_save_json_safe(d, path.c_str(), "tmp", "bak");
+	}
+	if (!ok)
+		obs_log(LOG_WARNING,
+			"could not save %s after 5 tries - something (a sync client?) is holding the file; the "
+			"settings just changed are not on disk",
+			path.c_str());
 	obs_data_release(d);
 }

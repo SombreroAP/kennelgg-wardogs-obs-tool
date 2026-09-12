@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.12
+- **A pop-out that vanishes for a moment no longer costs the slot its capture.** A stream that hiccups, a window Discord redraws, a title blank for a second: the slot now waits 20 seconds before deciding the pop-out is really gone, and the capture is kept rather than deleted, so OBS re-hooks the window by itself the instant it is back. The 0.8.6 loop of "could not add ... to the scene" every two seconds came from deleting and re-creating that capture; it cannot happen now.
+- **Settings saves retry.** A sync client holding the config file for a moment (Google Drive was seen doing it) made a save fail silently; it now tries five times and says clearly if it still cannot.
+
 ## 0.8.11
 - **The name on the dual window is about four times bigger**, and the frame a little heavier, so it reads on stream. A **Name size** control on the Dual POV tab scales it from a quarter to four times, and the window updates as you change it.
 

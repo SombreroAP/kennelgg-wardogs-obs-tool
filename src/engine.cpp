@@ -1300,6 +1300,8 @@ void Engine::armPopoutWatch()
 	}
 }
 
+static const int kPopoutGraceMs = 20000; // a pop-out has to be gone this long before its slot lets go
+
 void Engine::watchPopouts()
 {
 	if (stopping_)
@@ -1358,6 +1360,7 @@ void Engine::watchPopouts()
 		}
 		if (hit >= 0) {
 			taken[hit] = true;
+			f.popoutMissingMs = 0;
 			if (!f.onPopout()) {
 				std::string e = sw.bindPopout(cfg, f, wins[hit]);
 				if (!e.empty()) {
@@ -1395,9 +1398,15 @@ void Engine::watchPopouts()
 				    "sit behind the game, just not minimised).");
 			}
 		} else if (f.onPopout()) {
+			// gone this tick. A stream that hiccups, a pop-out Discord redraws, a title that is
+			// blank for a second: none of that is "closed". Give it a while before deciding.
+			f.popoutMissingMs += popoutTimer_.interval();
+			if (f.popoutMissingMs < kPopoutGraceMs)
+				continue;
 			sw.unbindPopout(cfg, f);
 			log("Squad: " + QString::fromStdString(f.name) +
-			    "'s pop-out closed - back to the Discord window for them.");
+			    "'s pop-out has been gone for a while - back to the Discord window for them. Pop "
+			    "it out again and the slot takes it straight back.");
 			changed = true;
 			if (applied_ && f.name == activeName)
 				applyNow(true, "their pop-out closed");
