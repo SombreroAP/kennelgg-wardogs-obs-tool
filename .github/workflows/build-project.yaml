@@ -299,9 +299,19 @@ jobs:
       - name: Build ClipHound app 🐶
         run: |
           # Build ClipHound app 🐶 (PyInstaller bundle + bundled Tesseract)
-          choco install tesseract --no-progress -y
+          # Chocolatey's feed times out now and then; without Tesseract ClipHound cannot read the
+          # kill feed at all, and 0.7.9 once shipped that way. Retry, then refuse to go on without it.
+          $ok = $false
+          foreach ($try in 1..4) {
+            choco install tesseract --no-progress -y
+            if (Test-Path "C:\Program Files\Tesseract-OCR\tesseract.exe") { $ok = $true; break }
+            Write-Host "Tesseract not installed (attempt $try) - waiting before retrying"
+            Start-Sleep -Seconds (20 * $try)
+          }
+          if (-not $ok) { Write-Error "Tesseract could not be installed; the installer would ship without OCR. Stopping."; exit 1 }
           python --version
           pwsh app/build_exe.ps1
+          if (-not (Test-Path "app/dist/ClipHound/tesseract/tesseract.exe")) { Write-Error "ClipHound bundle has no tesseract.exe. Stopping."; exit 1 }
           New-Item -ItemType Directory -Force "${{ github.workspace }}\release\app" | Out-Null
           Copy-Item -Recurse -Force app/dist/ClipHound "${{ github.workspace }}\release\app\ClipHound"
 
