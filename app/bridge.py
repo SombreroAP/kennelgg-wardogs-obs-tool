@@ -178,6 +178,8 @@ class Bridge:
                 c["detection"]["clip_every_kill"] = bool(v["clip_every_kill"])
             if "multikill_window" in v:
                 c["detection"]["multikill_window_s"] = float(v["multikill_window"])
+            if "series_window" in v:
+                c["detection"]["series_window_s"] = float(v["series_window"])
             if self.save_cfg:
                 self.save_cfg(c)
             print(f"[bridge] settings from the plugin: {v}")

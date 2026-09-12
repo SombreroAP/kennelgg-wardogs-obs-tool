@@ -95,6 +95,7 @@ struct Config {
 	/// the game and OBS are not on keeps Discord's own volume control on each one within reach.
 	int popoutMonitor = -1;
 	int discordVolume = 100;    // the Discord audio captures' level on stream, percent
+	int clipSeriesS = 45;       // clips this close together are a run: "[1 of 3]" names, "part 2" on Twitch
 	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
 
 	// dual POV: a squad mate's feed in a small window over your own POV (tank / chopper crews)

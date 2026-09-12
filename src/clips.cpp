@@ -1,4 +1,5 @@
 #include "clips.h"
+#include <QRegularExpression>
 #include "config.h"
 #include <QDir>
 #include <QFile>
@@ -133,6 +134,7 @@ void Clips::pollWatches()
 					Entry e{w.since, w.title, w.tags, target};
 					history_.push_back(e);
 					emit logged("Backtrack clip named: " + QFileInfo(target).fileName());
+					joinSeries(target, w.since);
 					emit saved(e);
 					done = true;
 				}
@@ -154,6 +156,49 @@ QString Clips::safe(QString s)
 		if (bad.contains(c) || c.unicode() < 32)
 			c = '-';
 	return s.trimmed().left(80);
+}
+
+/// "name [2 of 3].mp4" -> "name", so a file can be renumbered as its run grows.
+static QString stripRunMark(const QString &base)
+{
+	static const QRegularExpression mark(QStringLiteral("\\s*\\[\\d+ of \\d+\\]$"));
+	QString b = base;
+	b.remove(mark);
+	return b;
+}
+
+void Clips::joinSeries(const QString &path, const QDateTime &when)
+{
+	if (path.isEmpty() || seriesWindowS <= 0)
+		return;
+	// within the window of the LAST clip, not the first: three clips 40 s apart are one run
+	bool same = series_.last.isValid() && qAbs(series_.last.secsTo(when)) <= seriesWindowS;
+	if (!same)
+		series_.paths.clear();
+	series_.last = when;
+	series_.paths << path;
+	int n = series_.paths.size();
+	if (n < 2)
+		return; // a run only exists once there is a second clip; a lone clip keeps its plain name
+	for (int i = 0; i < n; i++) {
+		QFileInfo fi(series_.paths[i]);
+		if (!fi.exists())
+			continue;
+		QString base = stripRunMark(fi.completeBaseName());
+		QString target =
+			fi.dir().filePath(QString("%1 [%2 of %3].%4").arg(base).arg(i + 1).arg(n).arg(fi.suffix()));
+		if (target == series_.paths[i])
+			continue;
+		if (!QFile::rename(series_.paths[i], target))
+			continue; // still being written by something, or open in a player: try again next clip
+		for (auto &e : history_)
+			if (e.path == series_.paths[i])
+				e.path = target;
+		series_.paths[i] = target;
+	}
+	emit logged(QString("Rolling highlights: %1 clips inside %2 s, named 1 of %1 to %1 of %1.")
+			    .arg(n)
+			    .arg(seriesWindowS));
 }
 
 QString Clips::logFile() const
@@ -321,6 +366,8 @@ void Clips::onReplaySaved()
 		finalPath = target;
 	Entry e{p.when, p.title, p.tags, finalPath};
 	history_.push_back(e);
+	joinSeries(finalPath, p.when);
+	finalPath = history_.back().path; // joinSeries may have renamed it into the run
 	while (history_.size() > 200)
 		history_.pop_front();
 	QFile f(logFile());

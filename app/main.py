@@ -157,13 +157,23 @@ def main():
     if bridge is not None:
         bridge.on_config = apply_live
 
+    run = {"last": 0.0, "n": 0}
+
     def fire(trig):
         tw, ob = state["tw"], state["ob"]
         print(f"\n*** {trig.kind.upper()}: {trig.title}   tags={trig.tags} ***\n")
         if bridge is not None:
             bridge.event(f"{trig.title}  [{', '.join(trig.tags)}]", "trigger")
+        # clips this close together are one run of rolling highlights. A Twitch clip's title cannot
+        # be changed once it exists, so the first keeps its plain title and the rest say which part
+        # they are; the plugin renames the files on disk to "[1 of 3]", "[2 of 3]", "[3 of 3]".
+        now = time.time()
+        window = float(cfg["detection"].get("series_window_s", 45))
+        run["n"] = run["n"] + 1 if now - run["last"] <= window else 1
+        run["last"] = now
+        twitch_title = trig.headline() + (f" - part {run['n']}" if run["n"] > 1 else "")
         if tw:
-            threading.Timer(cfg["twitch"]["clip_delay_s"], lambda: _safe(tw.create_clip, trig.headline(), trig.tags)).start()
+            threading.Timer(cfg["twitch"]["clip_delay_s"], lambda: _safe(tw.create_clip, twitch_title, trig.tags)).start()
         if ob:
             ev = trig.events[-1] if trig.events else None
             info = {"kind": trig.kind, "description": trig.describe(),

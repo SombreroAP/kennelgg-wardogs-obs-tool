@@ -101,6 +101,7 @@ void Config::load()
 	DEFB(popoutTuck);
 	DEFI(popoutMonitor);
 	DEFI(discordVolume);
+	DEFI(clipSeriesS);
 	DEFS(sceneV);
 	DEFI(vdoBitrateKbps);
 	DEFB(dualEnabled);
@@ -222,6 +223,7 @@ void Config::load()
 	GETB(popoutTuck);
 	GETI(popoutMonitor);
 	GETI(discordVolume);
+	GETI(clipSeriesS);
 	GETS(sceneV);
 	GETI(vdoBitrateKbps);
 	GETB(dualEnabled);
@@ -473,6 +475,7 @@ void Config::save() const
 	SETB(popoutTuck);
 	SETI(popoutMonitor);
 	SETI(discordVolume);
+	SETI(clipSeriesS);
 	SETS(sceneV);
 	SETI(vdoBitrateKbps);
 	SETB(dualEnabled);

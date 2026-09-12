@@ -707,6 +707,7 @@ void Engine::start()
 		}
 	}
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
+	clips.seriesWindowS = cfg.clipSeriesS;
 	clips.folder = QString::fromStdString(cfg.clipFolder);
 	clips.watchFolders = cfg.backtrackFolder.empty() ? QStringList()
 							 : QStringList{QString::fromStdString(cfg.backtrackFolder)};
@@ -811,6 +812,7 @@ void Engine::pushAppConfig()
 	set["clip_every_kill"] = cfg.appEveryKill;
 	set["roi"] = QJsonArray{cfg.feedX, cfg.feedY, cfg.feedW, cfg.feedH};
 	set["multikill_window"] = cfg.appMultikillWindow;
+	set["series_window"] = cfg.clipSeriesS; // Twitch titles get "part 2", "part 3" inside this
 	set["fps"] = cfg.appFps > 0 ? cfg.appFps : 10;
 	QJsonObject nb;
 	nb["enabled"] = cfg.nearEnabled;
@@ -1478,6 +1480,7 @@ void Engine::watchPopouts()
 void Engine::reloadConfig()
 {
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
+	clips.seriesWindowS = cfg.clipSeriesS;
 	clips.folder = QString::fromStdString(cfg.clipFolder);
 	clips.watchFolders = cfg.backtrackFolder.empty() ? QStringList()
 							 : QStringList{QString::fromStdString(cfg.backtrackFolder)};

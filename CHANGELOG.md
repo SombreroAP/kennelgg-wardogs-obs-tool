@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.15
+- **Rolling highlights are numbered.** Clips made within 45 seconds of the previous one are a run, and their files are named "[1 of 3]", "[2 of 3]", "[3 of 3]", with the earlier files renamed as the run grows, so a chain of clips reads as one sequence in the folder. A lone clip keeps its plain name. On Twitch a clip's title cannot be changed once it exists, so the first clip of a run keeps its title and the later ones end in "part 2", "part 3". The 45 seconds is the clip series setting, sent to ClipHound as well.
+
 ## 0.8.14
 - **Auto tick on the dock's Dual POV row.** Untick it before a match and the vehicle detector will not open the small window at all; tick it and the window opens and closes with the vehicle again. Force Dual POV works either way.
 - **Only streams are ever captured.** A pop-out is treated as a squad mate's stream only when Discord titled it "<username>'s Stream". The whole call popped out ("General VC") and camera tiles are ignored everywhere: never added, never bound, never mentioned.

@@ -20,6 +20,9 @@ public:
 	explicit Clips(QObject *parent = nullptr);
 
 	QString nameTemplate = "{title}_{tags}_{date}_{time}";
+	/// Clips made within this many seconds of the last one are a run of rolling highlights: their
+	/// files are named "[1 of 3]", "[2 of 3]", "[3 of 3]", earlier ones renamed as the run grows.
+	int seriesWindowS = 45;
 	QString folder;              // move clips here when set // {date} {time} {title} {tags} {source}
 	bool autoStartReplay = true; // start the replay buffer when OBS loads / when a clip is asked for
 	bool useReplay = true;       // save OBS's replay buffer
@@ -68,4 +71,10 @@ private:
 			const QString &source) const;
 	QString logFile() const;
 	static QString safe(QString s);
+	/// A clip file just got its name: put it in the current run, or start a new one, and renumber.
+	void joinSeries(const QString &path, const QDateTime &when);
+	struct Series {
+		QDateTime last;
+		QStringList paths;
+	} series_;
 };
