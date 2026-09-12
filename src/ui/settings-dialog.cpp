@@ -1596,6 +1596,34 @@ QWidget *SettingsDialog::buildClipsTab()
 		"Tick the hotkeys OBS should press for you on every clip: with Aitum Backtrack that is its \"Save\" hotkey for the source you want (Backtrack names its own files, so the file-name template above does not apply to those). Untick the replay buffer above to clip with Backtrack alone.",
 		gh));
 	v->addWidget(gh);
+	auto *gr = new QGroupBox("Rolling highlights", w);
+	auto *fr = new QFormLayout(gr);
+	seriesS_ = new QSpinBox(gr);
+	seriesS_->setRange(0, 600);
+	seriesS_->setSuffix(" s");
+	seriesS_->setValue(e_->cfg.clipSeriesS);
+	seriesS_->setToolTip("Clips made within this many seconds of the previous one are a run, named [1 of 3], "
+			     "[2 of 3], [3 of 3]. 0 turns it off.");
+	fr->addRow("Clips this close are a run", seriesS_);
+	connect(seriesS_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int v) {
+		if (building_)
+			return;
+		e_->cfg.clipSeriesS = v;
+		e_->cfg.save();
+		e_->reloadConfig();
+	});
+	auto *pastRow = new QHBoxLayout();
+	auto *past = new QPushButton("Number past clips into runs", gr);
+	past->setToolTip("Goes through every clip already in the clip folders, finds the runs by the time in each "
+			 "file's name, and renames them [1 of 3] and so on. Twitch clips are not touched: their "
+			 "titles cannot be changed once they exist.");
+	pastResult_ = new QLabel(gr);
+	pastResult_->setWordWrap(true);
+	pastRow->addWidget(past);
+	pastRow->addWidget(pastResult_, 1);
+	fr->addRow(pastRow);
+	connect(past, &QPushButton::clicked, this, [this]() { pastResult_->setText(e_->clips.numberPastClips()); });
+	v->addWidget(gr);
 	connect(hotkeyFilter_, &QLineEdit::textChanged, this, [this](const QString &) { fillHotkeys(); });
 	connect(hotkeyList_, &QListWidget::itemChanged, this, [this](QListWidgetItem *) { saveAndApply(); });
 	connect(useReplay_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });

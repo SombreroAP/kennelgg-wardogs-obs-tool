@@ -201,6 +201,102 @@ void Clips::joinSeries(const QString &path, const QDateTime &when)
 			    .arg(seriesWindowS));
 }
 
+/// The moment a clip was made, from the "yyyy-MM-dd HH-mm-ss" every name carries (the {date}
+/// {time} of the template), or the file's modified time when the name has none.
+static QDateTime clipMoment(const QFileInfo &fi)
+{
+	static const QRegularExpression stamp(QStringLiteral("(\\d{4}-\\d{2}-\\d{2})[ _T](\\d{2})-(\\d{2})-(\\d{2})"));
+	QRegularExpressionMatch m = stamp.match(fi.completeBaseName());
+	if (m.hasMatch()) {
+		QDateTime dt = QDateTime::fromString(m.captured(1) + " " + m.captured(2) + ":" + m.captured(3) + ":" +
+							     m.captured(4),
+						     "yyyy-MM-dd HH:mm:ss");
+		if (dt.isValid())
+			return dt;
+	}
+	return fi.lastModified();
+}
+
+QString Clips::numberPastClips()
+{
+	QStringList folders = watchFolders + discoverBacktrackFolders();
+	if (!folder.isEmpty())
+		folders.prepend(folder);
+	folders.removeDuplicates();
+	struct Item {
+		QDateTime when;
+		QString path;
+	};
+	std::vector<Item> items;
+	QDateTime now = QDateTime::currentDateTime();
+	for (const QString &f : folders) {
+		if (!QDir(f).exists())
+			continue;
+		for (const QFileInfo &fi : listClips(f)) {
+			if (fi.lastModified().secsTo(now) < 10)
+				continue; // still being written
+			items.push_back({clipMoment(fi), fi.absoluteFilePath()});
+		}
+	}
+	std::sort(items.begin(), items.end(), [](const Item &a, const Item &b) { return a.when < b.when; });
+	// chain them: each within the window of the one before it
+	std::vector<std::vector<Item>> runs;
+	for (const Item &it : items) {
+		if (!runs.empty() && runs.back().back().when.secsTo(it.when) <= seriesWindowS)
+			runs.back().push_back(it);
+		else
+			runs.push_back({it});
+	}
+	int renamed = 0, runsFound = 0, alone = 0, failed = 0;
+	for (auto &run : runs) {
+		int n = (int)run.size();
+		if (n < 2) {
+			// a lone clip: take any old run mark off it, it is not part of one
+			QFileInfo fi(run[0].path);
+			QString base = stripRunMark(fi.completeBaseName());
+			if (base != fi.completeBaseName()) {
+				QString target = fi.dir().filePath(base + "." + fi.suffix());
+				if (!QFile::exists(target) && QFile::rename(run[0].path, target))
+					renamed++;
+			}
+			alone++;
+			continue;
+		}
+		runsFound++;
+		for (int i = 0; i < n; i++) {
+			QFileInfo fi(run[i].path);
+			QString base = stripRunMark(fi.completeBaseName());
+			QString target = fi.dir().filePath(
+				QString("%1 [%2 of %3].%4").arg(base).arg(i + 1).arg(n).arg(fi.suffix()));
+			if (target == run[i].path)
+				continue;
+			if (QFile::exists(target) || !QFile::rename(run[i].path, target)) {
+				failed++;
+				continue;
+			}
+			for (auto &e : history_)
+				if (e.path == run[i].path)
+					e.path = target;
+			renamed++;
+		}
+	}
+	QString out = QString("%1 clips looked at in %2 folder%3: %4 run%5 of rolling highlights, %6 file%7 renamed, "
+			      "%8 lone clip%9 left plain.")
+			      .arg(items.size())
+			      .arg(folders.size())
+			      .arg(folders.size() == 1 ? "" : "s")
+			      .arg(runsFound)
+			      .arg(runsFound == 1 ? "" : "s")
+			      .arg(renamed)
+			      .arg(renamed == 1 ? "" : "s")
+			      .arg(alone)
+			      .arg(alone == 1 ? "" : "s");
+	if (failed)
+		out += QString(" %1 could not be renamed (open in a player, or the name is taken).").arg(failed);
+	emit logged("Clips: " + out);
+	return out;
+}
+
 QString Clips::logFile() const
 {
 	return QString::fromStdString(Config::configFile("clips.csv"));

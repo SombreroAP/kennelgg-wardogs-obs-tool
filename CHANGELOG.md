@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.16
+- **Number past clips into runs.** A button on the Clips tab, under Rolling highlights, goes through every clip already in the clip folders, finds the runs by the time in each file's name, and renames them [1 of 3], [2 of 3], [3 of 3] the same way new clips are. Lone clips are left plain, and a clip open in a player is skipped and said so. Twitch clips are not touched: their titles cannot be changed once they exist. The run window is a setting beside it.
+
 ## 0.8.15
 - **Rolling highlights are numbered.** Clips made within 45 seconds of the previous one are a run, and their files are named "[1 of 3]", "[2 of 3]", "[3 of 3]", with the earlier files renamed as the run grows, so a chain of clips reads as one sequence in the folder. A lone clip keeps its plain name. On Twitch a clip's title cannot be changed once it exists, so the first clip of a run keeps its title and the later ones end in "part 2", "part 3". The 45 seconds is the clip series setting, sent to ClipHound as well.
 

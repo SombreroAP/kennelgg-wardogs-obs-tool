@@ -107,6 +107,8 @@ private:
 	QCheckBox *dualOn_ = nullptr, *dualAuto_ = nullptr, *dualKeep_ = nullptr;
 	QCheckBox *dualLook_ = nullptr;
 	QSpinBox *dualNameScale_ = nullptr;
+	QSpinBox *seriesS_ = nullptr;
+	QLabel *pastResult_ = nullptr;
 	QRadioButton *dragWin_ = nullptr, *dragKeys_ = nullptr;
 	QDoubleSpinBox *dualX_ = nullptr, *dualY_ = nullptr, *dualW_ = nullptr;
 	QSlider *dualOpacity_ = nullptr;

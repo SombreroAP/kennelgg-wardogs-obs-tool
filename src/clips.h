@@ -73,6 +73,14 @@ private:
 	static QString safe(QString s);
 	/// A clip file just got its name: put it in the current run, or start a new one, and renumber.
 	void joinSeries(const QString &path, const QDateTime &when);
+
+public:
+	/// Go through every clip already in the clip folders, find the runs by the time in each file's
+	/// name (or its modified time), and number them "[1 of 3]" ... the same way new ones are.
+	/// Returns what was done, for the settings tab.
+	QString numberPastClips();
+
+private:
 	struct Series {
 		QDateTime last;
 		QStringList paths;
