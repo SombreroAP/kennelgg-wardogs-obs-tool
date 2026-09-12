@@ -46,7 +46,9 @@ public:
 	void armPopoutWatch();
 	/// Every popped-out Discord stream on this PC becomes a squad mate named by its Discord
 	/// username, bound to that window. Returns what happened, for the Squad panel.
-	QString addPopouts();
+	QString addPopouts(QStringList *addedOut = nullptr);
+	/// Put this squad mate in the dual window and keep it there until it is turned off by hand.
+	void showInDual(int idx);
 	/// Is this Discord username you (your own stream is never a squad mate).
 	bool isMe(const QString &discordUser) const;
 	QString rosterStatus() const { return roster.status(); }

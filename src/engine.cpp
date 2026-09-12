@@ -1162,7 +1162,7 @@ bool Engine::isMe(const QString &discordUser) const
 	return !tw.isEmpty() && u == tw;
 }
 
-QString Engine::addPopouts()
+QString Engine::addPopouts(QStringList *addedOut)
 {
 	std::vector<Switcher::Popout> wins = Switcher::discordPopouts();
 	QStringList added, already, failed;
@@ -1200,6 +1200,8 @@ QString Engine::addPopouts()
 		}
 		cfg.friends.push_back(f);
 		added << owner;
+		if (addedOut)
+			*addedOut << owner;
 		log("Squad: added " + owner + " from their popped-out Discord stream (\"" +
 		    QString::fromStdString(w.title) + "\").");
 	}
@@ -2108,12 +2110,32 @@ void Engine::applyNow(bool on, const QString &why)
 	emit stateChanged();
 }
 
+void Engine::showInDual(int idx)
+{
+	if (idx < 0 || idx >= (int)cfg.friends.size())
+		return;
+	if (cfg.dualFriend != idx) {
+		cfg.dualFriend = idx;
+		cfg.save();
+	}
+	setDual(true, "squad panel");
+}
+
 void Engine::setDual(bool on, const QString &why)
 {
 	if (on && !cfg.dual()) {
-		log("Dual POV: pick a squad mate on the Dual POV tab first.");
-		return;
+		// nobody picked for the small window yet: the active squad mate is the obvious one
+		if (cfg.active()) {
+			cfg.dualFriend = cfg.activeFriend;
+			cfg.save();
+		} else {
+			log("Dual POV: add a squad mate first.");
+			return;
+		}
 	}
+	// turned on by hand it stays on; only a window the vehicle detector opened is its to close
+	if (on)
+		dualAutoOn_ = false;
 	std::string e = sw.applyDual(cfg, on && !applied_);
 	if (!e.empty()) {
 		log("Dual POV: " + QString::fromStdString(e));
@@ -2135,8 +2157,9 @@ void Engine::onVehicle(const QString &seat)
 	if (!cfg.dual())
 		return;
 	if (seat == "none") {
-		// out of the vehicle: the window goes, however it was turned on - unless asked to stay
-		if (dualOn_ && !cfg.dualKeep) {
+		// out of the vehicle: a window the detector opened goes - unless asked to stay. One you
+		// turned on yourself is yours to turn off.
+		if (dualOn_ && dualAutoOn_ && !cfg.dualKeep) {
 			dualAutoOn_ = false;
 			setDual(false, "out of the vehicle");
 		}
@@ -2163,9 +2186,9 @@ void Engine::onVehicle(const QString &seat)
 				cfg.save();
 			}
 	}
-	if (!dualOn_ || seat != "vehicle") {
-		dualAutoOn_ = true;
+	if (!dualOn_) {
 		setDual(true, "in a vehicle: " + seat);
+		dualAutoOn_ = dualOn_; // after the call: setDual clears it, and this one was the detector's
 	}
 	emit stateChanged();
 }

@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.1
+- **Add asks for the in-game name.** When a popped-out stream becomes a squad mate, the panel asks what they are called in the game, with the Discord username filled in as the guess. That name is what the NEARBY list is matched on, so Closest works from the first match. An **In-game name...** button on the panel changes it later.
+- **Dual POV turned on by hand stays on.** Leaving a vehicle only closes a window the vehicle detector opened. Pressing Dual POV with nobody picked uses the active squad mate. The Squad panel has **Show in Dual POV** for whoever is selected.
+
 ## 0.8.0
 - **Squad button on the dock, and the flow is now: pop it out, press Add.** Open OBS, join Discord voice, watch a squad mate's stream and pop it out. Press **Squad** on the dock, then **Add popped-out Discord streams**: every popped-out stream becomes a squad mate named by their Discord username, bound to that window by exact title, with their in-game name set to match. Already-added people are skipped. The panel also lists the squad with what each one is showing, and has Make active and Remove for mid-broadcast.
 - **Window title must match.** A slot made from a pop-out, or from a specific Discord window you picked, is matched on that exact title only. Matching by executable was how a slot ended up on the wrong Discord window; it is now used only for "Any Discord window".

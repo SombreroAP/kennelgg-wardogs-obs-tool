@@ -20,10 +20,13 @@ private:
 	void addPopouts();
 	void makeActive();
 	void removeSelected();
+	void editGameName();
+	void showInDual();
+	void askGameName(int idx);
 	Engine *e_;
 	QLabel *result_, *rosterState_;
 	QListWidget *list_;
-	QPushButton *add_, *active_, *remove_;
+	QPushButton *add_, *active_, *remove_, *gameName_, *dual_;
 	QCheckBox *roster_;
 	QLineEdit *me_;
 };

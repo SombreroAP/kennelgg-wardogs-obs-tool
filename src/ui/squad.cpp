@@ -4,6 +4,7 @@
 #include <QFormLayout>
 #include <QMessageBox>
 #include <QTimer>
+#include <QInputDialog>
 #include <algorithm>
 
 SquadPanel::SquadPanel(Engine *engine, QWidget *parent) : QDialog(parent), e_(engine)
@@ -34,12 +35,19 @@ SquadPanel::SquadPanel(Engine *engine, QWidget *parent) : QDialog(parent), e_(en
 	v->addWidget(list_, 1);
 	auto *row = new QHBoxLayout();
 	active_ = new QPushButton("Make active", this);
+	dual_ = new QPushButton("Show in Dual POV", this);
+	dual_->setToolTip("Their feed in the small Dual POV window, now, and it stays up until you turn it off.");
+	gameName_ = new QPushButton("In-game name...", this);
 	remove_ = new QPushButton("Remove", this);
 	row->addWidget(active_);
+	row->addWidget(dual_);
+	row->addWidget(gameName_);
 	row->addWidget(remove_);
 	row->addStretch(1);
 	v->addLayout(row);
 	connect(active_, &QPushButton::clicked, this, &SquadPanel::makeActive);
+	connect(dual_, &QPushButton::clicked, this, &SquadPanel::showInDual);
+	connect(gameName_, &QPushButton::clicked, this, &SquadPanel::editGameName);
 	connect(remove_, &QPushButton::clicked, this, &SquadPanel::removeSelected);
 	connect(list_, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *) { makeActive(); });
 
@@ -85,8 +93,12 @@ void SquadPanel::refresh()
 	for (size_t i = 0; i < e_->cfg.friends.size(); ++i) {
 		const Friend &f = e_->cfg.friends[i];
 		QString line = QString::fromStdString(f.name);
+		if (!f.gameName.empty() && f.gameName != f.name)
+			line += "  (in game: " + QString::fromStdString(f.gameName) + ")";
 		if ((int)i == e_->cfg.activeFriend)
 			line += "   (active)";
+		if ((int)i == e_->cfg.dualFriend && e_->dualOn())
+			line += "   (in the dual window)";
 		QString where;
 		switch (f.kind) {
 		case FriendKind::Discord:
@@ -124,6 +136,8 @@ void SquadPanel::refresh()
 	bool any = !e_->cfg.friends.empty();
 	active_->setEnabled(any);
 	remove_->setEnabled(any);
+	gameName_->setEnabled(any);
+	dual_->setEnabled(any);
 	rosterState_->setText(e_->cfg.rosterEnabled ? "Kennel.gg voice: " + e_->rosterStatus() : "");
 	rosterState_->setVisible(e_->cfg.rosterEnabled);
 }
@@ -131,8 +145,54 @@ void SquadPanel::refresh()
 void SquadPanel::addPopouts()
 {
 	add_->setEnabled(false);
-	result_->setText(e_->addPopouts());
+	QStringList added;
+	result_->setText(e_->addPopouts(&added));
 	QTimer::singleShot(400, this, [this]() { add_->setEnabled(true); });
+	refresh();
+	// their in-game name is what the NEARBY list is matched against; Discord's username is only a
+	// guess at it, so ask while they are being added rather than leave a slot that never matches
+	for (const QString &name : added)
+		for (size_t i = 0; i < e_->cfg.friends.size(); ++i)
+			if (QString::fromStdString(e_->cfg.friends[i].name) == name)
+				askGameName((int)i);
+}
+
+void SquadPanel::askGameName(int idx)
+{
+	if (idx < 0 || idx >= (int)e_->cfg.friends.size())
+		return;
+	Friend &f = e_->cfg.friends[idx];
+	bool ok = false;
+	QString cur = QString::fromStdString(f.gameName.empty() ? f.name : f.gameName);
+	QString v = QInputDialog::getText(
+		this, "In-game name",
+		"What is " + QString::fromStdString(f.name) +
+			" called in the game?\n\nThis is matched against the NEARBY list, so type it "
+			"as the game shows it (tags like [WDUK] are fine to leave out).",
+		QLineEdit::Normal, cur, &ok);
+	if (!ok)
+		return;
+	v = v.trimmed();
+	f.gameName = (v.isEmpty() || v == QString::fromStdString(f.name)) ? "" : v.toStdString();
+	e_->cfg.save();
+	e_->pushAppConfig(); // ClipHound matches on these names
+	refresh();
+}
+
+void SquadPanel::editGameName()
+{
+	askGameName(list_->currentRow());
+}
+
+void SquadPanel::showInDual()
+{
+	int r = list_->currentRow();
+	if (r < 0 || r >= (int)e_->cfg.friends.size())
+		return;
+	if (e_->dualOn() && e_->cfg.dualFriend == r)
+		e_->setDual(false, "squad panel");
+	else
+		e_->showInDual(r);
 	refresh();
 }
 
