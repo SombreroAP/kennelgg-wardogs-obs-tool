@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.5
+- **Both Add buttons do the same thing.** The Add on the Settings Squad tab now adds every popped-out Discord stream by itself first, exactly like the Squad panel, and only opens the by-hand dialog if there is nothing to add or you ask for it. Your log showed Add working three times and then a slot called "Discord" appearing from the by-hand dialog: that was its default name when the name box is left empty.
+- **The by-hand dialog names a pop-out after its owner.** Pick "Pop-out: superfs1's Stream" and leave the name empty and the slot is called superfs1, with the username set so the watcher and the NEARBY matcher know who it is.
+- Removing a squad mate from the Settings tab now logs it and updates the pop-out watch, the same as the panel.
+
 ## 0.8.4
 - **The dual window showed nothing for a Discord squad mate.** Their capture sits in the main scene under the "warm" hide filter while you are alive, and the small window used the same capture, so it came up transparent there too. The filter now comes off while the window is up and the main-scene copy is hidden instead, which keeps the capture just as warm. Twitch and other web feeds were not affected.
 

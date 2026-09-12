@@ -21,6 +21,7 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QFileDialog>
 #include <QDesktopServices>
 #include <QUrl>
@@ -585,6 +586,25 @@ private:
 		}
 		if (f.kind == FriendKind::Discord && f.channel.empty())
 			f.channel = "Discord:Chrome_WidgetWin_1:Discord.exe";
+		if (f.kind == FriendKind::Discord) {
+			// a picked pop-out is titled "<username>'s Stream": that username is who this is, so
+			// it is the slot's name unless one was typed, and always the handle the watcher matches
+			QString label = pick_->currentText();
+			if (label.startsWith("Pop-out: ")) {
+				QString owner = label.mid(9).trimmed();
+				static const QRegularExpression suffix(
+					QStringLiteral("\\s*(?:['\u2019\u2018]s?)?\\s*stream\\s*$"),
+					QRegularExpression::CaseInsensitiveOption);
+				QRegularExpressionMatch m = suffix.match(owner);
+				if (m.hasMatch() && m.capturedStart() > 0)
+					owner = owner.left(m.capturedStart()).trimmed();
+				if (!owner.isEmpty()) {
+					f.handle = owner.toLower().toStdString();
+					if (f.name.empty())
+						f.name = f.handle;
+				}
+			}
+		}
 		if (f.name.empty())
 			f.name = f.kind == FriendKind::ObsSource ? f.source
 				 : f.kind == FriendKind::Discord ? "Discord"
@@ -812,6 +832,8 @@ QWidget *SettingsDialog::buildSwitchTab()
 		if (e_->cfg.activeFriend >= (int)e_->cfg.friends.size())
 			e_->cfg.activeFriend = std::max(0, (int)e_->cfg.friends.size() - 1);
 		e_->cfg.save();
+		e_->armPopoutWatch();
+		e_->log("Squad: removed " + QString::fromStdString(f.name) + ".");
 		fillFriends();
 		emit e_->stateChanged();
 	});
@@ -2517,6 +2539,24 @@ void SettingsDialog::editFriend(int row)
 	Friend *existing = row >= 0 && row < (int)e_->cfg.friends.size() ? &e_->cfg.friends[row] : nullptr;
 	if (row >= 0 && !existing)
 		return;
+	if (!existing) {
+		// Add means the same thing here as on the Squad panel: every popped-out Discord stream
+		// becomes a squad mate by itself. The by-hand dialog is for everything else.
+		QStringList added;
+		QString what = e_->addPopouts(&added);
+		fillFriends();
+		if (!added.isEmpty()) {
+			QMessageBox box(QMessageBox::Information, "Kennel.gg Wardogs", what, QMessageBox::NoButton,
+					this);
+			auto *done = box.addButton("Done", QMessageBox::AcceptRole);
+			box.addButton("Add someone else by hand...", QMessageBox::ActionRole);
+			box.setDefaultButton(done);
+			box.exec();
+			emit e_->stateChanged();
+			if (box.clickedButton() == done)
+				return;
+		}
+	}
 	FriendDialog dlg(existing, Switcher::inputs(), this, e_->cfg.vdoBitrateKbps);
 	if (dlg.exec() != QDialog::Accepted)
 		return;
