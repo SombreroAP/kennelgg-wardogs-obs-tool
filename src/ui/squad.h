@@ -26,7 +26,7 @@ private:
 	Engine *e_;
 	QLabel *result_, *rosterState_;
 	QListWidget *list_;
-	QPushButton *add_, *active_, *remove_, *gameName_, *dual_;
+	QPushButton *add_, *active_, *remove_, *gameName_, *dual_, *show_ = nullptr;
 	QCheckBox *roster_;
 	QLineEdit *me_;
 };

@@ -50,6 +50,10 @@ public:
 	/// Their pop-out back off the top and on screen (when a slot is removed, or the tuck turned off).
 	void releasePopout(const Friend &f);
 	void releaseAllPopouts();
+	/// Bring every bound pop-out back on screen so its own controls can be used (Discord's volume,
+	/// for one), and stop tucking until this is turned off again.
+	void showPopouts(bool show);
+	bool popoutsShown() const { return popoutsShown_; }
 	/// Put this squad mate in the dual window and keep it there until it is turned off by hand.
 	void showInDual(int idx, const QString &why = "squad panel");
 	/// Is this Discord username you (your own stream is never a squad mate).
@@ -192,6 +196,7 @@ private:
 
 	QTimer timer_, frameTimer_, downDelay_, upDelay_;
 	QTimer popoutTimer_;
+	bool popoutsShown_ = false;
 	QString popoutNote_; // the unnamed pop-out we last mentioned, so the log says it once
 	std::atomic<bool> busy_{false}, stopping_{false}, frameBusy_{false};
 	Capture capGame_, capFriend_, capRoi_;

@@ -89,6 +89,10 @@ struct Config {
 	/// Pin every bound pop-out above other windows, tucked to the screen edge with a sliver showing,
 	/// so Discord keeps drawing it while the game covers it. Needs the game in borderless windowed.
 	bool popoutTuck = true;
+	/// Where bound pop-outs live: -1 = tucked to the edge of their own screen (a sliver showing);
+	/// 0, 1, ... = parked on that monitor, stacked, fully visible and on top. Parking on a screen
+	/// the game and OBS are not on keeps Discord's own volume control on each one within reach.
+	int popoutMonitor = -1;
 	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (LAN/fibre: 12-20 Mbit/s)
 
 	// dual POV: a squad mate's feed in a small window over your own POV (tank / chopper crews)

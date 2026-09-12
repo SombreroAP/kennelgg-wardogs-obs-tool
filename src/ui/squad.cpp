@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <QInputDialog>
+#include <QComboBox>
 #include <algorithm>
 
 SquadPanel::SquadPanel(Engine *engine, QWidget *parent) : QDialog(parent), e_(engine)
@@ -78,6 +79,32 @@ SquadPanel::SquadPanel(Engine *engine, QWidget *parent) : QDialog(parent), e_(en
 		else
 			e_->releaseAllPopouts();
 	});
+	auto *where = new QComboBox(this);
+	where->addItem("Tucked to the edge of their own screen (a sliver showing)", -1);
+	{
+		int i = 0;
+		for (const auto &m : Switcher::monitors())
+			where->addItem(QString("Parked on monitor %1 (%2), fully visible")
+					       .arg(++i)
+					       .arg(QString::fromStdString(m)),
+				       i - 1);
+	}
+	where->setCurrentIndex(std::max(0, where->findData(e_->cfg.popoutMonitor)));
+	where->setToolTip("Parking them on a screen the game and OBS are not on keeps every pop-out visible, on top "
+			  "and within reach, so Discord's own volume control on each one is a click away.");
+	form->addRow("Pop-outs live", where);
+	connect(where, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, where](int) {
+		e_->cfg.popoutMonitor = where->currentData().toInt();
+		e_->cfg.save();
+		e_->releaseAllPopouts();
+		e_->watchPopouts();
+	});
+	show_ = new QPushButton(this);
+	show_->setCheckable(true);
+	show_->setToolTip(
+		"Bring the pop-outs back on screen to use their own controls, then press again to tuck them away.");
+	form->addRow(show_);
+	connect(show_, &QPushButton::clicked, this, [this](bool on) { e_->showPopouts(on); });
 	rosterState_ = new QLabel(this);
 	rosterState_->setStyleSheet("color: palette(mid);");
 	form->addRow(rosterState_);
@@ -152,6 +179,11 @@ void SquadPanel::refresh()
 	remove_->setEnabled(any);
 	gameName_->setEnabled(any);
 	dual_->setEnabled(any);
+	show_->blockSignals(true);
+	show_->setChecked(e_->popoutsShown());
+	show_->setText(e_->popoutsShown() ? "Tuck pop-outs away again" : "Show pop-outs (to mute or adjust them)");
+	show_->blockSignals(false);
+	show_->setVisible(e_->cfg.popoutTuck && e_->cfg.popoutMonitor < 0);
 	rosterState_->setText(e_->cfg.rosterEnabled ? "Kennel.gg voice: " + e_->rosterStatus() : "");
 	rosterState_->setVisible(e_->cfg.rosterEnabled);
 }

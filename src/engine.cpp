@@ -1267,6 +1267,20 @@ void Engine::releaseAllPopouts()
 		releasePopout(f);
 }
 
+void Engine::showPopouts(bool show)
+{
+	popoutsShown_ = show;
+	if (show) {
+		releaseAllPopouts();
+		log("Squad: pop-outs brought back on screen. They can go black while covered until you tuck "
+		    "them again.");
+	} else {
+		log("Squad: pop-outs tucked away again.");
+		watchPopouts();
+	}
+	emit stateChanged();
+}
+
 void Engine::armPopoutWatch()
 {
 	int n = 0;
@@ -1296,6 +1310,7 @@ void Engine::watchPopouts()
 	};
 	std::vector<bool> taken(wins.size(), false);
 	bool changed = false;
+	int parked = 0; // stacking order on the parking monitor
 	const Friend *active = cfg.active();
 	std::string activeName = active ? active->name : "";
 	int liveShared = 0; // Discord squad mates who are not on a pop-out yet
@@ -1359,11 +1374,19 @@ void Engine::watchPopouts()
 					applyNow(true, "their pop-out appeared");
 				}
 			}
-			if (cfg.popoutTuck && !wins[hit].minimized && Switcher::tuckPopout(wins[hit]))
-				log("Squad: " + QString::fromStdString(f.name) +
-				    "'s pop-out pinned on top and tucked to the right edge of its screen, so Discord "
-				    "keeps drawing it while the game covers it. If it still goes black, the game is in "
-				    "exclusive fullscreen: switch it to borderless windowed.");
+			if (cfg.popoutTuck && !popoutsShown_ && !wins[hit].minimized) {
+				if (cfg.popoutMonitor >= 0) {
+					if (Switcher::parkPopout(wins[hit], cfg.popoutMonitor, parked++))
+						log("Squad: " + QString::fromStdString(f.name) +
+						    QString("'s pop-out parked on monitor %1, on top and fully visible, so "
+							    "Discord keeps drawing it and its controls stay in reach.")
+							    .arg(cfg.popoutMonitor + 1));
+				} else if (Switcher::tuckPopout(wins[hit]))
+					log("Squad: " + QString::fromStdString(f.name) +
+					    "'s pop-out pinned on top and tucked to the right edge of its screen, so "
+					    "Discord keeps drawing it while other windows cover it. Press Show pop-outs "
+					    "on the Squad panel to reach its controls.");
+			}
 			QString minKey = QString::fromStdString(f.name) + "/min";
 			if (wins[hit].minimized && popoutNote_ != minKey) {
 				popoutNote_ = minKey;

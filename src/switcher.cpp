@@ -618,6 +618,18 @@ static BOOL CALLBACK popoutEnum(HWND hwnd, LPARAM lp)
 }
 
 static const int kSliver = 12; // pixels of the pop-out left on screen: enough for Chromium to call it visible
+static const int kPopW = 1920, kPopH = 1080; // a pop-out's shape: 16:9, so Discord draws no letterbox bars
+
+/// 16:9 at 1920x1080, or the largest 16:9 that fits `maxW` x `maxH` when that is smaller.
+static void popoutSize(int maxW, int maxH, int &w, int &h)
+{
+	w = std::min(kPopW, maxW);
+	h = w * 9 / 16;
+	if (h > maxH) {
+		h = maxH;
+		w = h * 16 / 9;
+	}
+}
 
 bool Switcher::tuckPopout(const Popout &p)
 {
@@ -631,15 +643,68 @@ bool Switcher::tuckPopout(const Popout &p)
 		return false;
 	RECT r = {};
 	GetWindowRect(hwnd, &r);
-	int w = r.right - r.left, h = r.bottom - r.top;
-	if (w <= 0 || h <= 0)
+	if (r.right - r.left <= 0 || r.bottom - r.top <= 0)
 		return false;
+	// the window can hang off the screen, so only its height has to fit; the shape is the point
+	int w, h;
+	popoutSize(kPopW, mi.rcMonitor.bottom - mi.rcMonitor.top, w, h);
 	int x = mi.rcMonitor.right - kSliver;
 	int y = std::clamp((int)r.top, (int)mi.rcMonitor.top, (int)std::max(mi.rcMonitor.top, mi.rcMonitor.bottom - h));
 	bool topmost = (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
-	if (topmost && r.left == x && r.top == y)
-		return false; // already where it should be
-	SetWindowPos(hwnd, HWND_TOPMOST, x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+	if (topmost && r.left == x && r.top == y && r.right - r.left == w && r.bottom - r.top == h)
+		return false; // already where and how it should be
+	SetWindowPos(hwnd, HWND_TOPMOST, x, y, w, h, SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+	return true;
+}
+
+struct MonList {
+	std::vector<RECT> rects;
+};
+static BOOL CALLBACK monEnum(HMONITOR mon, HDC, LPRECT, LPARAM lp)
+{
+	MONITORINFO mi = {};
+	mi.cbSize = sizeof(mi);
+	if (GetMonitorInfoW(mon, &mi))
+		reinterpret_cast<MonList *>(lp)->rects.push_back(mi.rcWork);
+	return TRUE;
+}
+
+std::vector<std::string> Switcher::monitors()
+{
+	MonList ml;
+	EnumDisplayMonitors(nullptr, nullptr, monEnum, reinterpret_cast<LPARAM>(&ml));
+	std::vector<std::string> out;
+	for (const RECT &r : ml.rects)
+		out.push_back(std::to_string(r.right - r.left) + "x" + std::to_string(r.bottom - r.top) + " at " +
+			      std::to_string(r.left) + "," + std::to_string(r.top));
+	return out;
+}
+
+bool Switcher::parkPopout(const Popout &p, int mon, int slot)
+{
+	HWND hwnd = reinterpret_cast<HWND>(p.hwnd);
+	if (!hwnd || !IsWindow(hwnd) || IsIconic(hwnd))
+		return false;
+	MonList ml;
+	EnumDisplayMonitors(nullptr, nullptr, monEnum, reinterpret_cast<LPARAM>(&ml));
+	if (mon < 0 || mon >= (int)ml.rects.size())
+		return false;
+	const RECT &m = ml.rects[mon];
+	RECT r = {};
+	GetWindowRect(hwnd, &r);
+	if (r.right - r.left <= 0 || r.bottom - r.top <= 0)
+		return false;
+	const int gap = 8;
+	// 16:9 and as large as the screen allows: a portrait screen gets them at its full width
+	int w, h;
+	popoutSize((m.right - m.left) - 2 * gap, (m.bottom - m.top) - 2 * gap, w, h);
+	int x = m.left + gap, y = m.top + gap + slot * (h + gap);
+	if (y + h > m.bottom) // more pop-outs than the screen has room for: overlap from the bottom
+		y = std::max((int)m.top + gap, (int)m.bottom - h - gap);
+	bool topmost = (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+	if (topmost && r.left == x && r.top == y && r.right - r.left == w && r.bottom - r.top == h)
+		return false;
+	SetWindowPos(hwnd, HWND_TOPMOST, x, y, w, h, SWP_NOACTIVATE | SWP_NOOWNERZORDER);
 	return true;
 }
 
@@ -666,7 +731,15 @@ bool Switcher::tuckPopout(const Popout &)
 {
 	return false;
 }
+bool Switcher::parkPopout(const Popout &, int, int)
+{
+	return false;
+}
 void Switcher::untuckPopout(const Popout &) {}
+std::vector<std::string> Switcher::monitors()
+{
+	return {};
+}
 #endif
 
 std::vector<Switcher::Popout> Switcher::discordPopouts()
