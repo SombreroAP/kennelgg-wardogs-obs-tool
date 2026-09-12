@@ -47,21 +47,24 @@ body.v #name.pos-tl, body.v #name.pos-tc { top: 12vw; }
 body.v #name.pos-ml, body.v #name.pos-mc { top: 50%; }
 body.v #name.pos-bl, body.v #name.pos-br { bottom: 12vw; }
 #name.plate { background: rgba(11,14,16,.78); padding: 0.8vw 1.4vw; border-left: 0.35vw solid #C99A3B; }
-/* small: inside the dual-POV window, which is a quarter of the canvas at most, so everything shrinks */
-body.s .corner { width: 3vw; height: 3vw; border-width: 0.25vw; top: 2vw; left: 2vw; }
-body.s .corner.tr { left: auto; right: 2vw; }
-body.s .corner.bl { top: auto; bottom: 2vw; }
-body.s .corner.br { top: auto; bottom: 2vw; left: auto; right: 2vw; }
-body.s .hud { font-size: 1.4vw; letter-spacing: 0.1vw; }
-body.s #name { font-size: 1.9vw; letter-spacing: 0.15vw; }
-body.s #name small { font-size: 1.1vw; margin-right: 0.5vw; }
-body.s #name.plate { padding: 0.5vw 0.9vw; border-left-width: 0.25vw; }
-body.s #name.pos-tl, body.s #name.pos-tc { top: 2.2vw; }
-body.s #name.pos-bl, body.s #name.pos-br { bottom: 2.2vw; }
-body.s #name.pos-tl, body.s #name.pos-ml, body.s #name.pos-bl { left: 2.4vw; }
-body.s #name.pos-br { right: 2.4vw; }
+/* small: inside the dual-POV window. The page is drawn at full canvas size and the whole window is
+   then scaled to about a quarter, so the name has to be drawn LARGE here to read at all. --s is the
+   size knob from the Dual POV tab (1 = the default). */
+:root { --s: 1; }
+body.s .corner { width: 5vw; height: 5vw; border-width: 0.4vw; top: 2.5vw; left: 2.5vw; }
+body.s .corner.tr { left: auto; right: 2.5vw; }
+body.s .corner.bl { top: auto; bottom: 2.5vw; }
+body.s .corner.br { top: auto; bottom: 2.5vw; left: auto; right: 2.5vw; }
+body.s .hud { font-size: 3vw; letter-spacing: 0.2vw; }
+body.s #name { font-size: calc(8.5vw * var(--s)); letter-spacing: calc(0.4vw * var(--s)); }
+body.s #name small { font-size: calc(4vw * var(--s)); margin-right: calc(1.2vw * var(--s)); }
+body.s #name.plate { padding: calc(1.2vw * var(--s)) calc(2vw * var(--s)); border-left-width: calc(0.7vw * var(--s)); }
+body.s #name.pos-tl, body.s #name.pos-tc { top: 3vw; }
+body.s #name.pos-bl, body.s #name.pos-br { bottom: 3vw; }
+body.s #name.pos-tl, body.s #name.pos-ml, body.s #name.pos-bl { left: 3vw; }
+body.s #name.pos-br { right: 3vw; }
 /* frame: a thin edge round the whole picture, so the small window reads as a window */
-#frame { display: none; position: absolute; inset: 0.6vw; border: 0.22vw solid rgba(255,255,255,.85); box-shadow: 0 0 0 0.12vw rgba(0,0,0,.55), inset 0 0 0 0.12vw rgba(0,0,0,.55); pointer-events: none; }
+#frame { display: none; position: absolute; inset: 0.8vw; border: 0.4vw solid rgba(255,255,255,.85); box-shadow: 0 0 0 0.2vw rgba(0,0,0,.55), inset 0 0 0 0.2vw rgba(0,0,0,.55); pointer-events: none; }
 body.s #frame { display: block; }
 </style></head>
 <body>
@@ -82,6 +85,8 @@ body.s #frame { display: block; }
   var cam = q.get("cam") === "1", vig = q.get("vig") === "1", plate = q.get("plate") === "1";
   var small = q.get("small") === "1";
   if (small) document.body.classList.add("s");
+  var scale = parseInt(q.get("scale") || "100", 10);
+  if (scale > 0 && scale !== 100) document.documentElement.style.setProperty("--s", String(scale / 100));
   if (q.get("frame") !== "1") document.getElementById("frame").style.display = "none";
   var grain = Math.max(0, Math.min(100, parseInt(q.get("grain") || "0", 10) || 0));
   var label = q.get("label") || "POV";

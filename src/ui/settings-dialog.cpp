@@ -1987,6 +1987,21 @@ QWidget *SettingsDialog::buildDualTab()
 		if (e_->dualOn())
 			e_->setDual(true, "look changed");
 	});
+	dualNameScale_ = new QSpinBox(g);
+	dualNameScale_->setRange(25, 400);
+	dualNameScale_->setSuffix(" %");
+	dualNameScale_->setSingleStep(10);
+	dualNameScale_->setToolTip(
+		"How big the name on the dual window is. 100 is the default; go up if it is hard to read.");
+	f->addRow("Name size on the window", dualNameScale_);
+	connect(dualNameScale_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int v) {
+		if (building_)
+			return;
+		e_->cfg.dualNameScale = v;
+		e_->cfg.save();
+		if (e_->dualOn())
+			e_->setDual(true, "name size changed");
+	});
 	connect(dualKeep_, &QCheckBox::toggled, this, [this](bool on) {
 		if (building_)
 			return;
@@ -2119,6 +2134,7 @@ void SettingsDialog::dualToUi()
 	dualAuto_->setChecked(c.dualAuto);
 	dualKeep_->setChecked(c.dualKeep);
 	dualLook_->setChecked(c.dualLook);
+	dualNameScale_->setValue(c.dualNameScale);
 	dualState_->setText(e_->dualOn() ? "window is up" : "off");
 	building_ = was;
 }

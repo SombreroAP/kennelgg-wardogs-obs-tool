@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.11
+- **The name on the dual window is about four times bigger**, and the frame a little heavier, so it reads on stream. A **Name size** control on the Dual POV tab scales it from a quarter to four times, and the window updates as you change it.
+
 ## 0.8.10
 - **Dual POV has its own row on the dock**: its own drop-down for exactly who goes in the small window, with Force Dual POV beside it. It has nothing to do with the squad-mate drop-down above, which is who the full-screen swap shows. Changing the Dual POV pick while the window is up swaps the person inside it.
 

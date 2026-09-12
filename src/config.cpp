@@ -112,6 +112,7 @@ void Config::load()
 	DEFB(dualAuto);
 	DEFB(dualKeep);
 	DEFB(dualLook);
+	DEFI(dualNameScale);
 	DEFD(vehX);
 	DEFD(vehY);
 	DEFD(vehW);
@@ -231,6 +232,7 @@ void Config::load()
 	GETB(dualAuto);
 	GETB(dualKeep);
 	GETB(dualLook);
+	GETI(dualNameScale);
 	GETD(vehX);
 	GETD(vehY);
 	GETD(vehW);
@@ -480,6 +482,7 @@ void Config::save() const
 	SETB(dualAuto);
 	SETB(dualKeep);
 	SETB(dualLook);
+	SETI(dualNameScale);
 	SETD(vehX);
 	SETD(vehY);
 	SETD(vehW);

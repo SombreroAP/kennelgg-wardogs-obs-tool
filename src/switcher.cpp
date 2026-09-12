@@ -1531,7 +1531,8 @@ std::string Switcher::applyDual(const Config &cfg, bool on, bool rearm)
 	std::string lookName = Config::dualLookName();
 	if (look) {
 		std::string url = overlayUrl(cfg, f->name);
-		url += (url.find('?') == std::string::npos ? "?" : "&") + std::string("small=1&frame=1");
+		url += (url.find('?') == std::string::npos ? "?" : "&") + std::string("small=1&frame=1&scale=") +
+		       std::to_string(std::clamp(cfg.dualNameScale, 25, 400));
 		std::string e2 = ensureBrowserSource(dual, lookName.c_str(), url, true);
 		if (!e2.empty() && log)
 			log("Dual POV look: " + e2);
