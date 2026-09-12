@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.14
+- **Auto tick on the dock's Dual POV row.** Untick it before a match and the vehicle detector will not open the small window at all; tick it and the window opens and closes with the vehicle again. Force Dual POV works either way.
+- **Only streams are ever captured.** A pop-out is treated as a squad mate's stream only when Discord titled it "<username>'s Stream". The whole call popped out ("General VC") and camera tiles are ignored everywhere: never added, never bound, never mentioned.
+- **Discord audio level on stream** is a slider on the Squad panel. Discord mixes every squad mate's stream into one audio feed, so this is one level for all of them; for one person at a time, use the volume slider on their pop-out in Discord (Show pop-outs, or park them on another monitor).
+
 ## 0.8.13
 - **Two or more tucked pop-outs no longer go black.** Every tucked pop-out went to the same spot at the screen edge, so the second sat exactly on the first and covered its sliver, and Discord stopped drawing the one underneath. They are now staggered down the edge so each keeps a stretch of its own showing. Parked pop-outs that do not all fit on the screen are staggered the same way instead of piled on one spot.
 

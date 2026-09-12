@@ -753,6 +753,7 @@ void Engine::start()
 				    .arg(folded));
 	}
 	armPopoutWatch();
+	applyDiscordVolume();
 #ifdef _WIN32
 	// Two copies of this plugin both load, and the second one gets no bridge port: ClipHound then
 	// connects to the wrong one and everything looks like it is "starting" for ever.
@@ -1144,8 +1145,22 @@ void Engine::syncRoster()
 	emit stateChanged();
 }
 
+/// Is this Discord window somebody's stream, popped out? Discord titles those "<username>'s
+/// Stream", and "Discord Popout" for the second before it has drawn. The whole call popped out is
+/// titled with the channel name ("General VC"), a camera tile with the bare username: neither is
+/// a stream, and neither is ever captured.
+static bool isStreamPopout(const std::string &title)
+{
+	QString t = QString::fromStdString(title).trimmed();
+	if (t.compare("Discord Popout", Qt::CaseInsensitive) == 0)
+		return true;
+	static const QRegularExpression suffix(QStringLiteral("(?:['\u2019\u2018]s?)\\s*stream\\s*$"),
+					       QRegularExpression::CaseInsensitiveOption);
+	return suffix.match(t).hasMatch();
+}
+
 /// Whose window a Discord pop-out is. A Go Live pop-out is titled "<username>'s Stream" (seen
-/// on a real PC: "sombrero's Stream"); a camera tile's is the bare username. Lower case.
+/// on a real PC: "sombrero's Stream"). Lower case.
 static QString popoutOwner(const std::string &title)
 {
 	QString t = QString::fromStdString(title).toLower().trimmed();
@@ -1177,6 +1192,8 @@ QString Engine::addPopouts(QStringList *addedOut)
 	QStringList added, already, failed;
 	int unnamed = 0, mine = 0;
 	for (const auto &w : wins) {
+		if (!isStreamPopout(w.title))
+			continue; // the whole call popped out, a camera tile: not a stream, never captured
 		QString owner = popoutOwner(w.title);
 		if (owner == "discord popout") {
 			unnamed++; // Discord has not titled it yet; a second later it will have
@@ -1211,6 +1228,7 @@ QString Engine::addPopouts(QStringList *addedOut)
 		added << owner;
 		if (addedOut)
 			*addedOut << owner;
+		applyDiscordVolume();
 		log("Squad: added " + owner + " from their popped-out Discord stream (\"" +
 		    QString::fromStdString(w.title) + "\").");
 	}
@@ -1267,6 +1285,21 @@ void Engine::releaseAllPopouts()
 		releasePopout(f);
 }
 
+void Engine::applyDiscordVolume()
+{
+	float v = std::clamp(cfg.discordVolume, 0, 100) / 100.0f;
+	QStringList names{Friend::discordCallAudioName()};
+	for (const auto &f : cfg.friends)
+		if (!f.audioSource.empty())
+			names << QString::fromStdString(f.audioSource);
+	names.removeDuplicates();
+	for (const QString &n : names)
+		if (obs_source_t *src = obs_get_source_by_name(n.toUtf8().constData())) {
+			obs_source_set_volume(src, v);
+			obs_source_release(src);
+		}
+}
+
 void Engine::showPopouts(bool show)
 {
 	popoutsShown_ = show;
@@ -1306,7 +1339,10 @@ void Engine::watchPopouts()
 {
 	if (stopping_)
 		return;
-	std::vector<Switcher::Popout> wins = Switcher::discordPopouts();
+	std::vector<Switcher::Popout> wins;
+	for (const auto &p : Switcher::discordPopouts())
+		if (isStreamPopout(p.title))
+			wins.push_back(p); // the call view or a camera tile popped out is not a stream
 	auto lower = [](const std::string &s) {
 		return QString::fromStdString(s).toLower();
 	};

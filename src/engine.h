@@ -53,6 +53,8 @@ public:
 	/// Bring every bound pop-out back on screen so its own controls can be used (Discord's volume,
 	/// for one), and stop tucking until this is turned off again.
 	void showPopouts(bool show);
+	/// Set every Discord audio capture's level to cfg.discordVolume.
+	void applyDiscordVolume();
 	bool popoutsShown() const { return popoutsShown_; }
 	/// Put this squad mate in the dual window and keep it there until it is turned off by hand.
 	void showInDual(int idx, const QString &why = "squad panel");

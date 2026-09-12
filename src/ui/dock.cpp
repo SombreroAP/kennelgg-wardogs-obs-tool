@@ -164,7 +164,21 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 			  "this again. The vehicle detector (Dual POV tab) still opens and closes the window by "
 			  "itself when this is off.");
 	dualRow->addWidget(dual_);
+	dualAuto_ = new QCheckBox("Auto", this);
+	dualAuto_->setToolTip("Let the vehicle detector open the window by itself when you get in a tank or "
+			      "chopper and close it when you get out (needs ClipHound). Untick before a match to "
+			      "keep it from happening at all.");
+	dualRow->addWidget(dualAuto_);
 	v->addLayout(dualRow);
+	connect(dualAuto_, &QCheckBox::toggled, this, [this](bool on) {
+		if (filling_ || on == e_->cfg.dualAuto)
+			return;
+		e_->cfg.dualAuto = on;
+		e_->cfg.save();
+		e_->pushAppConfig(); // ClipHound only watches the vehicle corner while this is on
+		e_->log(on ? "Dual POV: auto on - the window opens and closes with the vehicle."
+			   : "Dual POV: auto off - only the Force button opens the window.");
+	});
 	connect(dualPick_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int i) {
 		if (filling_ || i < 0 || i >= (int)e_->cfg.friends.size())
 			return;
@@ -287,6 +301,11 @@ void Dock::refresh()
 	}
 	if (!names.isEmpty())
 		active_->setCurrentIndex(std::clamp(e_->cfg.activeFriend, 0, (int)names.size() - 1));
+	if (dualAuto_) {
+		dualAuto_->blockSignals(true);
+		dualAuto_->setChecked(e_->cfg.dualAuto);
+		dualAuto_->blockSignals(false);
+	}
 	if (dualPick_) {
 		QStringList dshown;
 		for (int i = 0; i < dualPick_->count(); i++)

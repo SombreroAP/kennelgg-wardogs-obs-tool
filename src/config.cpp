@@ -100,6 +100,7 @@ void Config::load()
 	DEFB(rosterAddSources);
 	DEFB(popoutTuck);
 	DEFI(popoutMonitor);
+	DEFI(discordVolume);
 	DEFS(sceneV);
 	DEFI(vdoBitrateKbps);
 	DEFB(dualEnabled);
@@ -220,6 +221,7 @@ void Config::load()
 	GETB(rosterAddSources);
 	GETB(popoutTuck);
 	GETI(popoutMonitor);
+	GETI(discordVolume);
 	GETS(sceneV);
 	GETI(vdoBitrateKbps);
 	GETB(dualEnabled);
@@ -470,6 +472,7 @@ void Config::save() const
 	SETB(rosterAddSources);
 	SETB(popoutTuck);
 	SETI(popoutMonitor);
+	SETI(discordVolume);
 	SETS(sceneV);
 	SETI(vdoBitrateKbps);
 	SETB(dualEnabled);
