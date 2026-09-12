@@ -1247,8 +1247,8 @@ QString Engine::addPopouts(QStringList *addedOut)
 			seen << "\"" + QString::fromStdString(w.title) + "\"";
 		out << (seen.isEmpty() ? QString("No Discord window other than the main one is open.")
 				       : "Discord windows seen: " + seen.join(", ") + ".");
-		log("Squad: Add found nothing to add. " + out.last());
 	}
+	log("Squad: Add - " + out.join(" "));
 	return out.join(" ");
 }
 

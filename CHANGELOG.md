@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.7
+- **Add says exactly why when it cannot add someone, and the log keeps the whole line.** A source that was deleted moments earlier but still held somewhere kept its name and blocked a new one with that name; the plugin now moves the ghost aside and makes a fresh source. If a scene refuses the source, the message names the scene.
+
 ## 0.8.6
 - **Pop-outs no longer go black when the game covers them.** Discord stops drawing a window that is completely hidden, and the capture went black with it. Every bound pop-out is now pinned above other windows and tucked to the right edge of its screen with a few pixels showing. Discord keeps drawing all of it, and the capture takes all of it. On by default; the tick is in the Squad panel, and turning it off puts the windows back.
   - Needs the game in borderless windowed mode. In exclusive fullscreen nothing can sit on top of the game, so a covered pop-out still goes black. The log says so when it tucks one.

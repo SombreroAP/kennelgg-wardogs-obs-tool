@@ -240,6 +240,13 @@ std::string Switcher::createInScene(const Config &cfg, const char *kind, const s
 		return "no scene";
 	obs_scene_t *scene = obs_scene_from_source(ss);
 	obs_source_t *src = obs_get_source_by_name(name.c_str());
+	if (src && obs_source_removed(src)) {
+		// deleted a moment ago but something still holds it: it keeps the name, and a scene will
+		// not take a removed source. Move the ghost aside and make a fresh one.
+		obs_source_set_name(src, (name + " (gone)").c_str());
+		obs_source_release(src);
+		src = nullptr;
+	}
 	if (src) {
 		if (settings && !alreadySet(src, settings))
 			obs_source_update(src, settings);
@@ -247,7 +254,7 @@ std::string Switcher::createInScene(const Config &cfg, const char *kind, const s
 		src = obs_source_create(kind, name.c_str(), settings, nullptr);
 		if (!src) {
 			obs_source_release(ss);
-			return "could not create '" + name + "'";
+			return "could not create '" + name + "' (OBS refused a " + kind + " source)";
 		}
 		if (log)
 			log("Added '" + name + "' to OBS.");
@@ -256,6 +263,12 @@ std::string Switcher::createInScene(const Config &cfg, const char *kind, const s
 	bool fresh = !item;
 	if (!item)
 		item = obs_scene_add(scene, src);
+	if (!item) {
+		std::string sceneName = obs_source_get_name(ss) ? obs_source_get_name(ss) : "?";
+		obs_source_release(src);
+		obs_source_release(ss);
+		return "could not add '" + name + "' to the scene '" + sceneName + "'";
+	}
 	if (item) {
 		if (obs_sceneitem_visible(item) != visible)
 			obs_sceneitem_set_visible(item, visible);
