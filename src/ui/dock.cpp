@@ -152,9 +152,11 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	connect(back_, &QPushButton::clicked, this, [this]() { e_->applyNow(false, "button"); });
 
 	auto *btns2 = new QHBoxLayout();
-	dual_ = new QPushButton("Dual POV", this);
+	dual_ = new QPushButton("Force Dual POV", this);
 	dual_->setCheckable(true);
-	dual_->setToolTip("Your crew mate's feed in a small window over your POV (set up on the Dual POV tab).");
+	dual_->setToolTip("Your squad mate's feed in the small Dual POV window, now, and it stays up until you press "
+			  "this again. The vehicle detector (Dual POV tab) still opens and closes the window by "
+			  "itself when this is off.");
 	btns->addWidget(dual_);
 	connect(dual_, &QPushButton::clicked, this, [this](bool on) { e_->setDual(on, "dock"); });
 	pause_ = new QPushButton("Pause", this);
@@ -323,7 +325,12 @@ void Dock::refresh()
 		dual_->blockSignals(true);
 		dual_->setChecked(e_->dualOn());
 		dual_->blockSignals(false);
-		dual_->setStyleSheet(e_->dualOn() ? "QPushButton { border-left: 4px solid #4cbe5a; }" : "");
+		dual_->setText(e_->dualForced() ? "FORCED Dual POV"
+			       : e_->dualOn()   ? "Dual POV (auto)"
+						: "Force Dual POV");
+		dual_->setStyleSheet(e_->dualForced() ? "QPushButton { border-left: 4px solid #c99a3b; }"
+				     : e_->dualOn()   ? "QPushButton { border-left: 4px solid #4cbe5a; }"
+						      : "");
 	}
 	show_->setEnabled(!e_->applied());
 	back_->setEnabled(e_->applied());

@@ -818,6 +818,12 @@ void Engine::pushAppConfig()
 	for (const auto &f : cfg.friends)
 		if (!f.nearName().empty())
 			names.append(QString::fromStdString(f.nearName()));
+	// their Discord username as well, when it differs: the in-game name is often a guess made from
+	// it, and ClipHound's matcher is fuzzy, so either spelling finds them
+	for (const auto &f : cfg.friends)
+		if (!f.handle.empty() && QString::fromStdString(f.handle).compare(QString::fromStdString(f.nearName()),
+										  Qt::CaseInsensitive) != 0)
+			names.append(QString::fromStdString(f.handle));
 	nb["names"] = names;
 	set["nearby"] = nb;
 	QJsonObject vh;
@@ -1639,6 +1645,9 @@ int Engine::friendIndexFor(const QString &gameName) const
 	for (size_t i = 0; i < cfg.friends.size(); i++)
 		if (QString::fromStdString(cfg.friends[i].name).compare(gameName, Qt::CaseInsensitive) == 0)
 			return (int)i;
+	for (size_t i = 0; i < cfg.friends.size(); i++)
+		if (QString::fromStdString(cfg.friends[i].handle).compare(gameName, Qt::CaseInsensitive) == 0)
+			return (int)i;
 	return -1;
 }
 
@@ -2146,7 +2155,7 @@ void Engine::setDual(bool on, const QString &why)
 	pushAppConfig(); // ClipHound watches the vehicle corner while the window is up
 	log((on ? "Dual POV on: " + QString::fromStdString(cfg.dual()->name) + " in the small window"
 		: QString("Dual POV off")) +
-	    " - " + why + ".");
+	    " - " + why + (on && !dualAutoOn_ ? " (forced: stays until you turn it off)." : "."));
 	emit stateChanged();
 }
 

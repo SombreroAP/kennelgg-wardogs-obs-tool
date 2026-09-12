@@ -1369,15 +1369,34 @@ std::string Switcher::applyDual(const Config &cfg, bool on)
 			obs_source_release(src);
 		}
 	}
-	// only the chosen feed is inside the window
+	// a small frame and their name over the feed, drawn by the same page as the main look, told
+	// to keep everything small because the window is
+	bool look = cfg.dualLook && cfg.lookEnabled() && err.empty();
+	std::string lookName = Config::dualLookName();
+	if (look) {
+		std::string url = overlayUrl(cfg, f->name);
+		url += (url.find('?') == std::string::npos ? "?" : "&") + std::string("small=1&frame=1");
+		std::string e2 = ensureBrowserSource(dual, lookName.c_str(), url, true);
+		if (!e2.empty() && log)
+			log("Dual POV look: " + e2);
+	}
+	// only the chosen feed, and the look over it, are inside the window
+	struct Keep {
+		std::string feed, look;
+		bool showLook;
+	} keep{inner, lookName, look};
 	obs_scene_enum_items(
 		dual,
-		[](obs_scene_t *, obs_sceneitem_t *it, void *want) {
+		[](obs_scene_t *, obs_sceneitem_t *it, void *p) {
+			auto *k = (Keep *)p;
 			obs_source_t *s = obs_sceneitem_get_source(it);
-			obs_sceneitem_set_visible(it, s && *(std::string *)want == obs_source_get_name(s));
+			std::string n = s ? obs_source_get_name(s) : "";
+			obs_sceneitem_set_visible(it, n == k->feed || (k->showLook && n == k->look));
+			if (k->showLook && n == k->look)
+				obs_sceneitem_set_order(it, OBS_ORDER_MOVE_TOP);
 			return true;
 		},
-		&inner);
+		&keep);
 	// opacity
 	{
 		obs_source_t *fl = obs_source_get_filter_by_name(dualSrc, "Kennel.gg dual opacity");

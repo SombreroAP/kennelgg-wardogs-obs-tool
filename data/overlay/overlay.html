@@ -47,6 +47,22 @@ body.v #name.pos-tl, body.v #name.pos-tc { top: 12vw; }
 body.v #name.pos-ml, body.v #name.pos-mc { top: 50%; }
 body.v #name.pos-bl, body.v #name.pos-br { bottom: 12vw; }
 #name.plate { background: rgba(11,14,16,.78); padding: 0.8vw 1.4vw; border-left: 0.35vw solid #C99A3B; }
+/* small: inside the dual-POV window, which is a quarter of the canvas at most, so everything shrinks */
+body.s .corner { width: 3vw; height: 3vw; border-width: 0.25vw; top: 2vw; left: 2vw; }
+body.s .corner.tr { left: auto; right: 2vw; }
+body.s .corner.bl { top: auto; bottom: 2vw; }
+body.s .corner.br { top: auto; bottom: 2vw; left: auto; right: 2vw; }
+body.s .hud { font-size: 1.4vw; letter-spacing: 0.1vw; }
+body.s #name { font-size: 1.9vw; letter-spacing: 0.15vw; }
+body.s #name small { font-size: 1.1vw; margin-right: 0.5vw; }
+body.s #name.plate { padding: 0.5vw 0.9vw; border-left-width: 0.25vw; }
+body.s #name.pos-tl, body.s #name.pos-tc { top: 2.2vw; }
+body.s #name.pos-bl, body.s #name.pos-br { bottom: 2.2vw; }
+body.s #name.pos-tl, body.s #name.pos-ml, body.s #name.pos-bl { left: 2.4vw; }
+body.s #name.pos-br { right: 2.4vw; }
+/* frame: a thin edge round the whole picture, so the small window reads as a window */
+#frame { display: none; position: absolute; inset: 0.6vw; border: 0.22vw solid rgba(255,255,255,.85); box-shadow: 0 0 0 0.12vw rgba(0,0,0,.55), inset 0 0 0 0.12vw rgba(0,0,0,.55); pointer-events: none; }
+body.s #frame { display: block; }
 </style></head>
 <body>
 <canvas id="grain"></canvas>
@@ -58,17 +74,21 @@ body.v #name.pos-bl, body.v #name.pos-br { bottom: 12vw; }
   <div class="hud" id="bat">BATT<span></span></div>
 </div>
 <div id="name"><small>POV</small><b>FRIEND</b></div>
+<div id="frame"></div>
 <script>
 (function () {
   var q = new URLSearchParams(location.search);
   var name = q.get("name") || "";
   var cam = q.get("cam") === "1", vig = q.get("vig") === "1", plate = q.get("plate") === "1";
+  var small = q.get("small") === "1";
+  if (small) document.body.classList.add("s");
+  if (q.get("frame") !== "1") document.getElementById("frame").style.display = "none";
   var grain = Math.max(0, Math.min(100, parseInt(q.get("grain") || "0", 10) || 0));
   var label = q.get("label") || "POV";
   var portrait = q.get("v") === "1";
   if (portrait) document.body.classList.add("v");
 
-  if (name) { var n = document.getElementById("name"); n.style.display = "block"; n.querySelector("small").textContent = label; n.querySelector("b").textContent = name; if (plate) n.classList.add("plate"); n.classList.add("pos-" + (q.get("pos") || (portrait ? "tc" : "ml"))); }
+  if (name) { var n = document.getElementById("name"); n.style.display = "block"; n.querySelector("small").textContent = label; n.querySelector("b").textContent = name; if (plate) n.classList.add("plate"); n.classList.add("pos-" + (small ? "bl" : (q.get("pos") || (portrait ? "tc" : "ml")))); }
   if (vig) document.getElementById("vig").style.display = "block";
   if (cam) {
     document.getElementById("cam").style.display = "block";

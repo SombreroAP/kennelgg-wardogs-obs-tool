@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.2
+- **Force Dual POV.** The dock button is now a forced toggle: press it and your squad mate is in the small window until you press it again, whatever the vehicle detector thinks. The detector still opens and closes the window by itself when the forced toggle is off, and the button says which of the two is holding it up.
+- **The dual window has a frame and their name.** A thin edge round the picture and a small name plate bottom-left, drawn by the same look as the main swap so it matches, and scaled down because the window is. Off and on with the look effects, or by its own tick on the Dual POV tab.
+- **A Discord username also finds them in the NEARBY list.** Both their in-game name and their Discord username go to ClipHound, whose matching is already fuzzy, so a slightly different spelling in the game still matches.
+
 ## 0.8.1
 - **Add asks for the in-game name.** When a popped-out stream becomes a squad mate, the panel asks what they are called in the game, with the Discord username filled in as the guess. That name is what the NEARBY list is matched on, so Closest works from the first match. An **In-game name...** button on the panel changes it later.
 - **Dual POV turned on by hand stays on.** Leaving a vehicle only closes a window the vehicle detector opened. Pressing Dual POV with nobody picked uses the active squad mate. The Squad panel has **Show in Dual POV** for whoever is selected.

@@ -1937,6 +1937,17 @@ QWidget *SettingsDialog::buildDualTab()
 	f->addRow(dualAuto_);
 	dualKeep_ = new QCheckBox("Leave the window up when I get out of the vehicle (off: it goes by itself)", g);
 	f->addRow(dualKeep_);
+	dualLook_ = new QCheckBox(
+		"A small frame and their name on the window (uses the look effects from the Look tab)", g);
+	f->addRow(dualLook_);
+	connect(dualLook_, &QCheckBox::toggled, this, [this](bool on) {
+		if (building_)
+			return;
+		e_->cfg.dualLook = on;
+		e_->cfg.save();
+		if (e_->dualOn())
+			e_->setDual(true, "look changed");
+	});
 	connect(dualKeep_, &QCheckBox::toggled, this, [this](bool on) {
 		if (building_)
 			return;
@@ -2068,6 +2079,7 @@ void SettingsDialog::dualToUi()
 	dualOpacity_->setValue(c.dualOpacity);
 	dualAuto_->setChecked(c.dualAuto);
 	dualKeep_->setChecked(c.dualKeep);
+	dualLook_->setChecked(c.dualLook);
 	dualState_->setText(e_->dualOn() ? "window is up" : "off");
 	building_ = was;
 }

@@ -103,6 +103,9 @@ signals:
 public:
 	bool applied() const { return applied_; }
 	bool dualOn() const { return dualOn_; }
+	/// Turned on by hand (the Force button, a hotkey, the Squad panel): the vehicle detector may
+	/// not close it. Off means whatever is up is the detector's.
+	bool dualForced() const { return dualOn_ && !dualAutoOn_; }
 	QString vehicleSeat() const { return vehicleSeat_; }
 	bool detected() const { return detected_; }
 	bool revivingRecent() const;
