@@ -33,6 +33,7 @@ private:
 	QCheckBox *closest_ = nullptr;
 	QPushButton *dual_ = nullptr;
 	QComboBox *active_;
+	QComboBox *dualPick_ = nullptr;
 	QPushButton *show_, *back_, *pause_, *clipNow_, *appBtn_;
 	QToolButton *saveBtn_;
 	bool filling_ = false;

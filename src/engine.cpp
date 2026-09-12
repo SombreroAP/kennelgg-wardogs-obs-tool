@@ -2193,9 +2193,10 @@ void Engine::showInDual(int idx, const QString &why)
 void Engine::setDual(bool on, const QString &why)
 {
 	if (on && !cfg.dual()) {
-		// nobody picked for the small window yet: the active squad mate is the obvious one
-		if (cfg.active()) {
-			cfg.dualFriend = cfg.activeFriend;
+		// nobody picked for the small window yet: the first squad mate, which is what the Dual POV
+		// drop-down on the dock shows
+		if (!cfg.friends.empty()) {
+			cfg.dualFriend = 0;
 			cfg.save();
 		} else {
 			log("Dual POV: add a squad mate first.");
@@ -2264,11 +2265,7 @@ void Engine::onVehicle(const QString &seat)
 
 void Engine::toggleDual()
 {
-	// forced on by hotkey: whoever the dock's drop-down shows goes in the window
-	if (!dualOn_ && cfg.active())
-		showInDual(cfg.activeFriend, "hotkey");
-	else
-		setDual(!dualOn_, "hotkey");
+	setDual(!dualOn_, "hotkey"); // the person is the Dual POV drop-down's pick
 }
 
 void Engine::toggle()

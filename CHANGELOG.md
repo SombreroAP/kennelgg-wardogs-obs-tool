@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.10
+- **Dual POV has its own row on the dock**: its own drop-down for exactly who goes in the small window, with Force Dual POV beside it. It has nothing to do with the squad-mate drop-down above, which is who the full-screen swap shows. Changing the Dual POV pick while the window is up swaps the person inside it.
+
 ## 0.8.9
 - **Pop-outs can be parked on another monitor instead of tucked away.** On the Squad panel, "Pop-outs live" lists your monitors. Park them on the one the game and OBS are not on and every pop-out sits there fully visible, on top and stacked, so Discord keeps drawing them and each one's own volume control is a click away.
 - **Show pop-outs** on the Squad panel brings tucked pop-outs back on screen to mute or adjust them, and tucks them away again when pressed a second time.

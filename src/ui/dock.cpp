@@ -151,22 +151,38 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	connect(show_, &QPushButton::clicked, this, [this]() { e_->applyNow(true, "button"); });
 	connect(back_, &QPushButton::clicked, this, [this]() { e_->applyNow(false, "button"); });
 
-	auto *btns2 = new QHBoxLayout();
+	// Dual POV is its own thing: its own person, its own button, nothing to do with the drop-down
+	// above, which is who the full-screen swap shows.
+	auto *dualRow = new QHBoxLayout();
+	dualRow->addWidget(new QLabel("Dual POV", this));
+	dualPick_ = new QComboBox(this);
+	dualPick_->setToolTip("Who goes in the small Dual POV window. Separate from the squad mate above.");
+	dualRow->addWidget(dualPick_, 1);
 	dual_ = new QPushButton("Force Dual POV", this);
 	dual_->setCheckable(true);
-	dual_->setToolTip("The squad mate picked in the drop-down goes in the small Dual POV window, now, and stays "
-			  "until you press this again. Change the drop-down afterwards and the full-screen swap "
-			  "follows it while the window keeps its person. The vehicle detector (Dual POV tab) still "
-			  "opens and closes the window by itself when this is off.");
-	btns->addWidget(dual_);
+	dual_->setToolTip("Put the person picked here in the small window, now, and keep them there until you press "
+			  "this again. The vehicle detector (Dual POV tab) still opens and closes the window by "
+			  "itself when this is off.");
+	dualRow->addWidget(dual_);
+	v->addLayout(dualRow);
+	connect(dualPick_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int i) {
+		if (filling_ || i < 0 || i >= (int)e_->cfg.friends.size())
+			return;
+		if (e_->dualOn())
+			e_->showInDual(i, "dock"); // the window is up: swap the person inside it
+		else {
+			e_->cfg.dualFriend = i;
+			e_->cfg.save();
+		}
+	});
 	connect(dual_, &QPushButton::clicked, this, [this](bool on) {
-		// forced: the squad mate the drop-down shows right now goes in the window. The drop-down
-		// can move on afterwards for the full-screen swap without moving the window.
-		if (on && e_->cfg.active())
-			e_->showInDual(e_->cfg.activeFriend, "dock");
+		int i = dualPick_->currentIndex();
+		if (on && i >= 0 && i < (int)e_->cfg.friends.size())
+			e_->showInDual(i, "dock");
 		else
 			e_->setDual(on, "dock");
 	});
+	auto *btns2 = new QHBoxLayout();
 	pause_ = new QPushButton("Pause", this);
 	auto *squad = new QPushButton("Squad", this);
 	squad->setToolTip("Turn popped-out Discord streams into squad mates, and manage them mid-broadcast.");
@@ -271,6 +287,18 @@ void Dock::refresh()
 	}
 	if (!names.isEmpty())
 		active_->setCurrentIndex(std::clamp(e_->cfg.activeFriend, 0, (int)names.size() - 1));
+	if (dualPick_) {
+		QStringList dshown;
+		for (int i = 0; i < dualPick_->count(); i++)
+			dshown << dualPick_->itemText(i);
+		if (dshown != names) {
+			dualPick_->clear();
+			dualPick_->addItems(names);
+		}
+		if (!names.isEmpty())
+			dualPick_->setCurrentIndex(std::clamp(e_->cfg.dualFriend, 0, (int)names.size() - 1));
+		dualPick_->setEnabled(!names.isEmpty());
+	}
 	filling_ = false;
 	state_->setText(QString::fromStdString(e_->stateText()));
 	state_->setStyleSheet(e_->applied() ? "color: #ce6050;" : "");
