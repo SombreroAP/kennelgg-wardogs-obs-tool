@@ -132,30 +132,63 @@ void SetupWizard::fillGame()
 QWizardPage *SetupWizard::pageSquad()
 {
 	auto *p = new QWizardPage(this);
-	p->setTitle("Squad mates");
-	p->setSubTitle(
-		"Whose POV should viewers see while you are down? Squad mates running this plugin on your network are found by themselves.");
+	p->setTitle("Your squad, from Discord");
+	p->setSubTitle("Whose POV viewers see while you are down. Squad mates come from the Discord call you are in.");
 	auto *v = new QVBoxLayout(p);
-	squad_ = new QListWidget(p);
-	squad_->setMaximumHeight(150);
-	v->addWidget(squad_);
-	auto *row = new QHBoxLayout();
-	twitch_ = new QLineEdit(p);
-	twitch_->setPlaceholderText("a squad mate's Twitch channel, e.g. pup");
-	auto *add = new QPushButton("Add Twitch channel", p);
-	row->addWidget(twitch_, 1);
-	row->addWidget(add);
-	v->addLayout(row);
-	lanShare_ = new QCheckBox("Share my own feed over NDI for squad mates on this network (needs DistroAV)", p);
-	lanShare_->setChecked(e_->cfg.ndiShare);
-	v->addWidget(lanShare_);
 	v->addWidget(note(
-		"Twitch is the zero-setup option (~2 s behind). Discord Go Live, VDO.Ninja and NDI are under Settings → Switch → Add. You can skip this and add someone later from the dock.",
+		"<b>Every session:</b> join your squad's voice channel, watch a squad mate's stream and pop it out "
+		"(right-click their stream, <b>Pop Out</b>), then press <b>Add pop-outs</b> on the dock. Their slot is made, "
+		"named after them, and their window is tucked to the edge of your screen where Discord keeps drawing it. "
+		"Pop out everyone whose POV you might show.<br><br>"
+		"<b>Do not minimise a pop-out.</b> A minimised window stops drawing and its feed freezes. Tucked away is "
+		"fine; minimised is not. Show pop-outs on the dock brings them back when you need their volume control.",
 		p));
+	auto *form = new QFormLayout();
+	me_ = new QLineEdit(QString::fromStdString(e_->cfg.myDiscord), p);
+	me_->setPlaceholderText("your Discord username - the lower-case one under your display name");
+	form->addRow("Your Discord username", me_);
+	v->addLayout(form);
+	rosterOn_ = new QCheckBox("See who is in my channel and who is live, by itself (recommended)", p);
+	rosterOn_->setChecked(true);
+	rosterOn_->setToolTip(
+		"The Kennel Ops Discord bot publishes who is in voice and who is streaming. With this on, "
+		"the plugin knows which channel is yours, shows only people who are live, and drops "
+		"anyone who leaves.");
+	v->addWidget(rosterOn_);
+	bot_ = new QLabel(p);
+	bot_->setWordWrap(true);
+	bot_->setOpenExternalLinks(true);
+	v->addWidget(bot_);
+	auto refreshBot = [this]() {
+		QStringList gs = e_->roster.guilds();
+		QString inv = e_->roster.inviteUrl().isEmpty() ? Config::botInviteUrl() : e_->roster.inviteUrl();
+		bot_->setText(
+			"<b>For the best experience the Kennel Ops bot needs to be in the Discord server you play "
+			"on.</b> It only asks to view channels. Servers it can see now: " +
+			(gs.isEmpty() ? QString("(checking...)") : gs.join(", ")) +
+			". Playing somewhere else? Its admin adds the bot with <a href=\"" + inv +
+			"\">this link</a>, and that server appears in the Squad panel.");
+	};
+	refreshBot();
+	connect(&e_->roster, &Roster::polled, this, refreshBot);
+	connect(&e_->roster, &Roster::changed, this, refreshBot);
+	if (!e_->roster.running())
+		e_->roster.configure(QString::fromStdString(e_->cfg.rosterUrl), e_->cfg.rosterPollS, QString(),
+				     QString());
+	v->addWidget(note("Squad mates on Twitch, Kick, YouTube or VDO.Ninja are added under Settings, Squad, Add. "
+			  "A slot for someone on this network sharing over NDI is made by itself.",
+			  p));
+	squad_ = new QListWidget(p);
+	squad_->setMaximumHeight(90);
+	v->addWidget(squad_);
+	twitch_ = new QLineEdit(p); // kept for the by-hand Twitch add, off the page
+	twitch_->hide();
+	lanShare_ = new QCheckBox(p);
+	lanShare_->setChecked(e_->cfg.ndiShare);
+	lanShare_->hide();
 	v->addStretch(1);
-	connect(add, &QPushButton::clicked, this, &SetupWizard::addTwitch);
-	connect(twitch_, &QLineEdit::returnPressed, this, &SetupWizard::addTwitch);
 	connect(&e_->lan, &Lan::peersChanged, this, [this]() { fillSquad(); });
+	connect(e_, &Engine::stateChanged, this, [this]() { fillSquad(); });
 	return p;
 }
 
@@ -253,6 +286,9 @@ void SetupWizard::accept()
 	if (game_->currentIndex() >= 0)
 		c.gameSource = game_->currentText().toStdString();
 	c.ndiShare = lanShare_->isChecked();
+	c.myDiscord = me_->text().trimmed().toLower().remove('@').toStdString();
+	c.rosterEnabled = rosterOn_->isChecked();
+	c.setupDone = true;
 	c.clipOnDowned = clipDowned_->isChecked();
 	c.launchApp = launchApp_->isChecked();
 	if (c.launchApp && c.appPath.empty())

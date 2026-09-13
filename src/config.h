@@ -84,8 +84,13 @@ struct Config {
 	{
 		return "https://kennel.gg/api/voice-KHc1U8CRGy8Ixq2JAeKj6JNAjdo8mDDu.json";
 	}
-	std::string rosterChannel;    // only this voice channel ("" = whichever one people are in)
-	std::string rosterGuild;      // only this Discord server ("" = every one the bot can see)
+	std::string rosterChannel; // only this voice channel ("" = whichever one people are in)
+	std::string rosterGuild;   // only this Discord server ("" = every one the bot can see)
+	bool setupDone = false;    // the setup ran once; an empty squad at start is normal with pop-outs
+	static const char *botInviteUrl()
+	{
+		return "https://discord.com/oauth2/authorize?client_id=1542623631111098378&scope=bot&permissions=1024";
+	}
 	int rosterPollS = 6;          // how often to ask
 	bool rosterAddSources = true; // create the Discord capture for whoever goes live
 	/// Pin every bound pop-out above other windows, tucked to the screen edge with a sliver showing,

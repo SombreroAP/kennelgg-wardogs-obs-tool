@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.25
+- **Setup is built around Discord now.** The squad page of the setup explains the session flow (join voice, pop out squad mates' streams, press Add pop-outs), asks for your Discord username, turns on the voice roster so the plugin sees who is in your channel and who is live, and says plainly that the Kennel Ops bot needs to be in the server you play on for the best experience, with the link an admin uses to add it and the list of servers it can see right now.
+- **Do not minimise a pop-out.** The setup and the log both say it: a minimised window stops drawing and its feed freezes. Tucked away is fine.
+- The setup no longer reopens every start just because the squad is empty; with pop-outs that is normal. It runs until it has been finished once, or while there is no game source.
+
 ## 0.8.24
 - **Add pop-outs and Show pop-outs are on the dock**, at the top. Add does the same as the Squad panel's button, in-game name prompt included, and the result shows on the dock's status line. Show pop-outs brings tucked pop-outs back to reach their controls and turns into Tuck pop-outs while they are out.
 

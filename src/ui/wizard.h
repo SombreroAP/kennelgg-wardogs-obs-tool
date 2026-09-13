@@ -23,6 +23,9 @@ private:
 	QListWidget *squad_;
 	QLineEdit *twitch_;
 	QCheckBox *lanShare_, *launchApp_, *clipDowned_, *lookName_;
+	QLineEdit *me_ = nullptr;
+	QCheckBox *rosterOn_ = nullptr;
+	QLabel *bot_ = nullptr;
 	QLabel *summary_;
 	void fillGame();
 	void fillSquad();

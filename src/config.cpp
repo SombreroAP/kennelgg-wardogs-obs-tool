@@ -97,6 +97,7 @@ void Config::load()
 	DEFS(myDiscord);
 	DEFS(rosterChannel);
 	DEFS(rosterGuild);
+	DEFB(setupDone);
 	DEFI(rosterPollS);
 	DEFB(rosterAddSources);
 	DEFB(popoutTuck);
@@ -220,6 +221,7 @@ void Config::load()
 	GETS(myDiscord);
 	GETS(rosterChannel);
 	GETS(rosterGuild);
+	GETB(setupDone);
 	GETI(rosterPollS);
 	GETB(rosterAddSources);
 	GETB(popoutTuck);
@@ -473,6 +475,7 @@ void Config::save() const
 	SETS(myDiscord);
 	SETS(rosterChannel);
 	SETS(rosterGuild);
+	SETB(setupDone);
 	SETI(rosterPollS);
 	SETB(rosterAddSources);
 	SETB(popoutTuck);

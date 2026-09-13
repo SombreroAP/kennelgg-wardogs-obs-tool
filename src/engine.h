@@ -141,7 +141,9 @@ public:
 	QImage grabNative();
 	/// Cut a template from where the damage log is right now, so it matches this HUD exactly.
 	QString learnTemplate(const QImage &native, QRectF rect);
-	bool needsSetup() const { return cfg.gameSource.empty() || cfg.friends.empty(); }
+	/// Squads fill themselves in from pop-outs now, so an empty squad at start is normal: the setup
+	/// runs until it has been finished once, or while there is no game source.
+	bool needsSetup() const { return cfg.gameSource.empty() || (!cfg.setupDone && cfg.friends.empty()); }
 	/// Tick every desktop-audio input once, when nothing was chosen yet.
 	void autoPickAudio();
 
