@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.19
+- **Only squad mates with a picture get shown.** A squad mate whose pop-out is bound, or who the Kennel.gg voice roster says is streaming, counts as live. One the roster has in voice but not streaming counts as off, and is never shown however close they are: Closest skips them for the nearest live one, and if the active squad mate is off when you go down, a live one takes their place, or you stay on your own POV with a line in the log saying so. Slots nobody can vouch for (Twitch, an OBS source, a Discord slot the roster does not know) are treated as live, as before. The Squad panel shows live / not streaming beside each slot.
+
 ## 0.8.18
 - **Auto switch tick on the dock.** Untick it and the plugin never switches away from your own POV by itself, however many times you go down. Show friend's POV still works by hand, Dual POV still works, and clips keep coming. It replaces the Pause button, which did the same thing under a name nobody could read that from.
 

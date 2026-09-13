@@ -1770,6 +1770,48 @@ bool Engine::feedUsable(const Friend &f) const
 	return true;
 }
 
+Engine::Feed Engine::feedState(const Friend &f) const
+{
+	if (f.kind != FriendKind::Discord)
+		return Feed::Unknown;
+	if (f.onPopout())
+		return Feed::Live; // their window is bound (and kept through a short absence)
+	if (cfg.rosterEnabled) {
+		QString h = QString::fromStdString(f.handle).toLower(), n = QString::fromStdString(f.name).toLower();
+		for (const auto &m : roster.members()) {
+			QString mh = m.handle.toLower(), mn = m.name.toLower();
+			if ((!h.isEmpty() && (mh == h || mn == h)) || mn == n || mh == n)
+				return m.streaming ? Feed::Live : Feed::Off;
+		}
+	}
+	return Feed::Unknown;
+}
+
+QString Engine::feedStateText(const Friend &f) const
+{
+	switch (feedState(f)) {
+	case Feed::Live:
+		return "live";
+	case Feed::Off:
+		return "not streaming";
+	default:
+		return "";
+	}
+}
+
+int Engine::anyLiveFriend() const
+{
+	if (cfg.active() && feedState(*cfg.active()) != Feed::Off)
+		return cfg.activeFriend;
+	for (size_t i = 0; i < cfg.friends.size(); ++i)
+		if (feedState(cfg.friends[i]) == Feed::Live)
+			return (int)i;
+	for (size_t i = 0; i < cfg.friends.size(); ++i)
+		if (feedState(cfg.friends[i]) == Feed::Unknown)
+			return (int)i;
+	return -1;
+}
+
 int Engine::nearbyDistanceOf(int friendIdx) const
 {
 	if (friendIdx < 0 || friendIdx >= (int)cfg.friends.size())
@@ -1784,7 +1826,7 @@ int Engine::closestFriend(int *metres, QString *problem) const
 {
 	if (!nearbyFresh())
 		return -1;
-	int best = -1, bestD = 0;
+	int best = -1, bestD = 0, bestRank = 9;
 	for (const auto &e : nearby_) {
 		if (e.match.isEmpty() || e.dist < 0)
 			continue;
@@ -1800,9 +1842,20 @@ int Engine::closestFriend(int *metres, QString *problem) const
 					   " is nearby but their feed is not usable (source missing in OBS?)";
 			continue;
 		}
-		if (best < 0 || e.dist < bestD) {
+		// a squad mate with nothing to show is never the one to show, however close: the nearest
+		// one who is actually streaming wins, and a slot nobody can vouch for comes after those
+		Feed state = feedState(cfg.friends[i]);
+		if (state == Feed::Off) {
+			if (problem)
+				*problem = QString::fromStdString(cfg.friends[i].name) +
+					   QString(" is closest at %1 m but is not streaming").arg(e.dist);
+			continue;
+		}
+		int rank = state == Feed::Live ? 0 : 1;
+		if (best < 0 || rank < bestRank || (rank == bestRank && e.dist < bestD)) {
 			best = i;
 			bestD = e.dist;
+			bestRank = rank;
 		}
 	}
 	if (best >= 0 && metres)
@@ -2136,6 +2189,23 @@ void Engine::detect(const Match &m)
 		upDelay_.stop();
 		askNearbyNow(); // fresh NEARBY reading while the delay runs
 		pickClosest("downed", true);
+		// whoever is about to be shown must have a picture: a squad mate the roster has in voice
+		// but not streaming shows nothing, so a live one takes their place, or you stay on your own
+		if (!applied_ && cfg.active() && feedState(*cfg.active()) == Feed::Off) {
+			int alt = anyLiveFriend();
+			if (alt < 0) {
+				log("Downed, but none of the squad is streaming right now - staying on your own POV.");
+				return;
+			}
+			if (alt != cfg.activeFriend) {
+				log("Downed: " + QString::fromStdString(cfg.active()->name) +
+				    " is not streaming, showing " + QString::fromStdString(cfg.friends[alt].name) +
+				    " instead.");
+				cfg.activeFriend = alt;
+				cfg.save();
+				emit stateChanged();
+			}
+		}
 		if (!applied_) {
 			if (cfg.downDelayMs <= 0)
 				applyNow(true, QString("downed screen detected (%1)").arg(m.score, 0, 'f', 3));

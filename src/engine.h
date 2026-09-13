@@ -192,6 +192,20 @@ private:
 	int friendIndexFor(const QString &gameName) const;
 	int nearbyDistanceOf(int friendIdx) const;
 	bool feedUsable(const Friend &f) const;
+
+public:
+	/// Whether a squad mate has a picture to show right now. Live: their pop-out is bound, or the
+	/// Discord roster says they are streaming. Off: the roster has them in voice and not streaming,
+	/// so there is nothing to show. Unknown: no way to tell (Twitch, an OBS source, a Discord slot
+	/// the roster does not know) - treated as live, as before.
+	enum class Feed { Live, Unknown, Off };
+	Feed feedState(const Friend &f) const;
+	QString feedStateText(const Friend &f) const; // "live" / "not streaming" / ""
+	/// The best squad mate to show when nothing nearer is known: the active one if not Off, else
+	/// any Live one, else -1 when everyone is known to be off.
+	int anyLiveFriend() const;
+
+private:
 	void askNearbyNow();
 	void sendPov(const QString &state);
 	void detect(const Match &m);

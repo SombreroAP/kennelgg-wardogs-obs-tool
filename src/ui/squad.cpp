@@ -188,6 +188,9 @@ void SquadPanel::refresh()
 		}
 		if (f.fromRoster)
 			where += ", from Kennel.gg voice";
+		QString st = e_->feedStateText(f);
+		if (!st.isEmpty())
+			where += "  -  " + st;
 		list_->addItem(line + "  -  " + where);
 	}
 	if (list_->count() == 0)
