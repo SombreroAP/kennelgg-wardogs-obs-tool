@@ -20,6 +20,8 @@ class ObsRoiCapture:
         h, w = frame.shape[:2]
         self.box = (int(w * self.r["x"]), int(h * self.r["y"]), int(w * self.r["w"]), int(h * self.r["h"]))
         print(f"[capture] OBS source '{self.source}' is {w}x{h}; ROI x,y,w,h = {self.box}")
+        import ocr
+        ocr.set_frame_height(h)
 
     def _frame(self) -> np.ndarray:
         # 'png' is lossless (better for OCR); a 1080p decode is a few ms.

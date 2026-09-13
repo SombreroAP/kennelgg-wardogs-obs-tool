@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.17
+- **Weapon icons are read correctly at 1440p.** Every icon template was cut from 1080p footage, and the game draws its HUD a third bigger at 1440p, so on a 1440p feed the icons never quite fit any template and the small ones won by matching a slice of a bigger icon: a pistol read off the body of an assault rifle, a thin RPG tube read off a sniper's barrel, headshots missed. The kill feed is now scaled to 1080p size before matching, whatever the capture resolution. On the reference set of real icons this takes a 1440p feed from 16 wrong of 39 to 0 wrong.
+- **Each icon is scored on its own, size included.** Icons are found as blobs and every template is scored against the blob with its size fit weighted in, so a small template cannot win on part of a big icon, and a skull beside a rifle reads as both. This also fixes two 1080p misreads (a Galil read as a car, a Kodiak pickup as a rifle), the small headshot skull no longer counting as a weapon, and most text streaks that used to read as a hunting rifle or an RPG. The thin-bar RPG template that caused the sniper mix-up is retired.
+
 ## 0.8.16
 - **Number past clips into runs.** A button on the Clips tab, under Rolling highlights, goes through every clip already in the clip folders, finds the runs by the time in each file's name, and renames them [1 of 3], [2 of 3], [3 of 3] the same way new clips are. Lone clips are left plain, and a clip open in a player is skipped and said so. Twitch clips are not touched: their titles cannot be changed once they exist. The run window is a setting beside it.
 

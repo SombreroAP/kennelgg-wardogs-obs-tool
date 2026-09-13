@@ -17,6 +17,16 @@ import pytesseract
 from colors import measure, classify
 
 SCALE = 4                     # upscale factor before OCR (feed text is ~9 px tall at 1080p)
+REF_FRAME_H = 1080            # every template was cut from 1080p footage; other resolutions are scaled to it
+_frame_h = REF_FRAME_H
+
+
+def set_frame_height(h: int):
+    """The capture's frame height. The HUD scales with resolution, so a 1440p feed draws every icon
+    a third bigger than the templates: the ROI is scaled back to 1080p size before anything else."""
+    global _frame_h
+    _frame_h = max(360, int(h or REF_FRAME_H))
+    print(f"[ocr] frame height {_frame_h}: icons scaled x{REF_FRAME_H / _frame_h:.3f} to match the templates")
 NAME_COL = (0.00, 0.40)       # fraction of ROI width holding "Kennel.gg - Sombrero"
 VICTIM_COL = (0.50, 1.00)     # victim name (after the distance)
 ICON_COL = (0.20, 0.62)       # weapon / kill-type icons live here (vehicle icons start further left)
@@ -144,7 +154,8 @@ def ocr_rows(rows: list["RowRead"]) -> list["RowRead"]:
 
 def binarize(roi_bgr: np.ndarray):
     """Return (upscaled gray, tophat mask). Tophat keeps small bright features = HUD text."""
-    up = cv2.resize(roi_bgr, None, fx=SCALE, fy=SCALE, interpolation=cv2.INTER_CUBIC)
+    f = SCALE * REF_FRAME_H / _frame_h   # 4x of the 1080p size, whatever the feed's resolution
+    up = cv2.resize(roi_bgr, None, fx=f, fy=f, interpolation=cv2.INTER_CUBIC)
     gray = cv2.cvtColor(up, cv2.COLOR_BGR2GRAY)
     binarize.last_up = up
     k = cv2.getStructuringElement(cv2.MORPH_RECT, (5 * SCALE, 5 * SCALE))
@@ -348,22 +359,78 @@ def _scores(mask_band: np.ndarray, names) -> dict[str, float]:
 
 
 def _base(name: str) -> str:
-    return re.sub(r"_\d+$", "", name)              # tank_2.png -> "tank" (variants of one icon)
+    n = re.sub(r"_\d+$", "", name)                 # tank_2.png -> "tank" (variants of one icon)
+    return "skull" if n == "skull_small" else n     # the small skull is a headshot too, not a weapon
+
+
+def _clusters(mask_band: np.ndarray, gap: int = 6 * SCALE // 2, min_area: int = 40):
+    """The icons in a band as (x0, y0, x1, y1) boxes: white blobs, with pieces closer than `gap`
+    horizontally joined into one icon (a rifle's magazine is its own blob)."""
+    n, _, stats, _ = cv2.connectedComponentsWithStats((mask_band > 0).astype(np.uint8), connectivity=8)
+    boxes = []
+    for i in range(1, n):
+        x, y, w, h, a = stats[i]
+        if a >= min_area:
+            boxes.append([x, y, x + w, y + h])
+    boxes.sort()
+    out = []
+    for bx in boxes:
+        if out and bx[0] <= out[-1][2] + gap:
+            out[-1][2] = max(out[-1][2], bx[2])
+            out[-1][1] = min(out[-1][1], bx[1])
+            out[-1][3] = max(out[-1][3], bx[3])
+        else:
+            out.append(bx)
+    return out
+
+
+def _size_sim(tw: int, th: int, bw: int, bh: int) -> float:
+    """How alike a template and an icon box are in size, 0..1. A small template sliding over a
+    slice of a big icon can correlate well; this is what stops it winning."""
+    return (min(tw, bw) / max(tw, bw)) * (min(th, bh) / max(th, bh))
 
 
 def match_icons(mask_band: np.ndarray) -> list[str]:
-    names = [n for n in load_templates() if not n.startswith("name_")]
-    s = _scores(mask_band, names)
-    best = {}                                         # base icon -> best score over its variants
-    for n, v in s.items():
-        b = _base(n)
-        best[b] = max(best.get(b, 0.0), v)
-    hits = [b for b in KILLTYPE_ICONS if best.get(b, 0) >= ICON_MATCH]
-    weapons = {b: v for b, v in best.items() if b not in KILLTYPE_ICONS}
+    """The icons in this band: at most one weapon, plus skull / explosion if drawn beside it.
+
+    Each icon is found as a blob cluster and scored against every template on its own, with the
+    correlation weighted by how well the template's size fits the icon: templates were cut from
+    real icons, so the right one is about the same size. That is what keeps a pistol from being
+    read off the body of a rifle, or a thin grenade-launcher tube off a sniper's barrel."""
+    tm = load_templates()
+    names = [n for n in tm if not n.startswith("name_")]
+    hits, weapons = [], {}
+    for x0, y0, x1, y1 in _clusters(mask_band):
+        bw, bh = x1 - x0, y1 - y0
+        if bh < 8 or bw < 8:
+            continue
+        pad = 6
+        crop = mask_band[max(0, y0 - pad):y1 + pad, max(0, x0 - pad):x1 + pad]
+        best_base, best_v = None, 0.0
+        for n in names:
+            t = tm[n]
+            th, tw = t.shape
+            sim = _size_sim(tw, th, bw, bh)
+            if sim < 0.2:
+                continue                      # not remotely the same size
+            # give the template room: pad the crop up to the template if the icon is smaller
+            c = crop
+            if th > c.shape[0] or tw > c.shape[1]:
+                c = np.zeros((max(th, c.shape[0]), max(tw, c.shape[1])), np.uint8)
+                c[:crop.shape[0], :crop.shape[1]] = crop
+            ncc = float(cv2.matchTemplate(c, t, cv2.TM_CCOEFF_NORMED).max())
+            v = ncc * (sim ** 0.5)
+            if v > best_v:
+                best_base, best_v = _base(n), v
+        if best_base is None or best_v < ICON_MATCH:
+            continue
+        if best_base in KILLTYPE_ICONS:
+            if best_base not in hits:
+                hits.append(best_base)
+        else:
+            weapons[best_base] = max(weapons.get(best_base, 0.0), best_v)
     if weapons:
-        w = max(weapons, key=weapons.get)
-        if weapons[w] >= ICON_MATCH:
-            hits.append(w)
+        hits.append(max(weapons, key=weapons.get))
     return hits
 
 

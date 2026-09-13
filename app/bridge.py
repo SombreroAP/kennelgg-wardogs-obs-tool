@@ -273,6 +273,8 @@ class BridgeRoiCapture:
         h, w = frame.shape[:2]
         self.box = (int(w * self.r["x"]), int(h * self.r["y"]), int(w * self.r["w"]), int(h * self.r["h"]))
         print(f"[capture] plugin source '{self.b.game_source}' is {w}x{h}; ROI x,y,w,h = {self.box}")
+        import ocr
+        ocr.set_frame_height(h)  # the icon templates were cut at 1080p; a 1440p feed is scaled to match
 
     def set_roi(self, r):
         """Kill-feed area changed in the plugin: re-cut the crop from the next frame on."""
