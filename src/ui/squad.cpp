@@ -204,6 +204,9 @@ void SquadPanel::refresh()
 		}
 		if (f.fromRoster)
 			where += ", from Kennel.gg voice";
+		if (f.kind == FriendKind::Discord && !f.handle.empty() &&
+		    QString::fromStdString(f.handle).compare(QString::fromStdString(f.name), Qt::CaseInsensitive) != 0)
+			where += " (" + QString::fromStdString(f.handle) + "'s stream!)";
 		QString st = e_->feedStateText(f);
 		if (!st.isEmpty())
 			where += "  -  " + st;

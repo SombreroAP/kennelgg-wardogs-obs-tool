@@ -599,9 +599,37 @@ private:
 				if (m.hasMatch() && m.capturedStart() > 0)
 					owner = owner.left(m.capturedStart()).trimmed();
 				if (!owner.isEmpty()) {
-					f.handle = owner.toLower().toStdString();
 					if (f.name.empty())
-						f.name = f.handle;
+						f.name = owner.toLower().toStdString();
+					// The slot's username is only ever the owner of the window picked. A typed
+					// name that is somebody else means the wrong window was left selected (the
+					// picker preselects the first pop-out): ask, rather than bind Cy to gazreyn.
+					if (QString::fromStdString(f.name).compare(owner, Qt::CaseInsensitive) != 0) {
+						QMessageBox box(
+							QMessageBox::Question, "Kennel.gg Wardogs",
+							"The window picked is " + owner +
+								"'s stream, but the name is " +
+								QString::fromStdString(f.name) +
+								".\n\nA slot shows the window it is given, whoever it is named "
+								"after. Which did you mean?",
+							QMessageBox::NoButton, this);
+						auto *useOwner =
+							box.addButton("Name it " + owner, QMessageBox::AcceptRole);
+						box.addButton("Keep " + QString::fromStdString(f.name) +
+								      " on that window",
+							      QMessageBox::ActionRole);
+						auto *cancel = box.addButton(QMessageBox::Cancel);
+						box.setDefaultButton(useOwner);
+						box.exec();
+						if (box.clickedButton() == cancel)
+							return;
+						if (box.clickedButton() == useOwner)
+							f.name = owner.toLower().toStdString();
+					}
+					f.handle =
+						QString::fromStdString(f.name).compare(owner, Qt::CaseInsensitive) == 0
+							? owner.toLower().toStdString()
+							: std::string(); // named after someone else: no username to match on
 				}
 			}
 		}

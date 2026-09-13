@@ -755,6 +755,12 @@ void Engine::start()
 	}
 	armPopoutWatch();
 	applyDiscordVolume();
+	for (const auto &f : cfg.friends)
+		if (f.kind == FriendKind::Discord && !f.handle.empty() &&
+		    QString::fromStdString(f.handle).compare(QString::fromStdString(f.name), Qt::CaseInsensitive) != 0)
+			log("Squad: the slot named " + QString::fromStdString(f.name) + " is set to " +
+			    QString::fromStdString(f.handle) +
+			    "'s stream. If that is not who it should show, remove it and add them again with Add.");
 #ifdef _WIN32
 	// Two copies of this plugin both load, and the second one gets no bridge port: ClipHound then
 	// connects to the wrong one and everything looks like it is "starting" for ever.
@@ -1776,13 +1782,25 @@ Engine::Feed Engine::feedState(const Friend &f) const
 		return Feed::Unknown;
 	if (f.onPopout())
 		return Feed::Live; // their window is bound (and kept through a short absence)
-	if (cfg.rosterEnabled) {
+	if (cfg.rosterEnabled && roster.running()) {
 		QString h = QString::fromStdString(f.handle).toLower(), n = QString::fromStdString(f.name).toLower();
+		// which channel is mine, when my username is known: a squad mate who is not in it cannot
+		// be streaming to me, however many other channels they might be sitting in
+		QString me = QString::fromStdString(cfg.myDiscord).toLower(), myChan;
+		if (!me.isEmpty())
+			for (const auto &m : roster.members())
+				if (m.handle.toLower() == me)
+					myChan = m.channel;
 		for (const auto &m : roster.members()) {
 			QString mh = m.handle.toLower(), mn = m.name.toLower();
-			if ((!h.isEmpty() && (mh == h || mn == h)) || mn == n || mh == n)
+			if ((!h.isEmpty() && (mh == h || mn == h)) || mn == n || mh == n) {
+				if (!myChan.isEmpty() && m.channel != myChan)
+					return Feed::Off;
 				return m.streaming ? Feed::Live : Feed::Off;
+			}
 		}
+		if (!myChan.isEmpty())
+			return Feed::Off; // the roster knows my channel and they are not in it
 	}
 	return Feed::Unknown;
 }
@@ -1895,6 +1913,18 @@ void Engine::pickClosest(const QString &why, bool decisive)
 	QString problem;
 	int idx = closestFriend(&d, &problem);
 	if (idx < 0) {
+		// nobody near you has a picture: any live squad mate beats staying on one who does not
+		if (cfg.active() && feedState(*cfg.active()) != Feed::Live) {
+			int alt = anyLiveFriend();
+			if (alt >= 0 && alt != cfg.activeFriend && feedState(cfg.friends[alt]) == Feed::Live) {
+				log("Closest squad mate: nobody near you is streaming" +
+				    (problem.isEmpty() ? QString() : " (" + problem + ")") + " - showing " +
+				    QString::fromStdString(cfg.friends[alt].name) + ", who is live.");
+				setActive(alt);
+				lastPick_ = clock_::now();
+				return;
+			}
+		}
 		if (clock_::now() - lastNearbyWarn_ > std::chrono::seconds(60)) {
 			lastNearbyWarn_ = clock_::now();
 			if (!problem.isEmpty())

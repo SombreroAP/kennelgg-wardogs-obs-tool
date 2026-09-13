@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.22
+- **A slot can no longer be quietly bound to the wrong person's stream.** The by-hand dialog preselects the first pop-out in its window list, and a slot typed as CYANIDE with gazreyn's pop-out left selected became "CYANIDE, showing gazreyn's stream", live whenever gazreyn was. The dialog now asks which you meant when the name and the picked window disagree, a slot named after someone else never takes that person's username, the Squad panel marks any slot still in that state, and the log says so at start.
+- **Not in your channel means not live.** With the voice roster on and your username set, a Discord squad mate who is not in the channel you are in counts as not streaming, since they cannot be streaming to you.
+- **Nobody near you streaming? Any live squad mate is shown.** When the NEARBY list has no one with a picture and the active squad mate is not live, the plugin switches to a squad mate who is, and says so in the log.
+
 ## 0.8.21
 - **Any Discord server.** The voice roster now covers every server the Kennel Ops bot is in, and the Squad panel has a **Discord server** picker: any server the bot can see, or one in particular. Playing somewhere else? The panel shows the link an admin uses to add the bot to that server (it only asks to view channels), and that server's channels appear once it is in. The pop-out flow never needed the bot and works on any server; the bot is what tells the plugin who is live and who is not.
 - **Live buttons at the top of the dock.** One button per squad mate who is streaming with a feed up. Press it and their feed takes the main view, press it again and you are back on your own POV. A button is there exactly as long as its person is live and its capture exists, so the row is empty when nobody is streaming. The one currently on screen is marked.
