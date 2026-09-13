@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.24
+- **Add pop-outs and Show pop-outs are on the dock**, at the top. Add does the same as the Squad panel's button, in-game name prompt included, and the result shows on the dock's status line. Show pop-outs brings tucked pop-outs back to reach their controls and turns into Tuck pop-outs while they are out.
+
 ## 0.8.23
 - **The voice roster outranks a leftover pop-out window.** Discord leaves a pop-out open after a stream ends, and a bound window counted as live even when the roster showed the person had left the channel or stopped. Now, whenever the roster knows your channel, it decides: not listed there means not streaming to you, whatever windows are still open. A bound window only counts as live when there is no roster to ask.
 - Roster display names carry a rank in front ("Recruit Moriar"); a slot named Moriar now matches that, so people in your channel are not wrongly counted as absent.

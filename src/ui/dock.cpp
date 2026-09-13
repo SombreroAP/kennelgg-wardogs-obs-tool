@@ -8,6 +8,7 @@
 #include <QMenu>
 #include <QTimer>
 #include <QMessageBox>
+#include <QInputDialog>
 #include <QScreen>
 #include <QGuiApplication>
 #include <QPlainTextEdit>
@@ -73,6 +74,43 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	// One button per squad mate who is live with a feed up: press it and their feed takes the main
 	// view, press it again and you are back on your own. Rebuilt on every refresh, so a button is
 	// there exactly as long as its person is streaming.
+	// the two things done most often mid-session, right at the top: add whatever is popped out,
+	// and bring the pop-outs back to reach their controls
+	auto *quick = new QHBoxLayout();
+	auto *addPop = new QPushButton("Add pop-outs", this);
+	addPop->setToolTip("Every popped-out Discord stream becomes a squad mate, named by its username. Same as the "
+			   "Add on the Squad panel.");
+	showPop_ = new QPushButton("Show pop-outs", this);
+	showPop_->setCheckable(true);
+	showPop_->setToolTip(
+		"Bring the tucked pop-outs back on screen to mute or adjust them; press again to tuck them away.");
+	quick->addWidget(addPop);
+	quick->addWidget(showPop_);
+	quick->addStretch(1);
+	v->addLayout(quick);
+	connect(addPop, &QPushButton::clicked, this, [this]() {
+		QStringList added;
+		QString what = e_->addPopouts(&added);
+		last_->setText(what);
+		for (const QString &name : added)
+			for (size_t i = 0; i < e_->cfg.friends.size(); ++i)
+				if (QString::fromStdString(e_->cfg.friends[i].name) == name) {
+					Friend &f = e_->cfg.friends[i];
+					bool ok = false;
+					QString v = QInputDialog::getText(
+						this, "In-game name",
+						"What is " + name +
+							" called in the game? (matched against the NEARBY list)",
+						QLineEdit::Normal, name, &ok);
+					if (ok) {
+						v = v.trimmed();
+						f.gameName = (v.isEmpty() || v == name) ? "" : v.toStdString();
+						e_->cfg.save();
+						e_->pushAppConfig();
+					}
+				}
+	});
+	connect(showPop_, &QPushButton::clicked, this, [this](bool on) { e_->showPopouts(on); });
 	liveRow_ = new QHBoxLayout();
 	liveRow_->setSpacing(4);
 	v->addLayout(liveRow_);
@@ -402,6 +440,13 @@ void Dock::refresh()
 		autoSwitch_->blockSignals(true);
 		autoSwitch_->setChecked(e_->cfg.enabled);
 		autoSwitch_->blockSignals(false);
+	}
+	if (showPop_) {
+		showPop_->blockSignals(true);
+		showPop_->setChecked(e_->popoutsShown());
+		showPop_->setText(e_->popoutsShown() ? "Tuck pop-outs" : "Show pop-outs");
+		showPop_->setVisible(e_->cfg.popoutTuck && e_->cfg.popoutMonitor < 0);
+		showPop_->blockSignals(false);
 	}
 	QString st = e_->appState();
 	if (st == "connected") {
