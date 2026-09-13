@@ -1780,28 +1780,37 @@ Engine::Feed Engine::feedState(const Friend &f) const
 {
 	if (f.kind != FriendKind::Discord)
 		return Feed::Unknown;
-	if (f.onPopout())
-		return Feed::Live; // their window is bound (and kept through a short absence)
+	// The voice roster is the authority when it knows my channel: a squad mate it does not list
+	// there is not streaming to me, whatever windows are still open on this PC - Discord leaves a
+	// pop-out up after a stream ends, and a bound window is not proof of a picture.
 	if (cfg.rosterEnabled && roster.running()) {
 		QString h = QString::fromStdString(f.handle).toLower(), n = QString::fromStdString(f.name).toLower();
-		// which channel is mine, when my username is known: a squad mate who is not in it cannot
-		// be streaming to me, however many other channels they might be sitting in
 		QString me = QString::fromStdString(cfg.myDiscord).toLower(), myChan;
 		if (!me.isEmpty())
 			for (const auto &m : roster.members())
 				if (m.handle.toLower() == me)
 					myChan = m.channel;
-		for (const auto &m : roster.members()) {
+		auto isThem = [&](const Roster::Member &m) {
 			QString mh = m.handle.toLower(), mn = m.name.toLower();
-			if ((!h.isEmpty() && (mh == h || mn == h)) || mn == n || mh == n) {
+			if (!h.isEmpty() && (mh == h || mn == h))
+				return true;
+			if (mh == n || mn == n)
+				return true;
+			// display names carry a rank ("Recruit Moriar") in front of the name a slot was given
+			return n.size() >= 3 &&
+			       (mn.endsWith(" " + n) || mn.startsWith(n + " ") || mn.contains(" " + n + " "));
+		};
+		for (const auto &m : roster.members())
+			if (isThem(m)) {
 				if (!myChan.isEmpty() && m.channel != myChan)
 					return Feed::Off;
 				return m.streaming ? Feed::Live : Feed::Off;
 			}
-		}
 		if (!myChan.isEmpty())
 			return Feed::Off; // the roster knows my channel and they are not in it
 	}
+	if (f.onPopout())
+		return Feed::Live; // no roster to ask: a bound window is the best sign there is
 	return Feed::Unknown;
 }
 

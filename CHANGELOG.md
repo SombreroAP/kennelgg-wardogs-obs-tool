@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.23
+- **The voice roster outranks a leftover pop-out window.** Discord leaves a pop-out open after a stream ends, and a bound window counted as live even when the roster showed the person had left the channel or stopped. Now, whenever the roster knows your channel, it decides: not listed there means not streaming to you, whatever windows are still open. A bound window only counts as live when there is no roster to ask.
+- Roster display names carry a rank in front ("Recruit Moriar"); a slot named Moriar now matches that, so people in your channel are not wrongly counted as absent.
+
 ## 0.8.22
 - **A slot can no longer be quietly bound to the wrong person's stream.** The by-hand dialog preselects the first pop-out in its window list, and a slot typed as CYANIDE with gazreyn's pop-out left selected became "CYANIDE, showing gazreyn's stream", live whenever gazreyn was. The dialog now asks which you meant when the name and the picked window disagree, a slot named after someone else never takes that person's username, the Squad panel marks any slot still in that state, and the log says so at start.
 - **Not in your channel means not live.** With the voice roster on and your username set, a Discord squad mate who is not in the channel you are in counts as not streaming, since they cannot be streaming to you.
