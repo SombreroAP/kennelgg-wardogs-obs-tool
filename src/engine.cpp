@@ -1528,7 +1528,7 @@ std::string Engine::stateText() const
 	const Friend *f = cfg.active();
 	std::string name = f ? f->name : "friend";
 	if (!cfg.enabled)
-		return "Paused";
+		return "Auto switch off - your own POV";
 	if (applied_)
 		return revivingRecent() ? "Showing " + name + " - being revived" : "Showing " + name + "'s POV";
 	if (cfg.gameSource.empty())
@@ -2348,7 +2348,8 @@ void Engine::setEnabled(bool on)
 	downRun_ = upRun_ = 0;
 	detected_ = false;
 	detGame_.holdThreshold = 0;
-	log(on ? "Resumed." : "Paused - your own POV stays on.");
+	log(on ? "Auto switch on: a squad mate takes over when you are downed."
+	       : "Auto switch off: your own POV stays up. Show friend's POV still works by hand, and clips keep coming.");
 	emit stateChanged();
 }
 

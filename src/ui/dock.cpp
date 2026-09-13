@@ -101,6 +101,15 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	row->addWidget(new QLabel("Squad mate", this));
 	active_ = new QComboBox(this);
 	row->addWidget(active_, 1);
+	autoSwitch_ = new QCheckBox("Auto switch", this);
+	autoSwitch_->setToolTip("Switch to a squad mate by itself when you get downed. Untick to keep your own POV up "
+				"no matter what; Show friend's POV still works by hand, and clips keep coming.");
+	row->addWidget(autoSwitch_);
+	connect(autoSwitch_, &QCheckBox::toggled, this, [this](bool on) {
+		if (filling_ || on == e_->cfg.enabled)
+			return;
+		e_->setEnabled(on);
+	});
 	closest_ = new QCheckBox("Closest", this);
 	closest_->setToolTip(
 		"Show whoever the game's NEARBY list says is closest, instead of the squad mate chosen here.\n"
@@ -197,14 +206,12 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 			e_->setDual(on, "dock");
 	});
 	auto *btns2 = new QHBoxLayout();
-	pause_ = new QPushButton("Pause", this);
 	auto *squad = new QPushButton("Squad", this);
 	squad->setToolTip("Turn popped-out Discord streams into squad mates, and manage them mid-broadcast.");
 	auto *settings = new QPushButton("Settings...", this);
 	auto *wiz = new QPushButton("Setup", this);
 	auto *logs = new QPushButton("Logs", this);
 	btns2->addWidget(squad);
-	btns2->addWidget(pause_);
 	btns2->addWidget(wiz);
 	btns2->addWidget(settings);
 	btns2->addWidget(logs);
@@ -212,7 +219,6 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	connect(squad, &QPushButton::clicked, this, &Dock::openSquad);
 	connect(wiz, &QPushButton::clicked, this, &Dock::openWizard);
 	v->addLayout(btns2);
-	connect(pause_, &QPushButton::clicked, this, [this]() { e_->setEnabled(!e_->cfg.enabled); });
 	connect(settings, &QPushButton::clicked, this, &Dock::openSettings);
 
 	app_ = new QLabel(this);
@@ -321,7 +327,11 @@ void Dock::refresh()
 	filling_ = false;
 	state_->setText(QString::fromStdString(e_->stateText()));
 	state_->setStyleSheet(e_->applied() ? "color: #ce6050;" : "");
-	pause_->setText(e_->cfg.enabled ? "Pause" : "Resume");
+	if (autoSwitch_) {
+		autoSwitch_->blockSignals(true);
+		autoSwitch_->setChecked(e_->cfg.enabled);
+		autoSwitch_->blockSignals(false);
+	}
 	QString st = e_->appState();
 	if (st == "connected") {
 		appBtn_->setText("Stop ClipHound");
