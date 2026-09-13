@@ -125,6 +125,22 @@ SquadPanel::SquadPanel(Engine *engine, QWidget *parent) : QDialog(parent), e_(en
 		"Bring the pop-outs back on screen to use their own controls, then press again to tuck them away.");
 	form->addRow(show_);
 	connect(show_, &QPushButton::clicked, this, [this](bool on) { e_->showPopouts(on); });
+	guild_ = new QComboBox(this);
+	guild_->setToolTip("Which Discord server's voice channels count. The bot has to be in the server to see it: "
+			   "the link below adds it to another one.");
+	form->addRow("Discord server", guild_);
+	connect(guild_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int i) {
+		if (fillingGuilds_ || i < 0)
+			return;
+		e_->cfg.rosterGuild = guild_->currentData().toString().toStdString();
+		e_->cfg.save();
+		e_->applyRosterConfig();
+	});
+	invite_ = new QLabel(this);
+	invite_->setOpenExternalLinks(true);
+	invite_->setWordWrap(true);
+	invite_->setStyleSheet("color: palette(mid);");
+	form->addRow(invite_);
 	rosterState_ = new QLabel(this);
 	rosterState_->setStyleSheet("color: palette(mid);");
 	form->addRow(rosterState_);
@@ -207,7 +223,32 @@ void SquadPanel::refresh()
 	show_->setText(e_->popoutsShown() ? "Tuck pop-outs away again" : "Show pop-outs (to mute or adjust them)");
 	show_->blockSignals(false);
 	show_->setVisible(e_->cfg.popoutTuck && e_->cfg.popoutMonitor < 0);
-	rosterState_->setText(e_->cfg.rosterEnabled ? "Kennel.gg voice: " + e_->rosterStatus() : "");
+	rosterState_->setText(e_->cfg.rosterEnabled ? "Discord voice: " + e_->rosterStatus() : "");
+	{
+		QStringList gs = e_->roster.guilds();
+		QString cur = QString::fromStdString(e_->cfg.rosterGuild);
+		if (!cur.isEmpty() && !gs.contains(cur))
+			gs << cur;
+		QStringList shown;
+		for (int i = 0; i < guild_->count(); i++)
+			shown << guild_->itemText(i);
+		QStringList want = QStringList{"Any server the bot can see"} + gs;
+		fillingGuilds_ = true;
+		if (shown != want) {
+			guild_->clear();
+			guild_->addItem("Any server the bot can see", "");
+			for (const QString &g : gs)
+				guild_->addItem(g, g);
+		}
+		guild_->setCurrentIndex(std::max(0, guild_->findData(cur)));
+		fillingGuilds_ = false;
+		QString inv = e_->roster.inviteUrl();
+		invite_->setText(
+			inv.isEmpty() ? QString()
+				      : "Playing on another server? Its admin adds the Kennel Ops bot with <a href=\"" +
+						inv + "\">this link</a> and that server's channels appear here.");
+		invite_->setVisible(!inv.isEmpty() && e_->cfg.rosterEnabled);
+	}
 	rosterState_->setVisible(e_->cfg.rosterEnabled);
 }
 

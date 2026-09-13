@@ -1041,7 +1041,7 @@ void Engine::applyRosterConfig()
 		return;
 	}
 	roster.configure(QString::fromStdString(cfg.rosterUrl), cfg.rosterPollS,
-			 QString::fromStdString(cfg.rosterChannel));
+			 QString::fromStdString(cfg.rosterChannel), QString::fromStdString(cfg.rosterGuild));
 }
 
 void Engine::syncRoster()

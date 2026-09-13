@@ -20,12 +20,17 @@ public:
 		bool streaming = false; // they have gone live in the call
 		bool camera = false;
 		QString channel; // the voice channel they are in
+		QString guild;   // the Discord server that channel is in
 	};
 
 	explicit Roster(QObject *parent = nullptr);
 
 	/// Start polling `url` every `seconds`. An empty url stops it.
-	void configure(const QString &url, int seconds, const QString &onlyChannel);
+	void configure(const QString &url, int seconds, const QString &onlyChannel,
+		       const QString &onlyGuild = QString());
+	/// Every server the bot can see, from the last poll, and the link that adds it to another one.
+	QStringList guilds() const { return guilds_; }
+	QString inviteUrl() const { return invite_; }
 	void poll(); // now, out of turn
 	void stop();
 
@@ -44,7 +49,9 @@ signals:
 private:
 	QNetworkAccessManager *net_ = nullptr;
 	QTimer timer_;
-	QString url_, onlyChannel_, status_ = "off";
+	QString url_, onlyChannel_, onlyGuild_, status_ = "off";
+	QStringList guilds_;
+	QString invite_;
 	QList<Member> members_;
 	bool inFlight_ = false;
 };

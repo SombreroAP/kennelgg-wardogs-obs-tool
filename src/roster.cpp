@@ -12,9 +12,10 @@ Roster::Roster(QObject *parent) : QObject(parent)
 	connect(&timer_, &QTimer::timeout, this, &Roster::poll);
 }
 
-void Roster::configure(const QString &url, int seconds, const QString &onlyChannel)
+void Roster::configure(const QString &url, int seconds, const QString &onlyChannel, const QString &onlyGuild)
 {
 	onlyChannel_ = onlyChannel.trimmed();
+	onlyGuild_ = onlyGuild.trimmed();
 	QString u = url.trimmed();
 	if (u.isEmpty()) {
 		stop();
@@ -80,9 +81,16 @@ void Roster::poll()
 		}
 		QJsonObject o = QJsonDocument::fromJson(r->readAll()).object();
 		QList<Member> found;
+		QStringList guilds;
+		invite_ = o.value("invite").toString();
 		for (const QJsonValue &cv : o.value("channels").toArray()) {
 			QJsonObject c = cv.toObject();
 			QString chan = c.value("channel").toString();
+			QString guild = c.value("guild").toString();
+			if (!guild.isEmpty() && !guilds.contains(guild))
+				guilds << guild;
+			if (!onlyGuild_.isEmpty() && guild.compare(onlyGuild_, Qt::CaseInsensitive) != 0)
+				continue;
 			if (!onlyChannel_.isEmpty() && chan.compare(onlyChannel_, Qt::CaseInsensitive) != 0)
 				continue;
 			for (const QJsonValue &mv : c.value("members").toArray()) {
@@ -95,9 +103,14 @@ void Roster::poll()
 				e.streaming = m.value("streaming").toBool();
 				e.camera = m.value("camera").toBool();
 				e.channel = chan;
+				e.guild = guild;
 				found.append(e);
 			}
 		}
+		for (const QJsonValue &gv : o.value("guilds").toArray())
+			if (!guilds.contains(gv.toString()))
+				guilds << gv.toString(); // servers the bot is in with nobody in voice right now
+		guilds_ = guilds;
 		bool same = found.size() == members_.size();
 		for (int i = 0; same && i < found.size(); ++i)
 			same = found[i].name == members_[i].name && found[i].streaming == members_[i].streaming &&

@@ -5,6 +5,7 @@
 #include <QPushButton>
 #include <QCheckBox>
 #include <QLineEdit>
+#include <QComboBox>
 #include "engine.h"
 
 /// The Squad panel, one button from the dock: turn popped-out Discord streams into squad mates,
@@ -28,5 +29,8 @@ private:
 	QListWidget *list_;
 	QPushButton *add_, *active_, *remove_, *gameName_, *dual_, *show_ = nullptr;
 	QCheckBox *roster_;
+	QComboBox *guild_ = nullptr;
+	QLabel *invite_ = nullptr;
+	bool fillingGuilds_ = false;
 	QLineEdit *me_;
 };

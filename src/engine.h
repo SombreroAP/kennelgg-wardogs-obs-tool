@@ -191,9 +191,9 @@ private:
 	void switchTo(int idx, const QString &why);
 	int friendIndexFor(const QString &gameName) const;
 	int nearbyDistanceOf(int friendIdx) const;
-	bool feedUsable(const Friend &f) const;
 
 public:
+	bool feedUsable(const Friend &f) const;
 	/// Whether a squad mate has a picture to show right now. Live: their pop-out is bound, or the
 	/// Discord roster says they are streaming. Off: the roster has them in voice and not streaming,
 	/// so there is nothing to show. Unknown: no way to tell (Twitch, an OBS source, a Discord slot

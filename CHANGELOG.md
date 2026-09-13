@@ -3,6 +3,7 @@
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
 ## 0.8.21
+- **Any Discord server.** The voice roster now covers every server the Kennel Ops bot is in, and the Squad panel has a **Discord server** picker: any server the bot can see, or one in particular. Playing somewhere else? The panel shows the link an admin uses to add the bot to that server (it only asks to view channels), and that server's channels appear once it is in. The pop-out flow never needed the bot and works on any server; the bot is what tells the plugin who is live and who is not.
 - **Live buttons at the top of the dock.** One button per squad mate who is streaming with a feed up. Press it and their feed takes the main view, press it again and you are back on your own POV. A button is there exactly as long as its person is live and its capture exists, so the row is empty when nobody is streaming. The one currently on screen is marked.
 
 ## 0.8.20

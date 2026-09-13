@@ -85,6 +85,7 @@ struct Config {
 		return "https://kennel.gg/api/voice-KHc1U8CRGy8Ixq2JAeKj6JNAjdo8mDDu.json";
 	}
 	std::string rosterChannel;    // only this voice channel ("" = whichever one people are in)
+	std::string rosterGuild;      // only this Discord server ("" = every one the bot can see)
 	int rosterPollS = 6;          // how often to ask
 	bool rosterAddSources = true; // create the Discord capture for whoever goes live
 	/// Pin every bound pop-out above other windows, tucked to the screen edge with a sliver showing,
