@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.20
+- **The dock's dropdowns list only squad mates who are streaming.** A slot the Kennel.gg voice roster has in voice but not streaming is left out of both the squad-mate and the Dual POV dropdown until they go live, and the ones known to be live carry a dot. Slots nobody can vouch for (Twitch, an OBS source, a Discord slot the roster does not know) stay in. If the one currently chosen stops streaming the dropdown shows nothing selected and reads "nobody streaming" when the list is empty. The lists refresh with every roster poll.
+
 ## 0.8.19
 - **Only squad mates with a picture get shown.** A squad mate whose pop-out is bound, or who the Kennel.gg voice roster says is streaming, counts as live. One the roster has in voice but not streaming counts as off, and is never shown however close they are: Closest skips them for the nearest live one, and if the active squad mate is off when you go down, a live one takes their place, or you stay on your own POV with a line in the log saying so. Slots nobody can vouch for (Twitch, an OBS source, a Discord slot the roster does not know) are treated as live, as before. The Squad panel shows live / not streaming beside each slot.
 

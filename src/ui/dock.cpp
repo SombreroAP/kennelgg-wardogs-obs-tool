@@ -147,8 +147,11 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 		refresh();
 	});
 	connect(active_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int i) {
-		if (!filling_ && i >= 0)
-			e_->setActive(i);
+		if (filling_ || i < 0)
+			return;
+		int f = active_->itemData(i).toInt(); // the list hides squad mates who are not streaming
+		if (f >= 0 && f < (int)e_->cfg.friends.size())
+			e_->setActive(f);
 	});
 
 	auto *btns = new QHBoxLayout();
@@ -189,19 +192,22 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 			   : "Dual POV: auto off - only the Force button opens the window.");
 	});
 	connect(dualPick_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int i) {
-		if (filling_ || i < 0 || i >= (int)e_->cfg.friends.size())
+		if (filling_ || i < 0)
+			return;
+		int f = dualPick_->itemData(i).toInt();
+		if (f < 0 || f >= (int)e_->cfg.friends.size())
 			return;
 		if (e_->dualOn())
-			e_->showInDual(i, "dock"); // the window is up: swap the person inside it
+			e_->showInDual(f, "dock"); // the window is up: swap the person inside it
 		else {
-			e_->cfg.dualFriend = i;
+			e_->cfg.dualFriend = f;
 			e_->cfg.save();
 		}
 	});
 	connect(dual_, &QPushButton::clicked, this, [this](bool on) {
-		int i = dualPick_->currentIndex();
-		if (on && i >= 0 && i < (int)e_->cfg.friends.size())
-			e_->showInDual(i, "dock");
+		int f = dualPick_->currentIndex() >= 0 ? dualPick_->currentData().toInt() : -1;
+		if (on && f >= 0 && f < (int)e_->cfg.friends.size())
+			e_->showInDual(f, "dock");
 		else
 			e_->setDual(on, "dock");
 	});
@@ -277,6 +283,8 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	v->addStretch(1);
 
 	connect(e_, &Engine::stateChanged, this, &Dock::refresh);
+	connect(&e_->roster, &Roster::changed, this, &Dock::refresh);
+	connect(&e_->roster, &Roster::polled, this, &Dock::refresh);
 	connect(e_, &Engine::frameUpdated, this, [this]() {
 		Match m = e_->lastGame();
 		bool down = m.score >= e_->cfg.threshold;
@@ -294,36 +302,43 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 
 void Dock::refresh()
 {
+	// Only squad mates with a picture are offered: a slot the voice roster has in voice but not
+	// streaming is left out. Slots nobody can vouch for (Twitch, an OBS source) stay in.
 	QStringList names;
-	for (auto &f : e_->cfg.friends)
-		names << QString::fromStdString(f.name);
-	QStringList shown;
-	for (int i = 0; i < active_->count(); i++)
-		shown << active_->itemText(i);
-	filling_ = true;
-	if (shown != names) { // rebuilding while the user has the list open would close it
-		active_->clear();
-		active_->addItems(names);
+	QList<int> idx;
+	for (size_t i = 0; i < e_->cfg.friends.size(); ++i) {
+		const Friend &f = e_->cfg.friends[i];
+		if (e_->feedState(f) == Engine::Feed::Off)
+			continue;
+		QString label = QString::fromStdString(f.name);
+		if (e_->feedState(f) == Engine::Feed::Live)
+			label += "  \u25cf"; // a dot for the ones known to be streaming
+		names << label;
+		idx << (int)i;
 	}
-	if (!names.isEmpty())
-		active_->setCurrentIndex(std::clamp(e_->cfg.activeFriend, 0, (int)names.size() - 1));
+	auto fill = [&](QComboBox *box, int want) {
+		QStringList shown;
+		for (int i = 0; i < box->count(); i++)
+			shown << box->itemText(i);
+		if (shown != names) { // rebuilding while the user has the list open would close it
+			box->clear();
+			for (int i = 0; i < names.size(); i++)
+				box->addItem(names[i], idx[i]);
+		}
+		int row = idx.indexOf(want);
+		box->setCurrentIndex(row); // -1 when the one chosen is not streaming: nothing selected
+		box->setEnabled(!names.isEmpty());
+		box->setPlaceholderText(e_->cfg.friends.empty() ? "no squad mates yet" : "nobody streaming");
+	};
+	filling_ = true;
+	fill(active_, e_->cfg.activeFriend);
 	if (dualAuto_) {
 		dualAuto_->blockSignals(true);
 		dualAuto_->setChecked(e_->cfg.dualAuto);
 		dualAuto_->blockSignals(false);
 	}
-	if (dualPick_) {
-		QStringList dshown;
-		for (int i = 0; i < dualPick_->count(); i++)
-			dshown << dualPick_->itemText(i);
-		if (dshown != names) {
-			dualPick_->clear();
-			dualPick_->addItems(names);
-		}
-		if (!names.isEmpty())
-			dualPick_->setCurrentIndex(std::clamp(e_->cfg.dualFriend, 0, (int)names.size() - 1));
-		dualPick_->setEnabled(!names.isEmpty());
-	}
+	if (dualPick_)
+		fill(dualPick_, e_->cfg.dualFriend);
 	filling_ = false;
 	state_->setText(QString::fromStdString(e_->stateText()));
 	state_->setStyleSheet(e_->applied() ? "color: #ce6050;" : "");
