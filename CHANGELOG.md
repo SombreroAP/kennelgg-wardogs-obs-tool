@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.9.0
+- **A proper face.** The dock carries the Kennel.gg hound and wordmark in the brand's condensed face, the status line is a pill whose colour is the state (olive watching, red showing, grey off), the sections are labelled Squad, Dual POV, Clips and Events, every button and drop-down shares one height and edge, and the live buttons are olive chips that turn red for the one on screen. Colours are the brand's graphite, olive, amber and bone, and the styling is scoped to the plugin's own panels so OBS's theme is untouched. The settings window gets the same header and section titles.
+
 ## 0.8.25
 - **Setup is built around Discord now.** The squad page of the setup explains the session flow (join voice, pop out squad mates' streams, press Add pop-outs), asks for your Discord username, turns on the voice roster so the plugin sees who is in your channel and who is live, and says plainly that the Kennel Ops bot needs to be in the server you play on for the best experience, with the link an admin uses to add it and the list of servers it can see right now.
 - **Do not minimise a pop-out.** The setup and the log both say it: a minimised window stops drawing and its feed freezes. Tucked away is fine.

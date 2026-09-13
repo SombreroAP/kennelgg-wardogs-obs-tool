@@ -8,6 +8,8 @@
 #include <QMenu>
 #include <QTimer>
 #include <QMessageBox>
+#include <QStyle>
+#include <QPixmap>
 #include <QInputDialog>
 #include <QScreen>
 #include <QGuiApplication>
@@ -58,19 +60,80 @@ static void showOnScreen(QWidget *w)
 	});
 }
 
+/// The dock's look: the brand's graphite, olive, amber and bone, scoped to this widget so OBS's own
+/// theme is left alone. Buttons share one height and one edge; the status line is a pill whose
+/// colour is the state; section labels are the condensed face in small caps.
+static const char *kDockStyle = R"(
+#kennelDock { background: #1c1f1d; }
+#kennelDock QLabel { color: #e6e2d6; }
+#kennelDock QLabel#eyebrow { color: #c99a3b; font-family: "Saira Condensed"; font-size: 12pt; font-weight: 700;
+	letter-spacing: 2px; padding: 8px 0 2px 0; border-bottom: 1px solid #343835; margin-bottom: 2px; }
+#kennelDock QLabel#wordmark { color: #ece7db; font-family: "Saira Condensed"; font-size: 17pt; font-weight: 700;
+	letter-spacing: 1px; }
+#kennelDock QLabel#version { color: #7c8076; font-family: "IBM Plex Mono"; font-size: 8pt; }
+#kennelDock QLabel#statePill { padding: 5px 10px; border-radius: 3px; border: 1px solid #3a3e3b; background: #242725;
+	font-weight: 600; }
+#kennelDock QLabel#statePill[mode="watching"] { border-color: #6f7c45; color: #cbd3a4; }
+#kennelDock QLabel#statePill[mode="showing"] { border-color: #ce6050; background: #3a2521; color: #f2c9c1; }
+#kennelDock QLabel#statePill[mode="off"] { border-color: #3a3e3b; color: #9a9e93; }
+#kennelDock QPushButton { min-height: 24px; padding: 2px 10px; border: 1px solid #3a3e3b; border-radius: 3px;
+	background: #262927; color: #e6e2d6; }
+#kennelDock QPushButton:hover { background: #2f3330; border-color: #4a4f4b; }
+#kennelDock QPushButton:pressed { background: #202321; }
+#kennelDock QPushButton:checked { border-color: #c99a3b; background: #2e2a1f; }
+#kennelDock QPushButton:disabled { color: #6c7068; border-color: #2e3230; }
+#kennelDock QPushButton#liveChip { border-color: #6f7c45; background: #232a1e; color: #d9e0b6; font-weight: 600; }
+#kennelDock QPushButton#liveChip:checked { border-color: #ce6050; background: #3a2521; color: #f2c9c1; }
+#kennelDock QComboBox { min-height: 24px; padding: 1px 6px; border: 1px solid #3a3e3b; border-radius: 3px;
+	background: #262927; color: #e6e2d6; }
+#kennelDock QComboBox:disabled { color: #6c7068; }
+#kennelDock QCheckBox { color: #e6e2d6; spacing: 5px; }
+#kennelDock QListWidget { border: 1px solid #2e3230; border-radius: 3px; background: #202321; color: #c9c5b8;
+	font-family: "IBM Plex Mono"; font-size: 8pt; }
+#kennelDock QToolButton { border: 1px solid #3a3e3b; border-radius: 3px; background: #262927; color: #e6e2d6; padding: 2px 6px; }
+)";
+
+static QLabel *eyebrow(const QString &text, QWidget *parent)
+{
+	auto *l = new QLabel(text.toUpper(), parent);
+	l->setObjectName("eyebrow");
+	return l;
+}
+
 Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 {
+	setObjectName("kennelDock");
+	setStyleSheet(kDockStyle);
 	auto *v = new QVBoxLayout(this);
-	v->setContentsMargins(8, 8, 8, 8);
+	v->setContentsMargins(10, 8, 10, 8);
+	v->setSpacing(6);
+	// header: the hound, the wordmark, the build
+	{
+		auto *head = new QHBoxLayout();
+		head->setSpacing(8);
+		auto *mark = new QLabel(this);
+		char *p = obs_module_file("brand/hound_mark.png");
+		if (p) {
+			QPixmap px(QString::fromUtf8(p));
+			bfree(p);
+			if (!px.isNull())
+				mark->setPixmap(px.scaledToHeight(26, Qt::SmoothTransformation));
+		}
+		head->addWidget(mark);
+		auto *wm = new QLabel("KENNEL.GG WARDOGS", this);
+		wm->setObjectName("wordmark");
+		head->addWidget(wm);
+		head->addStretch(1);
+		auto *ver = new QLabel(QString("v%1").arg(PLUGIN_VERSION), this);
+		ver->setObjectName("version");
+		head->addWidget(ver);
+		v->addLayout(head);
+	}
 	state_ = new QLabel(this);
-	QFont f = state_->font();
-	if (f.pointSizeF() > 0)
-		f.setPointSizeF(f.pointSizeF() + 2);
-	else if (f.pixelSize() > 0)
-		f.setPixelSize(f.pixelSize() + 3);
-	f.setBold(true);
-	state_->setFont(f);
+	state_->setObjectName("statePill");
+	state_->setAlignment(Qt::AlignCenter);
 	v->addWidget(state_);
+	v->addWidget(eyebrow("Squad", this));
 	// One button per squad mate who is live with a feed up: press it and their feed takes the main
 	// view, press it again and you are back on your own. Rebuilt on every refresh, so a button is
 	// there exactly as long as its person is streaming.
@@ -209,8 +272,8 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 
 	// Dual POV is its own thing: its own person, its own button, nothing to do with the drop-down
 	// above, which is who the full-screen swap shows.
+	v->addWidget(eyebrow("Dual POV", this));
 	auto *dualRow = new QHBoxLayout();
-	dualRow->addWidget(new QLabel("Dual POV", this));
 	dualPick_ = new QComboBox(this);
 	dualPick_->setToolTip("Who goes in the small Dual POV window. Separate from the squad mate above.");
 	dualRow->addWidget(dualPick_, 1);
@@ -285,6 +348,7 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 		}
 	}
 	// ClipHound control, styled like OBS's replay-buffer control: [Start/Stop ClipHound] [Save clip ▾]
+	v->addWidget(eyebrow("Clips", this));
 	auto *appRow = new QHBoxLayout();
 	appBtn_ = new QPushButton("Start ClipHound", this);
 	appRow->addWidget(appBtn_, 1);
@@ -315,6 +379,7 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	clipNow_ = nullptr;
 	v->addWidget(clip_);
 	v->addWidget(app_);
+	v->addWidget(eyebrow("Events", this));
 	events_ = new QListWidget(this);
 	events_->setMaximumHeight(120);
 	events_->setSelectionMode(QAbstractItemView::NoSelection);
@@ -333,7 +398,7 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 		Match m = e_->lastGame();
 		bool down = m.score >= e_->cfg.threshold;
 		detector_->setText(QString("Downed state detector: <b style=\"color:%1\">%2</b>")
-					   .arg(down ? "#ce6050" : "#4cbe5a", m.score < 0 ? "no template"
+					   .arg(down ? "#ce6050" : "#8f9c5a", m.score < 0 ? "no template"
 									      : down      ? "Downed"
 											  : "Alive"));
 		if (e_->revivingRecent())
@@ -362,8 +427,10 @@ void Dock::refresh()
 				delete it;
 			}
 			liveButtons_.clear();
+			liveNames_.clear();
 			for (int k = 0; k < liveNames.size(); k++) {
 				auto *b = new QPushButton(liveNames[k], this);
+				b->setObjectName("liveChip");
 				b->setCheckable(true);
 				b->setToolTip("Force " + liveNames[k] +
 					      "'s feed into the main view. Press again to come back to yours.");
@@ -381,6 +448,7 @@ void Dock::refresh()
 				});
 				liveRow_->addWidget(b);
 				liveButtons_ << b;
+				liveNames_ << liveNames[k];
 			}
 			liveRow_->addStretch(1);
 			liveShown_ = liveNames;
@@ -391,9 +459,9 @@ void Dock::refresh()
 			liveButtons_[k]->blockSignals(true);
 			liveButtons_[k]->setChecked(on);
 			liveButtons_[k]->blockSignals(false);
-			liveButtons_[k]->setStyleSheet(
-				on ? "QPushButton { border-left: 4px solid #ce6050; font-weight: bold; }"
-				   : "QPushButton { border-left: 4px solid #4cbe5a; }");
+			liveButtons_[k]->setToolTip(on ? liveNames_[k] +
+								    " is on screen. Press to come back to your own POV."
+						       : "Force " + liveNames_[k] + "'s feed into the main view.");
 		}
 	}
 	// Only squad mates with a picture are offered: a slot the voice roster has in voice but not
@@ -435,7 +503,14 @@ void Dock::refresh()
 		fill(dualPick_, e_->cfg.dualFriend);
 	filling_ = false;
 	state_->setText(QString::fromStdString(e_->stateText()));
-	state_->setStyleSheet(e_->applied() ? "color: #ce6050;" : "");
+	{
+		const char *mode = e_->applied() ? "showing" : !e_->cfg.enabled ? "off" : "watching";
+		if (state_->property("mode").toString() != mode) {
+			state_->setProperty("mode", mode);
+			state_->style()->unpolish(state_);
+			state_->style()->polish(state_);
+		}
+	}
 	if (autoSwitch_) {
 		autoSwitch_->blockSignals(true);
 		autoSwitch_->setChecked(e_->cfg.enabled);
@@ -451,7 +526,7 @@ void Dock::refresh()
 	QString st = e_->appState();
 	if (st == "connected") {
 		appBtn_->setText("Stop ClipHound");
-		appBtn_->setStyleSheet("QPushButton { border-left: 4px solid #4cbe5a; }");
+		appBtn_->setStyleSheet("QPushButton { border-left: 4px solid #8f9c5a; }");
 		app_->setText("ClipHound: " + (e_->appStatus().isEmpty() ? QString("connected") : e_->appStatus()));
 	} else if (st == "starting") {
 		appBtn_->setText("Stop ClipHound");
@@ -510,7 +585,7 @@ void Dock::refresh()
 			       : e_->dualOn()   ? "Dual POV (auto)"
 						: "Force Dual POV");
 		dual_->setStyleSheet(e_->dualForced() ? "QPushButton { border-left: 4px solid #c99a3b; }"
-				     : e_->dualOn()   ? "QPushButton { border-left: 4px solid #4cbe5a; }"
+				     : e_->dualOn()   ? "QPushButton { border-left: 4px solid #8f9c5a; }"
 						      : "");
 	}
 	show_->setEnabled(!e_->applied());

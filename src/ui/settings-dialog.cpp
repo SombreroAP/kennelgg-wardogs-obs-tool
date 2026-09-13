@@ -21,6 +21,7 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QMessageBox>
+#include <QPixmap>
 #include <QRegularExpression>
 #include <QFileDialog>
 #include <QDesktopServices>
@@ -676,6 +677,36 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	setMinimumSize(560, 400); // it scrolls now, so it can be made genuinely small
 	resize(900, 720);
 	auto *v = new QVBoxLayout(this);
+	// the same header as the dock, so the two read as one product
+	{
+		setObjectName("kennelSettings");
+		setStyleSheet(
+			"#kennelSettings QLabel#wordmark { color: #ece7db; font-family: \"Saira Condensed\"; font-size: 17pt; "
+			"font-weight: 700; letter-spacing: 1px; } "
+			"#kennelSettings QLabel#version { color: #7c8076; font-family: \"IBM Plex Mono\"; font-size: 8pt; } "
+			"#kennelSettings QGroupBox { font-family: \"Saira Condensed\"; font-size: 12pt; font-weight: 700; "
+			"letter-spacing: 1px; margin-top: 14px; } "
+			"#kennelSettings QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; color: #c99a3b; }");
+		auto *head = new QHBoxLayout();
+		head->setSpacing(8);
+		auto *mark = new QLabel(this);
+		char *p = obs_module_file("brand/hound_mark.png");
+		if (p) {
+			QPixmap px(QString::fromUtf8(p));
+			bfree(p);
+			if (!px.isNull())
+				mark->setPixmap(px.scaledToHeight(28, Qt::SmoothTransformation));
+		}
+		head->addWidget(mark);
+		auto *wm = new QLabel("KENNEL.GG WARDOGS", this);
+		wm->setObjectName("wordmark");
+		head->addWidget(wm);
+		head->addStretch(1);
+		auto *ver = new QLabel(QString("v%1  ·  kennel.gg").arg(PLUGIN_VERSION), this);
+		ver->setObjectName("version");
+		head->addWidget(ver);
+		v->addLayout(head);
+	}
 	auto *tabs = new QTabWidget(this);
 	// Every tab scrolls. On a small screen, at 125 % Windows scaling or with a large font, the
 	// contents used to be squeezed into whatever height was left instead of keeping their own.

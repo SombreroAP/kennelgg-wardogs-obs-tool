@@ -41,6 +41,7 @@ private:
 	QPushButton *showPop_ = nullptr;
 	QHBoxLayout *liveRow_ = nullptr;
 	QList<QPushButton *> liveButtons_;
+	QStringList liveNames_;
 	QStringList liveShown_;
 	QList<int> liveIdx_;
 	QToolButton *saveBtn_;

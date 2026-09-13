@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include <plugin-support.h>
 #include <QMainWindow>
 #include <QTimer>
+#include <QFontDatabase>
 #include "engine.h"
 #include "ui/dock.h"
 #include "ui/settings-dialog.h"
@@ -134,6 +135,14 @@ static void onFrontendEvent(enum obs_frontend_event event, void *)
 
 bool obs_module_load(void)
 {
+	// the brand faces the dock and the settings use, shipped with the overlay page
+	for (const char *f : {"overlay/SairaCondensed-Bold.ttf", "overlay/IBMPlexMono-SemiBold.ttf"}) {
+		char *p = obs_module_file(f);
+		if (p) {
+			QFontDatabase::addApplicationFont(QString::fromUtf8(p));
+			bfree(p);
+		}
+	}
 	auto *main = (QMainWindow *)obs_frontend_get_main_window();
 	g_engine = new Engine(main);
 	g_dock = new Dock(g_engine);
