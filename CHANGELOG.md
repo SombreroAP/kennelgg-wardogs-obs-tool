@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.8.21
+- **Live buttons at the top of the dock.** One button per squad mate who is streaming with a feed up. Press it and their feed takes the main view, press it again and you are back on your own POV. A button is there exactly as long as its person is live and its capture exists, so the row is empty when nobody is streaming. The one currently on screen is marked.
+
 ## 0.8.20
 - **The dock's dropdowns list only squad mates who are streaming.** A slot the Kennel.gg voice roster has in voice but not streaming is left out of both the squad-mate and the Dual POV dropdown until they go live, and the ones known to be live carry a dot. Slots nobody can vouch for (Twitch, an OBS source, a Discord slot the roster does not know) stay in. If the one currently chosen stops streaming the dropdown shows nothing selected and reads "nobody streaming" when the list is empty. The lists refresh with every roster poll.
 

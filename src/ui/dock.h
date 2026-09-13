@@ -1,5 +1,6 @@
 #pragma once
 #include <QWidget>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QComboBox>
 #include <QPushButton>
@@ -37,6 +38,10 @@ private:
 	QCheckBox *dualAuto_ = nullptr;
 	QPushButton *show_, *back_, *clipNow_, *appBtn_;
 	QCheckBox *autoSwitch_ = nullptr;
+	QHBoxLayout *liveRow_ = nullptr;
+	QList<QPushButton *> liveButtons_;
+	QStringList liveShown_;
+	QList<int> liveIdx_;
 	QToolButton *saveBtn_;
 	bool filling_ = false;
 	QPointer<QDialog> settings_;

@@ -70,6 +70,12 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	f.setBold(true);
 	state_->setFont(f);
 	v->addWidget(state_);
+	// One button per squad mate who is live with a feed up: press it and their feed takes the main
+	// view, press it again and you are back on your own. Rebuilt on every refresh, so a button is
+	// there exactly as long as its person is streaming.
+	liveRow_ = new QHBoxLayout();
+	liveRow_->setSpacing(4);
+	v->addLayout(liveRow_);
 
 	detector_ = new QLabel(this);
 	detector_->setTextFormat(Qt::RichText);
@@ -302,6 +308,56 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 
 void Dock::refresh()
 {
+	// the live buttons at the top: rebuilt only when the set of live squad mates changes
+	{
+		QStringList liveNames;
+		QList<int> liveIdx;
+		for (size_t i = 0; i < e_->cfg.friends.size(); ++i)
+			if (e_->feedState(e_->cfg.friends[i]) == Engine::Feed::Live &&
+			    e_->feedUsable(e_->cfg.friends[i])) {
+				liveNames << QString::fromStdString(e_->cfg.friends[i].name);
+				liveIdx << (int)i;
+			}
+		if (liveNames != liveShown_) {
+			while (QLayoutItem *it = liveRow_->takeAt(0)) {
+				delete it->widget();
+				delete it;
+			}
+			liveButtons_.clear();
+			for (int k = 0; k < liveNames.size(); k++) {
+				auto *b = new QPushButton(liveNames[k], this);
+				b->setCheckable(true);
+				b->setToolTip("Force " + liveNames[k] +
+					      "'s feed into the main view. Press again to come back to yours.");
+				int f = liveIdx[k];
+				connect(b, &QPushButton::clicked, this, [this, f]() {
+					if (f < 0 || f >= (int)e_->cfg.friends.size())
+						return;
+					if (e_->applied() && e_->cfg.activeFriend == f)
+						e_->applyNow(false, "button");
+					else {
+						e_->setActive(f); // switches on the spot when already showing someone
+						if (!e_->applied())
+							e_->applyNow(true, "button");
+					}
+				});
+				liveRow_->addWidget(b);
+				liveButtons_ << b;
+			}
+			liveRow_->addStretch(1);
+			liveShown_ = liveNames;
+			liveIdx_ = liveIdx;
+		}
+		for (int k = 0; k < liveButtons_.size(); k++) {
+			bool on = e_->applied() && k < liveIdx_.size() && e_->cfg.activeFriend == liveIdx_[k];
+			liveButtons_[k]->blockSignals(true);
+			liveButtons_[k]->setChecked(on);
+			liveButtons_[k]->blockSignals(false);
+			liveButtons_[k]->setStyleSheet(
+				on ? "QPushButton { border-left: 4px solid #ce6050; font-weight: bold; }"
+				   : "QPushButton { border-left: 4px solid #4cbe5a; }");
+		}
+	}
 	// Only squad mates with a picture are offered: a slot the voice roster has in voice but not
 	// streaming is left out. Slots nobody can vouch for (Twitch, an OBS source) stay in.
 	QStringList names;
