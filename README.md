@@ -57,8 +57,9 @@ themselves on first run; later they are under **Tools → Kennel.gg Wardogs OBS 
 ## First run
 
 1. **Switch** tab: pick the source that shows WARDOGS or press **Create Game Capture**. **Add...**
-   squad mates, each with their **in-game name**. Nothing of yours is muted by default; tick
-   "Play the squad mate's game sound" and anything of yours to mute if you want theirs instead.
+   squad mates, each with their **in-game name**. Nothing of yours is muted by default. The squad
+   mate on screen is the one feed with sound (the dock's **POV sound** button turns that off); tick
+   anything of yours to mute while they are up if you do not want both game sounds at once.
 2. Get downed once with the **Detect** tab open: the bar goes red (~0.9) and the stream cuts to
    the friend. Nothing to calibrate; capture your own template only if it never locks on.
 3. **Clips** tab: the replay buffer is started for you. Set the file-name template and, if you use
@@ -138,7 +139,9 @@ uint16 height, uint64 timestamp ms (little endian), then JPEG.
 | Help | the version you are running, the check for a newer build, and what everything does |
 
 The dock has the state line, the squad-mate box with the **Closest** tick box, the Nearby line,
-Show / Back / Pause, Start ClipHound and Save clip.
+Show / Back / **POV sound**, Start ClipHound and Save clip. POV sound is the sound of whoever is on
+screen: on (the default) their feed is the one with sound and the unmute moves with the picture;
+off, every squad mate is silent. It has a hotkey under OBS Settings → Hotkeys.
 
 ## Show whoever is closest
 

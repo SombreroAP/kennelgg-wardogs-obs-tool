@@ -67,12 +67,13 @@ struct Config {
 	bool bringToFront = true;
 	bool keepWarm = true;
 	bool preloadFeeds = false;   // every squad mate's feed loaded and playing, hidden and silent
-	bool friendAudio = false;    // play the squad mate's own game audio while showing them
+	bool friendAudio = true;     // the squad mate on screen is the one feed with sound on your stream
 	bool audioDefaults2 = false; // one-time move to "nothing of yours is muted by default"
 	bool audioDefaults3 = false; // ...and once more: nothing muted, and no sound taken from their feed
 	bool ndiShelved = false;     // NDI and LAN discovery off and hidden until they are ready
 	bool discordShared1 = false; // one-time move to one shared capture of the Discord window
 	bool audioDefaults4 = false; // the mute list cleared once more: the auto-pick had been refilling it
+	bool audioDefaults5 = false; // one-time: the squad mate on screen has sound, on by default (0.9.1)
 	// Discord roster: the Kennel.gg bot publishes who is in voice and who is sharing, and squad
 	// slots fill themselves in from it. Off until an address is entered.
 	bool rosterEnabled = false;

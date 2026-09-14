@@ -1136,11 +1136,12 @@ QWidget *SettingsDialog::buildSwitchTab()
 
 	auto *g3 = new QGroupBox("Sound while a squad mate is on screen", w);
 	auto *v3 = new QVBoxLayout(g3);
-	friendAudio_ = new QCheckBox("Play the squad mate's game sound (their feed is silent otherwise)", g3);
+	friendAudio_ = new QCheckBox(
+		"Play the sound of the squad mate on screen (the dock's POV sound button is the same switch)", g3);
 	friendAudio_->setChecked(e_->cfg.friendAudio);
 	v3->addWidget(friendAudio_);
 	v3->addWidget(muted(
-		"Off by default: you go on hearing your own game while your stream shows their POV. Turn it on to hear theirs instead, and tick your own audio below so the two do not play at once.",
+		"On by default: whoever is on screen is the one feed with sound, every other squad mate stays muted, and the unmute moves with the picture. Untick it and every squad mate's feed is silent. Discord hands OBS one track for the whole call (every stream you watch, voices included), so for Discord squad mates that track is what turns on and off. Tick anything of your own below if you do not want both game sounds at once.",
 		g3));
 	auto *h3 = new QHBoxLayout();
 	mute_ = new QListWidget(g3);
@@ -1153,6 +1154,13 @@ QWidget *SettingsDialog::buildSwitchTab()
 	v->addWidget(g3, 1);
 	connect(mute_, &QListWidget::itemChanged, this, [this](QListWidgetItem *) { saveAndApply(); });
 	connect(friendAudio_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(e_, &Engine::stateChanged, this, [this]() {
+		if (friendAudio_ && friendAudio_->isChecked() != e_->cfg.friendAudio) {
+			friendAudio_->blockSignals(true);
+			friendAudio_->setChecked(e_->cfg.friendAudio); // pressed on the dock, or the hotkey
+			friendAudio_->blockSignals(false);
+		}
+	});
 
 	auto *gTop = new QGroupBox("Always on top", w);
 	auto *vTop = new QVBoxLayout(gTop);

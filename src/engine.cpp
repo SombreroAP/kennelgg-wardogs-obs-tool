@@ -1512,7 +1512,8 @@ void Engine::reloadConfig()
 	timer_.setInterval(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
-	sw.raiseOnTop(cfg); // the camera and alerts list may have just changed
+	sw.raiseOnTop(cfg);                 // the camera and alerts list may have just changed
+	sw.applyFriendAudio(cfg, applied_); // the Switch tab's tick box takes effect on the spot
 	sw.tuneNdiSources(cfg);
 	pushAppConfig(); // areas, names and rules the app reads
 	emit stateChanged();
@@ -2460,6 +2461,31 @@ void Engine::setEnabled(bool on)
 	log(on ? "Auto switch on: a squad mate takes over when you are downed."
 	       : "Auto switch off: your own POV stays up. Show friend's POV still works by hand, and clips keep coming.");
 	emit stateChanged();
+}
+
+void Engine::setFriendAudio(bool on)
+{
+	if (cfg.friendAudio != on) {
+		cfg.friendAudio = on;
+		cfg.save();
+	}
+	sw.applyFriendAudio(cfg, applied_);
+	const Friend *a = cfg.active();
+	QString who = applied_ && a ? QString::fromStdString(a->name) : QString();
+	if (on)
+		log(who.isEmpty()
+			    ? QString("POV sound on: whoever is on screen is the one feed with sound.")
+			    : QString("POV sound on: %1's feed has sound now; every other squad mate stays muted.")
+				      .arg(who));
+	else
+		log(who.isEmpty() ? QString("POV sound off: squad mates' feeds are silent on your stream.")
+				  : QString("POV sound off: %1's feed is muted on your stream.").arg(who));
+	emit stateChanged();
+}
+
+void Engine::toggleFriendAudio()
+{
+	setFriendAudio(!cfg.friendAudio);
 }
 
 void Engine::captureTemplate()

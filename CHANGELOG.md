@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.9.1
+- **POV sound, on the dock.** Whoever is on screen is the one feed with sound on your stream: their feed is unmuted, every other squad mate stays muted, and the unmute moves with the picture when the swap changes person. On by default now. The **POV sound** button next to Back to me turns it off and on again, the Switch tab's tick box is the same switch, and there is a hotkey for it under OBS Settings → Hotkeys. Your own inputs are never touched either way.
+- Discord hands OBS one track for the whole call (every stream you watch, voices included), so for Discord squad mates that track is what turns on and off; a single stream's own level is still the slider on its pop-out.
+
 ## 0.9.0
 - **A proper face.** The dock carries the Kennel.gg hound and wordmark in the brand's condensed face, the status line is a pill whose colour is the state (olive watching, red showing, grey off), the sections are labelled Squad, Dual POV, Clips and Events, every button and drop-down shares one height and edge, and the live buttons are olive chips that turn red for the one on screen. Colours are the brand's graphite, olive, amber and bone, and the styling is scoped to the plugin's own panels so OBS's theme is untouched. The settings window gets the same header and section titles.
 

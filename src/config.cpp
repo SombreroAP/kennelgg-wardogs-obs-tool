@@ -91,6 +91,7 @@ void Config::load()
 	DEFB(ndiShelved);
 	DEFB(discordShared1);
 	DEFB(audioDefaults4);
+	DEFB(audioDefaults5);
 	DEFB(audioAutoPicked);
 	DEFB(rosterEnabled);
 	DEFS(rosterUrl);
@@ -215,6 +216,7 @@ void Config::load()
 	GETB(ndiShelved);
 	GETB(discordShared1);
 	GETB(audioDefaults4);
+	GETB(audioDefaults5);
 	GETB(audioAutoPicked);
 	GETB(rosterEnabled);
 	GETS(rosterUrl);
@@ -436,6 +438,12 @@ void Config::load()
 		muteWhileDowned.clear();
 		audioAutoPicked = true;
 	}
+	// 0.9.1: the squad mate on screen is the one feed with sound, on by default, and the unmute
+	// moves with the picture. The dock's POV sound button and the Switch tab turn it off.
+	if (!audioDefaults5) {
+		audioDefaults5 = true;
+		friendAudio = true;
+	}
 	// NDI is shelved: LAN discovery, the share and auto-adding are off and out of the way until
 	// they are ready. Squad mates already set up as NDI keep working.
 	if (!ndiShelved) {
@@ -469,6 +477,7 @@ void Config::save() const
 	SETB(ndiShelved);
 	SETB(discordShared1);
 	SETB(audioDefaults4);
+	SETB(audioDefaults5);
 	SETB(audioAutoPicked);
 	SETB(rosterEnabled);
 	SETS(rosterUrl);

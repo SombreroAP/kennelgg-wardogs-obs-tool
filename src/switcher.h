@@ -72,6 +72,10 @@ public:
 	/// Hide every scene item of this source in every scene (belt and braces for the way back).
 	static int hideEverywhere(const std::string &sourceName);
 	int hideAllFriends(const Config &cfg);
+	/// One feed with sound: while `showing` and cfg.friendAudio, the active squad mate's video and
+	/// audio sources are unmuted and every other squad mate's are muted; otherwise all of them are
+	/// muted. Only sources that belong to a squad slot are touched, never the streamer's own.
+	void applyFriendAudio(const Config &cfg, bool showing);
 	/// Choices a source kind offers for one of its list properties (e.g. window_capture "window").
 	/// NDI senders already used by a source in this OBS.
 	static std::vector<std::string> ndiSourceNames();

@@ -1394,6 +1394,35 @@ void Switcher::armOne(const Config &cfg, const Friend &f)
 	obs_source_release(ss);
 }
 
+void Switcher::applyFriendAudio(const Config &cfg, bool showing)
+{
+	const Friend *a = cfg.active();
+	std::vector<std::string> keep; // what carries the sound of the one on screen
+	if (showing && cfg.friendAudio && a) {
+		keep.push_back(cfg.sourceFor(*a));
+		if (!a->audioSource.empty())
+			keep.push_back(a->audioSource);
+	}
+	auto setMute = [](const std::string &name, bool mute) {
+		if (name.empty())
+			return;
+		obs_source_t *src = obs_get_source_by_name(name.c_str());
+		if (!src)
+			return;
+		if (obs_source_muted(src) != mute)
+			obs_source_set_muted(src, mute);
+		obs_source_release(src);
+	};
+	// everyone else first, then the one on screen: a Discord slot shares its capture and its call
+	// audio with the other Discord slots, and the shared source must end up unmuted
+	for (const auto &f : cfg.friends)
+		for (const std::string &n : {cfg.sourceFor(f), f.audioSource})
+			if (std::find(keep.begin(), keep.end(), n) == keep.end())
+				setMute(n, true);
+	for (const auto &n : keep)
+		setMute(n, false);
+}
+
 /// Your own POV, and nothing else: every squad mate's video and audio hidden in every scene.
 int Switcher::hideAllFriends(const Config &cfg)
 {
@@ -1658,6 +1687,9 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 		if (a)
 			obs_source_release(a);
 	}
+
+	// 1c. one feed with sound: theirs while POV sound is on, and every other squad mate muted
+	applyFriendAudio(cfg, on);
 
 	// 2. the look overlay, above the friend
 	{
