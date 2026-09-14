@@ -1100,23 +1100,23 @@ QWidget *SettingsDialog::buildSwitchTab()
 	fRoster->addRow(rosterOn_);
 	rosterUrl_ = new QLineEdit(QString::fromStdString(e_->cfg.rosterUrl), gRoster);
 	rosterUrl_->setPlaceholderText("https://kennel.gg/api/voice-....json");
-	fRoster->addRow("Roster address", rosterUrl_);
+	rosterUrl_->hide(); // the Kennel.gg bot's: squad automation is driven by it, not by a copy
 	rosterChannel_ = new QLineEdit(QString::fromStdString(e_->cfg.rosterChannel), gRoster);
 	rosterChannel_->setPlaceholderText("(any voice channel)");
-	fRoster->addRow("Only this channel", rosterChannel_);
+	rosterChannel_->hide(); // the channel is whichever one you are sitting in
 	rosterSources_ = new QCheckBox("Also make their Discord capture for them", gRoster);
 	rosterSources_->setChecked(e_->cfg.rosterAddSources);
 	fRoster->addRow(rosterSources_);
 	rosterStatus_ = new QLabel(gRoster);
 	rosterStatus_->setWordWrap(true);
 	fRoster->addRow(rosterStatus_);
-	auto *rosterNote =
-		new QLabel("Discord will not tell a plugin who is in a call, so the Kennel.gg Discord bot publishes it "
-			   "instead. Ask in the server for your roster address - it carries a key, so treat it like a "
-			   "password and do not put it on stream. When somebody goes live in the call a squad slot "
-			   "appears with their Discord name on it, and it goes away again when they stop. Slots you "
-			   "added yourself are never touched.",
-			   gRoster);
+	auto *rosterNote = new QLabel(
+		"Discord will not tell a plugin who is in a call, so the Kennel Ops bot in the Kennel.gg Discord "
+		"publishes it. It is for members of that server: the Discord username from Setup is checked "
+		"against it, and the bot then follows whichever voice channel you are in. When somebody goes live in the call a squad slot "
+		"appears with their Discord name on it, and it goes away again when they stop. Slots you "
+		"added yourself are never touched.",
+		gRoster);
 	rosterNote->setWordWrap(true);
 	rosterNote->setStyleSheet("color: palette(mid);");
 	fRoster->addRow(rosterNote);
@@ -2724,8 +2724,8 @@ void SettingsDialog::collect()
 		c.sceneV = sceneV_->currentData().toString().toStdString();
 	c.lanEnabled = lanOn_->isChecked();
 	c.rosterEnabled = rosterOn_->isChecked();
-	c.rosterUrl = rosterUrl_->text().trimmed().toStdString();
-	c.rosterChannel = rosterChannel_->text().trimmed().toStdString();
+	c.rosterUrl = Config::kennelRosterUrl();
+	c.rosterChannel.clear(); // whichever channel you are in
 	c.rosterAddSources = rosterSources_->isChecked();
 	c.ndiShare = ndiShare_->isChecked();
 	c.autoAddPeers = autoAdd_->isChecked();

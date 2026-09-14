@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QString>
 #include <QList>
+#include <QSet>
 #include <QTimer>
 #include <QNetworkAccessManager>
 
@@ -31,6 +32,13 @@ public:
 	/// Every server the bot can see, from the last poll, and the link that adds it to another one.
 	QStringList guilds() const { return guilds_; }
 	QString inviteUrl() const { return invite_; }
+	/// The server the bot is home to (Kennel.gg), and whether it listed that server's members.
+	QString homeGuild() const { return home_; }
+	QString joinUrl() const { return join_; } // the plugin's own invite into that server
+	bool membersKnown() const { return membersKnown_; }
+	/// Is this Discord username a member of the home server, by the bot's last poll. The bot
+	/// publishes hashes, not names, so this hashes the same way.
+	bool isMember(const QString &handle) const;
 	void poll(); // now, out of turn
 	void stop();
 
@@ -52,6 +60,9 @@ private:
 	QString url_, onlyChannel_, onlyGuild_, status_ = "off";
 	QStringList guilds_;
 	QString invite_;
+	QString home_, join_;
+	QSet<QString> memberHashes_;
+	bool membersKnown_ = false;
 	QList<Member> members_;
 	bool inFlight_ = false;
 };

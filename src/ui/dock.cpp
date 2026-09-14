@@ -85,6 +85,8 @@ static const char *kDockStyle = R"(
 #kennelDock QPushButton#liveChip { border-color: #6f7c45; background: #232a1e; color: #d9e0b6; font-weight: 600; }
 #kennelDock QPushButton#liveChip:checked { border-color: #ce6050; background: #3a2521; color: #f2c9c1; }
 #kennelDock QPushButton#soundBtn:checked { border-color: #6f7c45; background: #232a1e; color: #d9e0b6; }
+#kennelDock QLabel#lockedChip { min-height: 24px; padding: 2px 10px; border: 1px dashed #3a3e3b; border-radius: 3px;
+	background: #202321; color: #7c8076; }
 #kennelDock QComboBox { min-height: 24px; padding: 1px 6px; border: 1px solid #3a3e3b; border-radius: 3px;
 	background: #262927; color: #e6e2d6; }
 #kennelDock QComboBox:disabled { color: #6c7068; }
@@ -178,6 +180,27 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	liveRow_ = new QHBoxLayout();
 	liveRow_->setSpacing(4);
 	v->addLayout(liveRow_);
+	// where the live buttons go when the bot cannot fill them in: greyed out, with the way in
+	locked_ = new QLabel(this);
+	locked_->setObjectName("lockedChip");
+	locked_->setTextFormat(Qt::RichText);
+	locked_->setWordWrap(true);
+	locked_->setOpenExternalLinks(false);
+	locked_->hide();
+	v->addWidget(locked_);
+	connect(locked_, &QLabel::linkActivated, this, [this](const QString &href) {
+		if (href == "kennel:username") {
+			bool ok = false;
+			QString v = QInputDialog::getText(
+				this, "Your Discord username",
+				"Your Discord username - the lower-case one under your display name. The Kennel.gg bot "
+				"checks it is in the server, and then follows whichever voice channel you are in.",
+				QLineEdit::Normal, QString::fromStdString(e_->cfg.myDiscord), &ok);
+			if (ok)
+				e_->setMyDiscord(v);
+		} else
+			QDesktopServices::openUrl(QUrl(href));
+	});
 
 	detector_ = new QLabel(this);
 	detector_->setTextFormat(Qt::RichText);
@@ -337,10 +360,15 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	auto *settings = new QPushButton("Settings...", this);
 	auto *wiz = new QPushButton("Setup", this);
 	auto *logs = new QPushButton("Logs", this);
+	auto *disc = new QPushButton("Discord", this);
+	disc->setToolTip("Join the Kennel.gg Discord. Squad automation runs through the Kennel Ops bot there and is "
+			 "for its members.");
 	btns2->addWidget(squad);
 	btns2->addWidget(wiz);
 	btns2->addWidget(settings);
 	btns2->addWidget(logs);
+	btns2->addWidget(disc);
+	connect(disc, &QPushButton::clicked, this, [this]() { QDesktopServices::openUrl(QUrl(e_->discordUrl())); });
 	connect(logs, &QPushButton::clicked, this, &Dock::openLogs);
 	connect(squad, &QPushButton::clicked, this, &Dock::openSquad);
 	connect(wiz, &QPushButton::clicked, this, &Dock::openWizard);
@@ -603,6 +631,25 @@ void Dock::refresh()
 	}
 	show_->setEnabled(!e_->applied());
 	back_->setEnabled(e_->applied());
+	if (locked_) {
+		Engine::Access a = e_->rosterAccess();
+		QString url = e_->discordUrl().toHtmlEscaped();
+		bool show = !e_->cfg.rosterEnabled || a == Engine::Access::NotMember || a == Engine::Access::NoUsername;
+		locked_->setVisible(show);
+		if (!e_->cfg.rosterEnabled || a == Engine::Access::NoUsername)
+			locked_->setText(
+				"<a style=\"color:#c99a3b\" href=\"" + url +
+				"\">Join Kennel.gg Discord for more automation</a>: live squad mates appear "
+				"here. Already in? <a style=\"color:#c99a3b\" href=\"kennel:username\">Enter your "
+				"Discord username</a>.");
+		else
+			locked_->setText(
+				"<a style=\"color:#c99a3b\" href=\"" + url +
+				"\">Join Kennel.gg Discord for more automation</a>: \"" +
+				QString::fromStdString(e_->cfg.myDiscord).toHtmlEscaped() +
+				"\" is not in the server. <a style=\"color:#c99a3b\" href=\"kennel:username\">Change "
+				"the username</a>.");
+	}
 	if (sound_) {
 		sound_->blockSignals(true);
 		sound_->setChecked(e_->cfg.friendAudio);

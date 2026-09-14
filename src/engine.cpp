@@ -47,6 +47,8 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	lastReviveSeen_ = clock_::now() - std::chrono::hours(1);
 	downSince_ = lastReviveSeen_;
 	lastPick_ = lastNearbyWarn_ = lastReviveSeen_;
+	connect(&roster, &Roster::changed, this, &Engine::checkAccess);
+	connect(&roster, &Roster::polled, this, &Engine::checkAccess);
 	connect(&roster, &Roster::changed, this, &Engine::syncRoster);
 	popoutTimer_.setInterval(2000);
 	connect(&popoutTimer_, &QTimer::timeout, this, &Engine::watchPopouts);
@@ -1050,9 +1052,76 @@ void Engine::applyRosterConfig()
 			 QString::fromStdString(cfg.rosterChannel), QString::fromStdString(cfg.rosterGuild));
 }
 
+Engine::Access Engine::rosterAccess() const
+{
+	if (!roster.running() || !roster.membersKnown())
+		return Access::Unknown; // nothing polled yet
+	if (roster.homeGuild().compare(Config::kennelHomeGuild(), Qt::CaseInsensitive) != 0)
+		return Access::NotMember; // not the Kennel.gg bot
+	if (cfg.myDiscord.empty())
+		return Access::NoUsername;
+	return roster.isMember(QString::fromStdString(cfg.myDiscord)) ? Access::Ok : Access::NotMember;
+}
+
+bool Engine::rosterOpen() const
+{
+	Access a = rosterAccess();
+	return a == Access::Ok || a == Access::Unknown;
+}
+
+QString Engine::rosterStatus() const
+{
+	switch (rosterAccess()) {
+	case Access::NoUsername:
+		return "locked - enter your Discord username (Setup) so the bot can see you are in the Kennel.gg Discord";
+	case Access::NotMember:
+		return "locked - \"" + QString::fromStdString(cfg.myDiscord) +
+		       "\" is not in the Kennel.gg Discord. Join it (the Discord button on the dock), and check the "
+		       "username is the lower-case one under your display name";
+	default:
+		return roster.status();
+	}
+}
+
+QString Engine::discordUrl() const
+{
+	return roster.joinUrl().isEmpty() ? QString(Config::kennelDiscordUrl()) : roster.joinUrl();
+}
+
+void Engine::setMyDiscord(const QString &user)
+{
+	cfg.myDiscord = user.trimmed().toLower().toStdString();
+	cfg.rosterEnabled = true;
+	cfg.save();
+	applyRosterConfig();
+	roster.poll();
+	log(cfg.myDiscord.empty() ? QString("Discord username cleared.")
+				  : QString("Discord username set to %1; checking the Kennel.gg Discord for it.")
+					    .arg(QString::fromStdString(cfg.myDiscord)));
+	emit stateChanged();
+}
+
+void Engine::checkAccess()
+{
+	Access a = rosterAccess();
+	if (a == lastAccess_)
+		return;
+	Access was = lastAccess_;
+	lastAccess_ = a;
+	if (a == Access::NotMember || a == Access::NoUsername) {
+		log("Squad automation is " + rosterStatus() + ".");
+		addEvent("squad automation locked - join the Kennel.gg Discord");
+	} else if (a == Access::Ok && was != Access::Unknown) {
+		log("Squad automation unlocked: " + QString::fromStdString(cfg.myDiscord) +
+		    " is in the Kennel.gg Discord.");
+		syncRoster();
+	}
+	emit stateChanged();
+}
+
 void Engine::syncRoster()
 {
-	if (!cfg.rosterEnabled)
+	if (!cfg.rosterEnabled || !rosterOpen())
 		return;
 	// Only the people actually sharing get a slot. Everyone in the call would mean a window
 	// capture each for feeds that do not exist, and Discord puts every share inside the one
@@ -1784,7 +1853,7 @@ Engine::Feed Engine::feedState(const Friend &f) const
 	// The voice roster is the authority when it knows my channel: a squad mate it does not list
 	// there is not streaming to me, whatever windows are still open on this PC - Discord leaves a
 	// pop-out up after a stream ends, and a bound window is not proof of a picture.
-	if (cfg.rosterEnabled && roster.running()) {
+	if (cfg.rosterEnabled && roster.running() && rosterOpen()) {
 		QString h = QString::fromStdString(f.handle).toLower(), n = QString::fromStdString(f.name).toLower();
 		QString me = QString::fromStdString(cfg.myDiscord).toLower(), myChan;
 		if (!me.isEmpty())

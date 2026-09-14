@@ -444,6 +444,10 @@ void Config::load()
 		audioDefaults5 = true;
 		friendAudio = true;
 	}
+	// Squad automation is driven by the Kennel.gg bot and is for members of that server: the
+	// address is not a setting, and the channel is whichever one you are sitting in.
+	rosterUrl = kennelRosterUrl();
+	rosterChannel.clear();
 	// NDI is shelved: LAN discovery, the share and auto-adding are off and out of the way until
 	// they are ready. Squad mates already set up as NDI keep working.
 	if (!ndiShelved) {

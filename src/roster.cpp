@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QUrl>
+#include <QCryptographicHash>
 
 Roster::Roster(QObject *parent) : QObject(parent)
 {
@@ -50,6 +51,16 @@ QList<Roster::Member> Roster::streamers() const
 	return out;
 }
 
+bool Roster::isMember(const QString &handle) const
+{
+	QString h = handle.trimmed().toLower();
+	if (h.isEmpty())
+		return false;
+	QString hash =
+		QString::fromLatin1(QCryptographicHash::hash(h.toUtf8(), QCryptographicHash::Sha256).toHex()).left(16);
+	return memberHashes_.contains(hash);
+}
+
 void Roster::poll()
 {
 	if (url_.isEmpty() || inFlight_)
@@ -83,6 +94,12 @@ void Roster::poll()
 		QList<Member> found;
 		QStringList guilds;
 		invite_ = o.value("invite").toString();
+		home_ = o.value("home").toString();
+		join_ = o.value("join").toString();
+		membersKnown_ = o.contains("members");
+		memberHashes_.clear();
+		for (const QJsonValue &hv : o.value("members").toArray())
+			memberHashes_.insert(hv.toString().toLower());
 		for (const QJsonValue &cv : o.value("channels").toArray()) {
 			QJsonObject c = cv.toObject();
 			QString chan = c.value("channel").toString();

@@ -163,6 +163,11 @@ QWizardPage *SetupWizard::pageSquad()
 		QStringList gs = e_->roster.guilds();
 		QString inv = e_->roster.inviteUrl().isEmpty() ? Config::botInviteUrl() : e_->roster.inviteUrl();
 		bot_->setText(
+			"<b>Squad automation is for members of the Kennel.gg Discord.</b> The Kennel Ops bot checks the "
+			"username above against the server, then follows whichever voice channel you are sitting in: "
+			"nothing to name. Not in yet? <a href=\"" +
+			e_->discordUrl() +
+			"\">Join here</a>.<br><br>"
 			"<b>For the best experience the Kennel Ops bot needs to be in the Discord server you play "
 			"on.</b> It only asks to view channels. Servers it can see now: " +
 			(gs.isEmpty() ? QString("(checking...)") : gs.join(", ")) +

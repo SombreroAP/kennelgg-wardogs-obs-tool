@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.9.2
+- **Squad automation is for members of the Kennel.gg Discord.** The Kennel Ops bot now publishes its member list (hashed), and the plugin checks the Discord username from Setup against it. Not in the server, or no username entered: the roster is locked, the live buttons' place on the dock shows greyed out with **Join Kennel.gg Discord for more automation** and a link to enter the username, and the log says so once. Pop-outs and the manual controls keep working either way.
+- **A Discord button on the dock** opens the Kennel.gg Discord through the plugin's own invite, so joins from the plugin are counted on their own line.
+- The roster address and the channel name are no longer settings: it is always the Kennel.gg bot, and the channel is whichever voice channel you are sitting in.
+
 ## 0.9.1
 - **POV sound, on the dock.** Whoever is on screen is the one feed with sound on your stream: their feed is unmuted, every other squad mate stays muted, and the unmute moves with the picture when the swap changes person. On by default now. The **POV sound** button next to Back to me turns it off and on again, the Switch tab's tick box is the same switch, and there is a hotkey for it under OBS Settings → Hotkeys. Your own inputs are never touched either way.
 - Discord hands OBS one track for the whole call (every stream you watch, voices included), so for Discord squad mates that track is what turns on and off; a single stream's own level is still the slider on its pop-out.

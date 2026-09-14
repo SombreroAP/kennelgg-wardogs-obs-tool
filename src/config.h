@@ -88,6 +88,9 @@ struct Config {
 	std::string rosterChannel; // only this voice channel ("" = whichever one people are in)
 	std::string rosterGuild;   // only this Discord server ("" = every one the bot can see)
 	bool setupDone = false;    // the setup ran once; an empty squad at start is normal with pop-outs
+	/// The Kennel.gg Discord, through the plugin's own invite (its joins are counted apart).
+	static const char *kennelDiscordUrl() { return "https://discord.gg/nDyJ7SSM8q"; }
+	static const char *kennelHomeGuild() { return "Kennel.gg"; }
 	static const char *botInviteUrl()
 	{
 		return "https://discord.com/oauth2/authorize?client_id=1542623631111098378&scope=bot&permissions=1024";

@@ -60,7 +60,16 @@ public:
 	void showInDual(int idx, const QString &why = "squad panel");
 	/// Is this Discord username you (your own stream is never a squad mate).
 	bool isMe(const QString &discordUser) const;
-	QString rosterStatus() const { return roster.status(); }
+	/// Squad automation (the roster) is for members of the Kennel.gg Discord: the bot publishes
+	/// its member list and the username from Setup is checked against it.
+	enum class Access { Ok, NoUsername, NotMember, Unknown };
+	Access rosterAccess() const;
+	bool rosterOpen() const; // Ok, or nothing to check against yet
+	QString rosterStatus() const;
+	/// The Kennel.gg Discord, through the plugin's own invite.
+	QString discordUrl() const;
+	/// Save the streamer's Discord username and turn the roster on: the dock's unlock path.
+	void setMyDiscord(const QString &user);
 	void applyLan();
 	void applyReplaySeconds();
 	void syncAppPort();
@@ -221,6 +230,8 @@ private:
 	QTimer popoutTimer_;
 	bool popoutsShown_ = false;
 	QString popoutNote_; // the unnamed pop-out we last mentioned, so the log says it once
+	Access lastAccess_ = Access::Unknown;
+	void checkAccess(); // say it once when the roster locks or unlocks
 	std::atomic<bool> busy_{false}, stopping_{false}, frameBusy_{false};
 	Capture capGame_, capFriend_, capRoi_;
 	QString appStatus_;
