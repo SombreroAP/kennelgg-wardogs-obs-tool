@@ -29,8 +29,7 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 static Engine *g_engine = nullptr;
 static Dock *g_dock = nullptr;
 static obs_hotkey_id g_hkToggle = OBS_INVALID_HOTKEY_ID, g_hkCapture = OBS_INVALID_HOTKEY_ID,
-		     g_hkClip = OBS_INVALID_HOTKEY_ID, g_hkDual = OBS_INVALID_HOTKEY_ID,
-		     g_hkSound = OBS_INVALID_HOTKEY_ID;
+		     g_hkClip = OBS_INVALID_HOTKEY_ID, g_hkDual = OBS_INVALID_HOTKEY_ID;
 
 static void hotkeyToggle(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
 {
@@ -42,12 +41,6 @@ static void hotkeyDual(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
 {
 	if (pressed && g_engine)
 		QMetaObject::invokeMethod(g_engine, "toggleDual", Qt::QueuedConnection);
-}
-
-static void hotkeySound(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
-{
-	if (pressed && g_engine)
-		QMetaObject::invokeMethod(g_engine, "toggleFriendAudio", Qt::QueuedConnection);
 }
 
 static void hotkeyCapture(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
@@ -94,11 +87,6 @@ static void loadHotkeys()
 		obs_hotkey_load(g_hkDual, a);
 		obs_data_array_release(a);
 	}
-	a = obs_data_get_array(d, "sound");
-	if (a) {
-		obs_hotkey_load(g_hkSound, a);
-		obs_data_array_release(a);
-	}
 	obs_data_release(d);
 }
 
@@ -116,9 +104,6 @@ static void saveHotkeys()
 	obs_data_array_release(a);
 	a = obs_hotkey_save(g_hkClip);
 	obs_data_set_array(d, "clip", a);
-	obs_data_array_release(a);
-	a = obs_hotkey_save(g_hkSound);
-	obs_data_set_array(d, "sound", a);
 	obs_data_array_release(a);
 	obs_data_save_json_safe(d, Config::configFile("hotkeys.json").c_str(), "tmp", "bak");
 	obs_data_release(d);
@@ -177,8 +162,6 @@ bool obs_module_load(void)
 						hotkeyClip, nullptr);
 	g_hkDual = obs_hotkey_register_frontend("kennel.dual.toggle", obs_module_text("KennelWardogs.Hotkey.Dual"),
 						hotkeyDual, nullptr);
-	g_hkSound = obs_hotkey_register_frontend("kennel.pov.sound", obs_module_text("KennelWardogs.Hotkey.Sound"),
-						 hotkeySound, nullptr);
 	loadHotkeys();
 	obs_frontend_add_event_callback(onFrontendEvent, nullptr);
 	obs_log(LOG_INFO, "Kennel.gg Wardogs OBS Tool loaded (version %s)", PLUGIN_VERSION);
@@ -196,8 +179,6 @@ void obs_module_unload(void)
 		obs_hotkey_unregister(g_hkDual);
 	if (g_hkClip != OBS_INVALID_HOTKEY_ID)
 		obs_hotkey_unregister(g_hkClip);
-	if (g_hkSound != OBS_INVALID_HOTKEY_ID)
-		obs_hotkey_unregister(g_hkSound);
 	if (g_engine)
 		g_engine->stop();
 	g_engine = nullptr; // owned by the main window

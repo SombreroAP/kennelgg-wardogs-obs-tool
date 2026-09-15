@@ -284,6 +284,38 @@ std::vector<std::string> Switcher::friendSourceNames(const Config &cfg, const Fr
 	return names;
 }
 
+/// Discord's sound is not handled since 0.10.3: it hands OBS one mix for the whole call. Take the
+/// Application Audio Captures earlier builds made for Discord squad mates out of every scene and
+/// delete them, once. Returns how many went.
+int Switcher::removeDiscordAudio(Config &cfg)
+{
+	std::vector<std::string> names{Friend::discordCallAudioName()};
+	for (auto &f : cfg.friends)
+		if (f.kind == FriendKind::Discord && !f.audioSource.empty()) {
+			if (std::find(names.begin(), names.end(), f.audioSource) == names.end())
+				names.push_back(f.audioSource);
+			f.audioSource.clear();
+		}
+	int gone = 0;
+	for (const auto &name : names) {
+		obs_source_t *src = obs_get_source_by_name(name.c_str());
+		if (!src)
+			continue;
+		struct obs_frontend_source_list scenes = {};
+		obs_frontend_get_scenes(&scenes);
+		for (size_t i = 0; i < scenes.sources.num; i++) {
+			obs_scene_t *scene = obs_scene_from_source(scenes.sources.array[i]);
+			if (obs_sceneitem_t *it = scene ? obs_scene_find_source(scene, name.c_str()) : nullptr)
+				obs_sceneitem_remove(it);
+		}
+		obs_frontend_source_list_free(&scenes);
+		obs_source_remove(src);
+		obs_source_release(src);
+		gone++;
+	}
+	return gone;
+}
+
 int Switcher::removeFriendSources(const Config &cfg, const Friend &f)
 {
 	int gone = 0;
@@ -371,7 +403,6 @@ std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 		// picture anyway. When one of them pops their share out, bindPopout gives them their own.
 		bool shared = f.sharesDiscordCall();
 		std::string video = shared ? Friend::discordCallSourceName() : base;
-		std::string audio = shared ? Friend::discordCallAudioName() : base + " audio";
 		obs_data_t *st = obs_data_create();
 		obs_data_set_string(st, "window", f.channel.c_str());
 		obs_data_set_int(st, "method", 2); // Windows 10 capture: survives the window being covered
@@ -385,15 +416,6 @@ std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 		if (!e.empty())
 			return e;
 		f.source = video;
-		// Discord's audio (their game sound), matched by executable so it follows any Discord window
-		obs_data_t *au = obs_data_create();
-		obs_data_set_string(au, "window", f.channel.c_str());
-		obs_data_set_int(au, "priority", 2);
-		e = createInScene(cfg, "wasapi_process_output_capture", audio, au, false, false);
-		obs_data_release(au);
-		if (!e.empty())
-			return e;
-		f.audioSource = audio;
 		return "";
 	}
 	return "";
@@ -1436,20 +1458,24 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 			errors.push_back("look: " + e);
 	}
 
-	// 3. game audio: mute on the way down, restore the exact previous state on the way up
+	// 3. game audio: mute on the way down, restore the exact previous state on the way up. Not for a
+	// Discord squad mate: their sound is not handled (Discord hands OBS one mix for the whole call),
+	// so yours stays up while they are shown.
 	for (auto &input : cfg.muteWhileDowned) {
+		if (on && f->kind == FriendKind::Discord)
+			break;
 		obs_source_t *src = obs_get_source_by_name(input.c_str());
 		if (!src) {
-			errors.push_back("audio '" + input + "' not found");
+			if (on)
+				errors.push_back("audio '" + input + "' not found");
 			continue;
 		}
 		if (on) {
 			if (!prevMute_.count(input))
 				prevMute_[input] = obs_source_muted(src);
 			obs_source_set_muted(src, true);
-		} else {
-			bool prev = prevMute_.count(input) ? prevMute_[input] : false;
-			obs_source_set_muted(src, prev);
+		} else if (prevMute_.count(input)) { // only what this plugin muted goes back
+			obs_source_set_muted(src, prevMute_[input]);
 			prevMute_.erase(input);
 		}
 		obs_source_release(src);

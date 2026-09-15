@@ -100,25 +100,6 @@ SquadPanel::SquadPanel(Engine *engine, QWidget *parent) : QDialog(parent), e_(en
 		e_->releaseAllPopouts();
 		e_->watchPopouts();
 	});
-	auto *volRow = new QHBoxLayout();
-	auto *vol = new QSlider(Qt::Horizontal, this);
-	vol->setRange(0, 100);
-	vol->setValue(e_->cfg.discordVolume);
-	vol->setToolTip("How loud the squad mates' Discord audio is on your stream while POV sound is on (the "
-			"dock button; on by default). Discord mixes every stream into one, so this is "
-			"one level for all of them: for one person at a time, use the volume slider on their "
-			"pop-out in Discord (Show pop-outs, or park them on another monitor).");
-	auto *volLbl = new QLabel(QString("%1%").arg(e_->cfg.discordVolume), this);
-	volLbl->setMinimumWidth(40);
-	volRow->addWidget(vol, 1);
-	volRow->addWidget(volLbl);
-	form->addRow("Discord audio on stream", volRow);
-	connect(vol, &QSlider::valueChanged, this, [this, volLbl](int v) {
-		volLbl->setText(QString("%1%").arg(v));
-		e_->cfg.discordVolume = v;
-		e_->applyDiscordVolume();
-	});
-	connect(vol, &QSlider::sliderReleased, this, [this]() { e_->cfg.save(); });
 	show_ = new QPushButton(this);
 	show_->setCheckable(true);
 	show_->setToolTip(

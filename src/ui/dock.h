@@ -40,7 +40,6 @@ private:
 	QPushButton *show_, *back_, *clipNow_, *appBtn_;
 	QCheckBox *autoSwitch_ = nullptr;
 	QPushButton *showPop_ = nullptr;
-	QPushButton *sound_ = nullptr;
 	QHBoxLayout *liveRow_ = nullptr;
 	QList<QPushButton *> liveButtons_;
 	QStringList liveNames_;

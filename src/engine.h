@@ -47,8 +47,6 @@ public:
 	/// Bring every bound pop-out back on screen so its own controls can be used (Discord's volume,
 	/// for one), and stop tucking until this is turned off again.
 	void showPopouts(bool show);
-	/// Set every Discord audio capture's level to cfg.discordVolume.
-	void applyDiscordVolume();
 	bool popoutsShown() const { return popoutsShown_; }
 	/// Put this squad mate in the dual window and keep it there until it is turned off by hand.
 	void showInDual(int idx, const QString &why = "squad panel");
@@ -164,7 +162,6 @@ public slots:
 	/// feed with sound and the unmute moves with the picture; off: every squad mate is silent. The
 	/// dock's POV sound button, the Switch tab's tick box and a hotkey all set the same thing.
 	void setFriendAudio(bool on);
-	void toggleFriendAudio();
 	void captureTemplate();
 	void useBuiltInTemplate();
 	void previewLook(bool on);

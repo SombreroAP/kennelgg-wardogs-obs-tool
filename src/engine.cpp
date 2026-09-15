@@ -482,8 +482,18 @@ void Engine::start()
 			log(QString("Squad mates watching the Discord call now share one capture (%1 moved over).")
 				    .arg(folded));
 	}
+	if (!cfg.discordAudio1) {
+		int n = sw.removeDiscordAudio(cfg);
+		cfg.discordAudio1 = true;
+		cfg.save();
+		if (n)
+			log(QString("The plugin no longer captures Discord's sound (%1 audio capture%2 removed). Discord hands "
+				    "OBS one mix for the whole call, so it comes through whatever already carries Discord on "
+				    "your stream.")
+				    .arg(n)
+				    .arg(n == 1 ? "" : "s"));
+	}
 	armPopoutWatch();
-	applyDiscordVolume();
 	for (const auto &f : cfg.friends)
 		if (f.kind == FriendKind::Discord && !f.handle.empty() &&
 		    QString::fromStdString(f.handle).compare(QString::fromStdString(f.name), Qt::CaseInsensitive) != 0)
@@ -945,7 +955,8 @@ void Engine::syncRoster()
 		}
 		cfg.friends.push_back(f);
 		changed = true;
-		log("Squad: " + QString::fromStdString(f.name) + " is sharing in Discord voice - slot added.");
+		log("Squad: " + QString::fromStdString(f.name) +
+		    " is sharing in Discord voice - slot added. Discord's sound is not handled: Discord hands OBS one mix for the whole call, so it comes through whatever already carries Discord on your stream, and your own game sound stays up while they are shown.");
 	}
 
 	if (!changed)
@@ -1046,7 +1057,6 @@ QString Engine::addPopouts(QStringList *addedOut)
 		added << owner;
 		if (addedOut)
 			*addedOut << owner;
-		applyDiscordVolume();
 		log("Squad: added " + owner + " from their popped-out Discord stream (\"" +
 		    QString::fromStdString(w.title) + "\").");
 	}
@@ -1061,7 +1071,8 @@ QString Engine::addPopouts(QStringList *addedOut)
 	}
 	QStringList out;
 	if (!added.isEmpty())
-		out << "Added " + added.join(", ") + ".";
+		out << "Added " + added.join(", ") +
+				". Discord's sound is not handled: Discord hands OBS one mix for the whole call, so it comes through whatever already carries Discord on your stream, and your own game sound stays up while they are shown.";
 	if (!already.isEmpty())
 		out << already.join(", ") + (already.size() == 1 ? " is" : " are") + " already in the squad.";
 	if (!failed.isEmpty())
@@ -1101,21 +1112,6 @@ void Engine::releaseAllPopouts()
 {
 	for (const auto &f : cfg.friends)
 		releasePopout(f);
-}
-
-void Engine::applyDiscordVolume()
-{
-	float v = std::clamp(cfg.discordVolume, 0, 100) / 100.0f;
-	QStringList names{Friend::discordCallAudioName()};
-	for (const auto &f : cfg.friends)
-		if (!f.audioSource.empty())
-			names << QString::fromStdString(f.audioSource);
-	names.removeDuplicates();
-	for (const QString &n : names)
-		if (obs_source_t *src = obs_get_source_by_name(n.toUtf8().constData())) {
-			obs_source_set_volume(src, v);
-			obs_source_release(src);
-		}
 }
 
 void Engine::showPopouts(bool show)
@@ -2290,11 +2286,6 @@ void Engine::setFriendAudio(bool on)
 		log(who.isEmpty() ? QString("POV sound off: squad mates' feeds are silent on your stream.")
 				  : QString("POV sound off: %1's feed is muted on your stream.").arg(who));
 	emit stateChanged();
-}
-
-void Engine::toggleFriendAudio()
-{
-	setFriendAudio(!cfg.friendAudio);
 }
 
 void Engine::captureTemplate()

@@ -18,8 +18,8 @@ people find us.
   stops.
 - **The closest one.** With more than one feed, the game's NEARBY list decides which POV comes up: the
   squad mate who is actually next to you. If nobody near you is live, another live squad mate is shown.
-- **POV sound.** Whoever is on screen is the one feed with sound on your stream; everyone else stays
-  muted, and the unmute moves with the picture. One button on the dock turns it off.
+- **Sound that follows the picture** for Twitch, Kick, YouTube and VDO.Ninja squad mates: theirs plays
+  and your game's is muted while they are up. Discord's sound is not handled (see Sound below).
 - **Dual POV.** In a tank or a Havoc with a crew mate: your own POV stays up and theirs sits in a small
   framed window with their name, placed where that seat's HUD leaves room (presets for tank driver,
   tank gunner, Havoc pilot and Havoc gunner), or wherever you drag it. Forced by hand from its own row
@@ -65,7 +65,7 @@ files for a manual install (copy its `kennelgg` folder into `C:\ProgramData\obs-
 
 Top to bottom: the state pill (watching, showing, off), **Add pop-outs** and **Show pop-outs**, one
 button per squad mate who is live (press it to force their feed up, again to come back), the squad-mate
-box with **Auto switch** and **Closest**, **Show friend's POV**, **Back to me** and **POV sound**, the
+box with **Auto switch** and **Closest**, **Show friend's POV** and **Back to me**, the
 Dual POV row with its own person and **Force Dual POV**, then Squad, Setup, Settings, Logs and
 **Discord**, ClipHound start/stop and Save clip, and the last events.
 
@@ -87,11 +87,18 @@ the Kennel.gg Discord or to detect your username.
 
 ## Sound
 
-While a squad mate is on screen, their sound plays and your own game's sound is muted: the game
-source when it carries audio, otherwise Desktop Audio, chosen once and listed on the Switch tab where
-it can be changed. Your microphone is never touched. The dock's **POV sound** button (and a hotkey)
-turns their sound off. Discord hands OBS one track for the whole call, so for Discord squad mates that
-track is what turns on and off; one stream's own level is the slider on its pop-out.
+Two rules, by squad-mate kind.
+
+For **Twitch, Kick, YouTube and VDO.Ninja** squad mates, their sound plays while they are on screen and
+your own game's sound is muted: the game source when it carries audio, otherwise Desktop Audio,
+chosen once and listed on the Switch tab where it can be changed. Your microphone is never touched,
+and everything is put back the moment you are revived. The Switch tab tick box turns their sound off.
+
+For **Discord** squad mates the plugin does not touch sound at all. Discord hands OBS one mix for the
+whole call, every stream you watch plus everyone's voice, and nothing outside Discord can pick one
+stream out of it. So a Discord feed comes with no audio capture, nothing of yours is muted while it is
+shown, and the call's sound reaches your stream through whatever already carries Discord (usually
+Desktop Audio). A single stream's level is the slider on its pop-out in Discord.
 
 ## Clips and ClipHound
 

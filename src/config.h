@@ -14,9 +14,9 @@ enum class FriendKind {
 struct Friend {
 	std::string name;
 	FriendKind kind = FriendKind::Twitch;
-	std::string source;                                 // OBS source name (ObsSource / Discord: the video source)
-	std::string audioSource;                            // Discord: the Application Audio Capture created for them
-	std::string channel;                                // Twitch login, VDO.Ninja stream id, or the Discord window
+	std::string source;      // OBS source name (ObsSource / Discord: the video source)
+	std::string audioSource; // a companion audio source, if the kind has one (none since 0.10.3)
+	std::string channel;     // Twitch login, VDO.Ninja stream id, or the Discord window
 	int vdoHeight = 1080, vdoFps = 60, vdoKbps = 12000; // VDO.Ninja quality (push and view links)
 	std::string vdoCodec = "h264";
 	std::string gameName; // their name in the game's NEARBY list ("" = the name above)
@@ -71,6 +71,7 @@ struct Config {
 	bool audioDefaults2 = false; // one-time move to "nothing of yours is muted by default"
 	bool audioDefaults3 = false; // ...and once more: nothing muted, and no sound taken from their feed
 	bool discordShared1 = false; // one-time move to one shared capture of the Discord window
+	bool discordAudio1 = false;  // one-time: the Discord audio captures deleted (0.10.3)
 	bool audioDefaults4 = false; // the mute list cleared once more: the auto-pick had been refilling it
 	bool audioDefaults5 = false; // one-time: the squad mate on screen has sound, on by default (0.9.1)
 	bool audioDefaults6 = false; // one-time: your own game sound muted while they are up (0.10.2)
@@ -104,7 +105,6 @@ struct Config {
 	/// 0, 1, ... = parked on that monitor, stacked, fully visible and on top. Parking on a screen
 	/// the game and OBS are not on keeps Discord's own volume control on each one within reach.
 	int popoutMonitor = -1;
-	int discordVolume = 100;    // the Discord audio captures' level on stream, percent
 	int clipSeriesS = 45;       // clips this close together are a run: "[1 of 3]" names, "part 2" on Twitch
 	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (wired or fibre: 12-20 Mbit/s)
 

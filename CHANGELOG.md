@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.10.3
+- **Discord's sound is left to Discord.** Discord hands OBS one mix for the whole call, so nothing outside Discord can pick one stream's sound out of it. The plugin no longer makes an audio capture for a Discord squad mate (the ones earlier builds made are removed once), nothing of yours is muted while a Discord feed is shown, and adding one says so. The POV sound button and its hotkey are gone with it.
+- Twitch, Kick, YouTube and VDO.Ninja squad mates keep the sound that follows the picture: theirs plays while they are up and your game's sound is muted meanwhile, with the tick box on the Switch tab to turn theirs off.
+- Coming back to your own POV only unmutes what the plugin itself muted, never an input you had muted by hand.
+
 ## 0.10.2
 - **Their sound instead of yours.** While a squad mate is on screen, your own game's sound is muted and theirs plays: the game source when it carries audio (a capture card does), otherwise Desktop Audio, chosen once and listed under Settings, Switch, where it can be changed or cleared. Your microphone is never touched, and everything is put back exactly as it was when you are revived.
 

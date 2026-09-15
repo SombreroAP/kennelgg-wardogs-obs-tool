@@ -85,7 +85,6 @@ static const char *kDockStyle = R"(
 #kennelDock QPushButton:disabled { color: #6c7068; border-color: #2e3230; }
 #kennelDock QPushButton#liveChip { border-color: #6f7c45; background: #232a1e; color: #d9e0b6; font-weight: 600; }
 #kennelDock QPushButton#liveChip:checked { border-color: #ce6050; background: #3a2521; color: #f2c9c1; }
-#kennelDock QPushButton#soundBtn:checked { border-color: #6f7c45; background: #232a1e; color: #d9e0b6; }
 #kennelDock QLabel#lockedChip { min-height: 24px; padding: 2px 10px; border: 1px dashed #3a3e3b; border-radius: 3px;
 	background: #202321; color: #7c8076; }
 #kennelDock QComboBox { min-height: 24px; padding: 1px 6px; border: 1px solid #3a3e3b; border-radius: 3px;
@@ -306,23 +305,11 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	auto *btns = new QHBoxLayout();
 	show_ = new QPushButton("Show friend's POV", this);
 	back_ = new QPushButton("Back to me", this);
-	// the sound of whoever is on screen: on (the default) it follows the picture, off they are all silent
-	sound_ = new QPushButton("POV sound on", this);
-	sound_->setObjectName("soundBtn");
-	sound_->setCheckable(true);
-	sound_->setToolTip(
-		"The sound of whoever is on screen, on your stream. On: the squad mate being shown is the one feed "
-		"with sound, and the unmute moves with the picture; everyone else stays muted. Off: every squad "
-		"mate's feed is silent. Your own inputs are never touched.\n"
-		"Discord hands OBS one track for the whole call, so for Discord squad mates that track is what "
-		"turns on and off; one stream's own level is the slider on its pop-out (Show pop-outs).");
 	btns->addWidget(show_);
 	btns->addWidget(back_);
-	btns->addWidget(sound_);
 	v->addLayout(btns);
 	connect(show_, &QPushButton::clicked, this, [this]() { e_->applyNow(true, "button"); });
 	connect(back_, &QPushButton::clicked, this, [this]() { e_->applyNow(false, "button"); });
-	connect(sound_, &QPushButton::clicked, this, [this](bool on) { e_->setFriendAudio(on); });
 
 	// Dual POV is its own thing: its own person, its own button, nothing to do with the drop-down
 	// above, which is who the full-screen swap shows.
@@ -667,12 +654,6 @@ void Dock::refresh()
 				QString::fromStdString(e_->cfg.myDiscord).toHtmlEscaped() +
 				"\" is not in the server. <a style=\"color:#c99a3b\" href=\"kennel:detect\">Detect</a> or "
 				"<a style=\"color:#c99a3b\" href=\"kennel:username\">change</a> the username.");
-	}
-	if (sound_) {
-		sound_->blockSignals(true);
-		sound_->setChecked(e_->cfg.friendAudio);
-		sound_->setText(e_->cfg.friendAudio ? "POV sound on" : "POV sound off");
-		sound_->blockSignals(false);
 	}
 }
 

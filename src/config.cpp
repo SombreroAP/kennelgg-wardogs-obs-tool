@@ -89,6 +89,7 @@ void Config::load()
 	DEFB(audioDefaults2);
 	DEFB(audioDefaults3);
 	DEFB(discordShared1);
+	DEFB(discordAudio1);
 	DEFB(audioDefaults4);
 	DEFB(audioDefaults5);
 	DEFB(audioDefaults6);
@@ -103,7 +104,6 @@ void Config::load()
 	DEFB(rosterAddSources);
 	DEFB(popoutTuck);
 	DEFI(popoutMonitor);
-	DEFI(discordVolume);
 	DEFI(clipSeriesS);
 	DEFS(sceneV);
 	DEFI(vdoBitrateKbps);
@@ -206,6 +206,7 @@ void Config::load()
 	GETB(audioDefaults2);
 	GETB(audioDefaults3);
 	GETB(discordShared1);
+	GETB(discordAudio1);
 	GETB(audioDefaults4);
 	GETB(audioDefaults5);
 	GETB(audioDefaults6);
@@ -220,7 +221,6 @@ void Config::load()
 	GETB(rosterAddSources);
 	GETB(popoutTuck);
 	GETI(popoutMonitor);
-	GETI(discordVolume);
 	GETI(clipSeriesS);
 	GETS(sceneV);
 	GETI(vdoBitrateKbps);
@@ -456,6 +456,7 @@ void Config::save() const
 	SETB(audioDefaults2);
 	SETB(audioDefaults3);
 	SETB(discordShared1);
+	SETB(discordAudio1);
 	SETB(audioDefaults4);
 	SETB(audioDefaults5);
 	SETB(audioDefaults6);
@@ -470,7 +471,6 @@ void Config::save() const
 	SETB(rosterAddSources);
 	SETB(popoutTuck);
 	SETI(popoutMonitor);
-	SETI(discordVolume);
 	SETI(clipSeriesS);
 	SETS(sceneV);
 	SETI(vdoBitrateKbps);

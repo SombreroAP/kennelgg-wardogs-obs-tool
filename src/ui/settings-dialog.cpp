@@ -456,7 +456,7 @@ private:
 			break;
 		case FriendKind::Discord:
 			hint_->setText(
-				"They press Go Live in the call. Open their stream in Discord and pop it out into its own window. \"Any Discord window\" follows the pop-out automatically; pick a specific window only if you have several. On Save a Window Capture and an Application Audio Capture of Discord are created in your scene. 720p without Nitro.");
+				"They press Go Live in the call. Open their stream in Discord and pop it out into its own window. \"Any Discord window\" follows the pop-out automatically; pick a specific window only if you have several. On Save a Window Capture of it is created in your scene. 720p without Nitro. Its sound is not handled: Discord hands OBS one mix for the whole call, so it comes through whatever already carries Discord on your stream.");
 			break;
 		case FriendKind::Kick:
 			hint_->setText(
@@ -965,17 +965,17 @@ QWidget *SettingsDialog::buildSwitchTab()
 	auto *g3 = new QGroupBox("Sound while a squad mate is on screen", w);
 	auto *v3 = new QVBoxLayout(g3);
 	friendAudio_ = new QCheckBox(
-		"Play the sound of the squad mate on screen (the dock's POV sound button is the same switch)", g3);
+		"Play the squad mate's sound while they are on screen (Twitch, Kick, YouTube and VDO.Ninja)", g3);
 	friendAudio_->setChecked(e_->cfg.friendAudio);
 	v3->addWidget(friendAudio_);
 	v3->addWidget(muted(
-		"On by default: whoever is on screen is the one feed with sound, every other squad mate stays muted, and the unmute moves with the picture. Untick it and every squad mate's feed is silent. Discord hands OBS one track for the whole call (every stream you watch, voices included), so for Discord squad mates that track is what turns on and off. Your own game sound is ticked below by default, so theirs takes over; untick it to hear both.",
+		"On by default for Twitch, Kick, YouTube and VDO.Ninja squad mates: whoever is on screen is the one feed with sound, and your own game sound (ticked below) is muted meanwhile. Discord is different. Discord hands OBS one mix for the whole call, so a Discord squad mate's sound is not handled by the plugin: nothing of yours is muted while they are shown, and their sound comes through whatever already carries Discord on your stream.",
 		g3));
 	auto *h3 = new QHBoxLayout();
 	mute_ = new QListWidget(g3);
 	h3->addWidget(mute_, 1);
 	h3->addWidget(
-		muted("What of YOURS is muted while a squad mate is on screen. Your game's sound is ticked by default (the game source when it carries audio, otherwise Desktop Audio), so their POV comes with their sound and not yours on top. Untick it to hear both. Do NOT tick your microphone; it keeps going either way. Ticked inputs are put back exactly as they were when you are revived.",
+		muted("What of YOURS is muted while a Twitch, Kick, YouTube or VDO.Ninja squad mate is on screen; never for a Discord one. Your game's sound is ticked by default (the game source when it carries audio, otherwise Desktop Audio), so their POV comes with their sound and not yours on top. Untick it to hear both. Do NOT tick your microphone; it keeps going either way. Ticked inputs are put back exactly as they were when you are revived.",
 		      g3),
 		1);
 	v3->addLayout(h3, 1);
@@ -2293,7 +2293,7 @@ QWidget *SettingsDialog::buildAboutTab()
 		"<p><b>Squad mate feeds.</b> Twitch: nothing for them to do, ~2 s behind with low-latency mode, includes their mic. "
 		"VDO.Ninja: they open one link in Chrome/Edge and share their game window with system audio, ~0.3 s, no mic. "
 		"Discord Go Live (~0.5-1 s, 720p without Nitro): they Go Live in the call, you pop their stream out into its own window, add a Window Capture of it "
-		"(Windows 10 method, keep it unminimised) plus an Application Audio Capture of Discord, and add the squad mate as an OBS source pointing at that capture.</p>"
+		"(Windows 10 method, keep it unminimised) and press Add pop-outs. Its sound is not handled: Discord hands OBS one mix for the whole call.</p>"
 		"<p><b>Timing the switch back.</b> While your friend is on screen, the plugin also watches their feed for the word REVIVING and the progress ring. "
 		"When it sees it, the switch back fires the instant the damage log disappears from your own game, with no confirmation delay. "
 		"Your own feed is the trigger because it has no latency; the friend's feed only arms it.</p>"
