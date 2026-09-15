@@ -157,6 +157,7 @@ def main():
     if bridge is not None:
         bridge.on_config = apply_live
         try:
+            print("[highlights] starting")
             from highlights import Highlights
             hl = Highlights(bridge, cfg)
             bridge.on_clip_saved = hl.on_clip_saved

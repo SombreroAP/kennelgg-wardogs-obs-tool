@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.13.1
+- On one PC 0.13.0 froze OBS within a minute of starting, ending in Windows refusing OBS any more window objects. This build moves the only new timer to after start-up, stops the replay source from reopening its last file when a scene collection loads, and logs how many Windows objects OBS holds whenever the count climbs, so the next occurrence names its cause by time.
+
 ## 0.13.0
 - **The highlights compilation, built on this PC.** ClipHound now ships with ffmpeg and cuts the compilation itself: as each clip lands, its action is pre-cut into a cached segment (5 s before the first kill to 3 s after the last, one at a time, at low priority, held back for 30 s whenever OBS reports dropped frames). When the stream stops, or when Play highlights finds nothing newer than your last clip, the best clips of the session (up to 12, by kill count, distance and tags) are joined with a title card and a kennel.gg card, a music track from a music folder inside the highlights folder is laid under it if there is one, and the file lands in the highlights folder. Play highlights then plays it full screen. The dock button reads Building... meanwhile and the status line shows progress.
 - Settings, Clips: build at stream end (on by default) and the clip count.

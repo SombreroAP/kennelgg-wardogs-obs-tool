@@ -245,6 +245,7 @@ private:
 	bool highlightsBuilding_ = false, highlightsThenPlay_ = false;
 	QTimer healthTimer_; // OBS's dropped-frame counters to ClipHound, so segment work backs off
 	void sendObsHealth();
+	unsigned long lastUserObjects_ = 0;
 	QDateTime lastChatReplay_;
 	void replayTick();
 	bool popoutsShown_ = false;

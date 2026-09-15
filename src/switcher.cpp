@@ -1287,6 +1287,12 @@ void Switcher::stopMedia(const Config &cfg)
 	obs_source_t *src = obs_get_source_by_name(Config::replaySourceName());
 	if (src) {
 		obs_source_media_stop(src);
+		// and forget the file: a media source saved with a file in it opens and decodes that file
+		// again the next time the scene collection loads, for nothing
+		obs_data_t *st = obs_data_create();
+		obs_data_set_string(st, "local_file", "");
+		obs_source_update(src, st);
+		obs_data_release(st);
 		obs_source_release(src);
 	}
 	hideEverywhere(Config::replaySourceName());

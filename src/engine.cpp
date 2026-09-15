@@ -50,7 +50,6 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	lastPick_ = lastNearbyWarn_ = lastReviveSeen_;
 	connect(&replayTimer_, &QTimer::timeout, this, &Engine::replayTick);
 	connect(&healthTimer_, &QTimer::timeout, this, &Engine::sendObsHealth);
-	healthTimer_.start(5000);
 	sessionStart_ = QDateTime::currentDateTime();
 	connect(&roster, &Roster::changed, this, &Engine::checkAccess);
 	connect(&roster, &Roster::polled, this, &Engine::checkAccess);
@@ -514,6 +513,7 @@ void Engine::start()
 #endif
 	applyRosterConfig();
 	timer_.start(std::max(100, cfg.pollMs));
+	healthTimer_.start(5000);
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
 	QTimer::singleShot(15000, this, [this]() {
@@ -2308,6 +2308,20 @@ void Engine::requestHighlights(const QString &why, bool thenPlay)
 
 void Engine::sendObsHealth()
 {
+#ifdef _WIN32
+	// The 0.13.0 start-up freeze ended in "used all of its system allowance of handles for Window
+	// Manager objects": something in the OBS process was making USER objects fast. Count them, and
+	// say so in the log when the count climbs, so the next one names its culprit by time.
+	{
+		DWORD user = GetGuiResources(GetCurrentProcess(), GR_USEROBJECTS);
+		DWORD gdi = GetGuiResources(GetCurrentProcess(), GR_GDIOBJECTS);
+		if (lastUserObjects_ == 0 || user > lastUserObjects_ + 300 || user > 6000)
+			log(QString("Windows objects held by OBS: %1 user, %2 GDI (the limit is 10000 each).")
+				    .arg(user)
+				    .arg(gdi));
+		lastUserObjects_ = user;
+	}
+#endif
 	if (!appConnected())
 		return;
 	QJsonObject o;
