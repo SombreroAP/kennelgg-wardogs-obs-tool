@@ -105,6 +105,10 @@ private:
 	QCheckBox *dualLook_ = nullptr;
 	QSpinBox *dualNameScale_ = nullptr;
 	QSpinBox *seriesS_ = nullptr;
+	QSpinBox *replayPre_ = nullptr, *replayPost_ = nullptr, *replayScale_ = nullptr, *replayVol_ = nullptr,
+		 *replayCool_ = nullptr;
+	QCheckBox *replayChat_ = nullptr;
+	QLineEdit *chatKick_ = nullptr, *chatYouTube_ = nullptr, *highlightsFolder_ = nullptr;
 	QLabel *pastResult_ = nullptr;
 	QRadioButton *dragWin_ = nullptr, *dragKeys_ = nullptr;
 	QDoubleSpinBox *dualX_ = nullptr, *dualY_ = nullptr, *dualW_ = nullptr;

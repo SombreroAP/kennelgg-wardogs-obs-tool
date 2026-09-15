@@ -48,6 +48,7 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	lastReviveSeen_ = clock_::now() - std::chrono::hours(1);
 	downSince_ = lastReviveSeen_;
 	lastPick_ = lastNearbyWarn_ = lastReviveSeen_;
+	connect(&replayTimer_, &QTimer::timeout, this, &Engine::replayTick);
 	connect(&roster, &Roster::changed, this, &Engine::checkAccess);
 	connect(&roster, &Roster::polled, this, &Engine::checkAccess);
 	connect(&roster, &Roster::changed, this, &Engine::syncRoster);
@@ -540,6 +541,10 @@ void Engine::pushAppConfig()
 	set["roi"] = QJsonArray{cfg.feedX, cfg.feedY, cfg.feedW, cfg.feedH};
 	set["multikill_window"] = cfg.appMultikillWindow;
 	set["series_window"] = cfg.clipSeriesS; // Twitch titles get "part 2", "part 3" inside this
+	set["replay_chat"] = cfg.replayChat;    // "!replay" in chat plays the last highlight
+	set["replay_cooldown_s"] = cfg.replayCooldownS;
+	set["chat_kick"] = QString::fromStdString(cfg.chatKick);
+	set["chat_youtube"] = QString::fromStdString(cfg.chatYouTube);
 	set["fps"] = cfg.appFps > 0 ? cfg.appFps : 10;
 	QJsonObject nb;
 	nb["enabled"] = cfg.nearEnabled;
@@ -747,6 +752,7 @@ void Engine::stop()
 	downDelay_.stop();
 	upDelay_.stop();
 	bridge.close();
+	stopReplay("OBS closing");
 	sw.shutdown(); // the dual-POV scene and its browser page, before obs-browser unloads
 	for (int i = 0; i < 50 && busy_; i++)
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -1404,6 +1410,17 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		bridge.sendJson(r);
 		if (!err.isEmpty())
 			log("Clip request: " + err);
+	} else if (type == "replay") {
+		QString who = o.value("who").toString("chat");
+		QString err = chatReplay(who);
+		QJsonObject r;
+		r["type"] = "replay_result";
+		r["ok"] = err.isEmpty();
+		r["error"] = err;
+		r["who"] = who;
+		bridge.sendJson(r);
+		if (!err.isEmpty())
+			log("Chat replay from " + who + " not played: " + err + ".");
 	} else if (type == "app_config" && o.contains("values")) {
 		QJsonObject v = o.value("values").toObject();
 		if (cfg.appConfigDirty) {
@@ -2153,6 +2170,157 @@ void Engine::applyNow(bool on, const QString &why)
 	log(msg);
 	applying_ = false;
 	emit stateChanged();
+}
+
+/// Where the action is in a clip, in ms from the start of the file: from the sidecar offsets
+/// when the plugin wrote them, else the usual "about 7 s before the end".
+static void replayWindow(const Clips::Entry &e, qint64 durMs, int preS, int postS, qint64 *startMs, qint64 *endMs)
+{
+	qint64 first = e.firstS >= 0 ? (qint64)(e.firstS * 1000) : (e.momentS >= 0 ? (qint64)(e.momentS * 1000) : 7000);
+	qint64 last = e.momentS >= 0 ? (qint64)(e.momentS * 1000) : first;
+	*startMs = std::max<qint64>(0, durMs - first - (qint64)preS * 1000);
+	*endMs = std::min<qint64>(durMs, durMs - last + (qint64)postS * 1000);
+	if (*endMs <= *startMs + 1000)
+		*endMs = std::min<qint64>(durMs, *startMs + 8000);
+}
+
+void Engine::playReplay(const QString &why)
+{
+	const Clips::Entry *last = nullptr;
+	for (auto it = clips.history().rbegin(); it != clips.history().rend(); ++it)
+		if (!it->path.isEmpty() && QFileInfo::exists(it->path)) {
+			last = &*it;
+			break;
+		}
+	if (!last) {
+		log("Instant replay: no highlight saved yet this session.");
+		return;
+	}
+	if (replaying())
+		stopReplay("replaced");
+	std::string e = sw.playMedia(cfg, last->path.toStdString(), cfg.replayScale, cfg.replayVolume);
+	if (!e.empty()) {
+		log("Instant replay: " + QString::fromStdString(e));
+		return;
+	}
+	replayWhat_ = last->title.isEmpty() ? QFileInfo(last->path).fileName() : last->title;
+	// the length is known only once the file has loaded: the tick seeks and arms the stop
+	pendingReplay_ = *last;
+	replayLengthMs_ = 1; // "playing, not yet sought"
+	replaySought_ = false;
+	replayClock_.start();
+	replayTimer_.start(150);
+	addEvent(QDateTime::currentDateTime().toString("HH:mm:ss") + "  REPLAY " + replayWhat_);
+	log("Instant replay: " + replayWhat_ + " - " + why + ".");
+	emit stateChanged();
+}
+
+void Engine::playCompilation(const QString &why)
+{
+	QString folder = QString::fromStdString(cfg.highlightsFolder);
+	if (folder.isEmpty()) {
+		QString base = QString::fromStdString(cfg.clipFolder);
+		if (base.isEmpty())
+			base = QString::fromStdString(cfg.backtrackFolder);
+		if (base.isEmpty()) {
+			QStringList bt = Clips::discoverBacktrackFolders();
+			if (!bt.isEmpty())
+				base = bt.first();
+		}
+		folder = base.isEmpty() ? QString() : base + "/highlights";
+	}
+	if (folder.isEmpty() || !QDir(folder).exists()) {
+		log("Play highlights: no highlights folder yet" +
+		    (folder.isEmpty() ? QString(".") : " (" + folder + ").") +
+		    " Settings, Clips sets where the compilations live.");
+		return;
+	}
+	QFileInfoList files = QDir(folder).entryInfoList({"*.mp4", "*.mkv", "*.mov"}, QDir::Files, QDir::Time);
+	if (files.isEmpty()) {
+		log("Play highlights: nothing in " + folder + " yet.");
+		return;
+	}
+	if (replaying())
+		stopReplay("replaced");
+	std::string e = sw.playMedia(cfg, files.first().absoluteFilePath().toStdString(), 100, cfg.replayVolume);
+	if (!e.empty()) {
+		log("Play highlights: " + QString::fromStdString(e));
+		return;
+	}
+	replayWhat_ = files.first().fileName();
+	pendingReplay_ = Clips::Entry{};
+	pendingReplay_.path.clear();
+	replayLengthMs_ = 1;
+	replaySought_ = true; // from the start, to the end
+	replayStartMs_ = 0;
+	replayEndMs_ = 0; // = the whole file, once its length is known
+	replayClock_.start();
+	replayTimer_.start(250);
+	addEvent(QDateTime::currentDateTime().toString("HH:mm:ss") + "  HIGHLIGHTS " + replayWhat_);
+	log("Play highlights: " + replayWhat_ + " - " + why + ".");
+	emit stateChanged();
+}
+
+void Engine::replayTick()
+{
+	if (!replaying())
+		return;
+	qint64 dur = sw.mediaDurationMs();
+	if (!replaySought_) {
+		if (dur <= 0) {
+			if (replayClock_.elapsed() > 4000) {
+				log("Instant replay: the file did not load.");
+				stopReplay("failed");
+			}
+			return;
+		}
+		replayWindow(pendingReplay_, dur, cfg.replayPreS, cfg.replayPostS, &replayStartMs_, &replayEndMs_);
+		if (replayStartMs_ > 0)
+			sw.seekMedia(replayStartMs_);
+		replaySought_ = true;
+		replayLengthMs_ = replayEndMs_ - replayStartMs_;
+		replayClock_.restart();
+		return;
+	}
+	if (replayEndMs_ == 0 && dur > 0)
+		replayEndMs_ = dur, replayLengthMs_ = dur;
+	bool timeUp = replayEndMs_ > 0 && replayClock_.elapsed() >= replayLengthMs_ + 250;
+	if (timeUp || (replayClock_.elapsed() > 1500 && sw.mediaEnded()))
+		stopReplay("finished");
+}
+
+void Engine::stopReplay(const QString &why)
+{
+	replayTimer_.stop();
+	bool was = replaying();
+	replayLengthMs_ = 0;
+	replayStartMs_ = replayEndMs_ = 0;
+	sw.stopMedia(cfg);
+	if (was)
+		log("Replay off - " + why + ".");
+	replayWhat_.clear();
+	emit stateChanged();
+}
+
+QString Engine::chatReplay(const QString &who)
+{
+	if (!cfg.replayChat)
+		return "chat replays are off (Settings, Clips)";
+	QDateTime now = QDateTime::currentDateTime();
+	if (lastChatReplay_.isValid()) {
+		qint64 left = cfg.replayCooldownS - lastChatReplay_.secsTo(now);
+		if (left > 0)
+			return QString("cooldown: %1 s to go").arg(left);
+	}
+	bool have = false;
+	for (const auto &e : clips.history())
+		if (!e.path.isEmpty() && QFileInfo::exists(e.path))
+			have = true;
+	if (!have)
+		return "no highlight saved yet";
+	lastChatReplay_ = now;
+	playReplay("chat: " + who);
+	return "";
 }
 
 void Engine::showInDual(int idx, const QString &why)

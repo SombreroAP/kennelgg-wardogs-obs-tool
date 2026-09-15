@@ -106,7 +106,18 @@ struct Config {
 	/// 0, 1, ... = parked on that monitor, stacked, fully visible and on top. Parking on a screen
 	/// the game and OBS are not on keeps Discord's own volume control on each one within reach.
 	int popoutMonitor = -1;
-	int clipSeriesS = 45;       // clips this close together are a run: "[1 of 3]" names, "part 2" on Twitch
+	int clipSeriesS = 45; // clips this close together are a run: "[1 of 3]" names, "part 2" on Twitch
+	// Instant replay: the last highlight played back on the stream, cut down to the action.
+	int replayPreS = 3;           // seconds before the first kill
+	int replayPostS = 5;          // seconds after the last kill
+	int replayScale = 75;         // percent of the canvas it takes, centred, under the always-on-top list
+	int replayVolume = 40;        // the clip's own sound on the stream, percent (it carries your mic too)
+	int replayCooldownS = 60;     // chat may trigger it this often at most (30 s to 15 min)
+	bool replayChat = true;       // "!replay" from subscribers and moderators in chat plays it
+	std::string chatKick;         // your Kick channel, for the chat trigger (Twitch comes from the login)
+	std::string chatYouTube;      // your YouTube channel or @handle, for the chat trigger
+	std::string highlightsFolder; // where the highlights compilations live ("" = <clip folder>/highlights)
+	static const char *replaySourceName() { return "Kennel.gg · Replay"; }
 	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (wired or fibre: 12-20 Mbit/s)
 
 	// dual POV: a squad mate's feed in a small window over your own POV (tank / chopper crews)

@@ -397,6 +397,29 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	}
 	// ClipHound control, styled like OBS's replay-buffer control: [Start/Stop ClipHound] [Save clip ▾]
 	v->addWidget(eyebrow("Clips", this));
+	// the last highlight back on the stream, cut to the action; and the session's compilation
+	auto *replayRow = new QHBoxLayout();
+	replay_ = new QPushButton("Instant replay", this);
+	replay_->setToolTip("Play the last highlight on the stream, cut to the action: a few seconds before the first "
+			    "kill to a few seconds after the last (Settings, Clips). Press again to stop.");
+	highlights_ = new QPushButton("Play highlights", this);
+	highlights_->setToolTip("Play the newest highlights compilation, full screen, under your camera and alerts. "
+				"Press again to stop.");
+	replayRow->addWidget(replay_);
+	replayRow->addWidget(highlights_);
+	v->addLayout(replayRow);
+	connect(replay_, &QPushButton::clicked, this, [this]() {
+		if (e_->replaying())
+			e_->stopReplay("dock");
+		else
+			e_->playReplay("dock");
+	});
+	connect(highlights_, &QPushButton::clicked, this, [this]() {
+		if (e_->replaying())
+			e_->stopReplay("dock");
+		else
+			e_->playCompilation("dock");
+	});
 	auto *appRow = new QHBoxLayout();
 	appBtn_ = new QPushButton("Start ClipHound", this);
 	appRow->addWidget(appBtn_, 1);
@@ -644,6 +667,12 @@ void Dock::refresh()
 	}
 	show_->setEnabled(!e_->applied());
 	back_->setEnabled(e_->applied());
+	if (replay_) {
+		bool on = e_->replaying();
+		replay_->setText(on ? "Stop replay" : "Instant replay");
+		highlights_->setText(on ? "Stop" : "Play highlights");
+		replay_->setStyleSheet(on ? "QPushButton { border-left: 4px solid #ce6050; }" : "");
+	}
 	if (locked_) {
 		Engine::Access a = e_->rosterAccess();
 		QString url = e_->discordUrl().toHtmlEscaped();

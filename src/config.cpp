@@ -107,6 +107,15 @@ void Config::load()
 	DEFB(popoutTuck);
 	DEFI(popoutMonitor);
 	DEFI(clipSeriesS);
+	DEFI(replayPreS);
+	DEFI(replayPostS);
+	DEFI(replayScale);
+	DEFI(replayVolume);
+	DEFI(replayCooldownS);
+	DEFB(replayChat);
+	DEFS(chatKick);
+	DEFS(chatYouTube);
+	DEFS(highlightsFolder);
 	DEFS(sceneV);
 	DEFI(vdoBitrateKbps);
 	DEFB(dualEnabled);
@@ -225,6 +234,15 @@ void Config::load()
 	GETB(popoutTuck);
 	GETI(popoutMonitor);
 	GETI(clipSeriesS);
+	GETI(replayPreS);
+	GETI(replayPostS);
+	GETI(replayScale);
+	GETI(replayVolume);
+	GETI(replayCooldownS);
+	GETB(replayChat);
+	GETS(chatKick);
+	GETS(chatYouTube);
+	GETS(highlightsFolder);
 	GETS(sceneV);
 	GETI(vdoBitrateKbps);
 	GETB(dualEnabled);
@@ -438,6 +456,11 @@ void Config::load()
 		nearMaxM = 99;
 	}
 	nearMaxM = std::clamp(nearMaxM, 0, 100); // the NEARBY list never shows more than 100 m
+	replayCooldownS = std::clamp(replayCooldownS, 30, 900);
+	replayScale = std::clamp(replayScale, 25, 100);
+	replayVolume = std::clamp(replayVolume, 0, 100);
+	replayPreS = std::clamp(replayPreS, 0, 30);
+	replayPostS = std::clamp(replayPostS, 0, 30);
 	// Squad automation is driven by the Kennel.gg bot and is for members of that server: the
 	// address is not a setting, and the channel is whichever one you are sitting in.
 	rosterUrl = kennelRosterUrl();
@@ -482,6 +505,15 @@ void Config::save() const
 	SETB(popoutTuck);
 	SETI(popoutMonitor);
 	SETI(clipSeriesS);
+	SETI(replayPreS);
+	SETI(replayPostS);
+	SETI(replayScale);
+	SETI(replayVolume);
+	SETI(replayCooldownS);
+	SETB(replayChat);
+	SETS(chatKick);
+	SETS(chatYouTube);
+	SETS(highlightsFolder);
 	SETS(sceneV);
 	SETI(vdoBitrateKbps);
 	SETB(dualEnabled);

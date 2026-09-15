@@ -8,6 +8,7 @@
 #include <QImage>
 #include <QTimer>
 #include <QDateTime>
+#include <QElapsedTimer>
 #include "bridge.h"
 #include "capture.h"
 #include "clips.h"
@@ -49,6 +50,16 @@ public:
 	bool popoutsShown() const { return popoutsShown_; }
 	/// Put this squad mate in the dual window and keep it there until it is turned off by hand.
 	void showInDual(int idx, const QString &why = "squad panel");
+	/// Instant replay: the last highlight, cut to the action (replayPreS before the first kill to
+	/// replayPostS after the last), on the stream at replayScale of the canvas. `why` for the log.
+	void playReplay(const QString &why = "dock");
+	/// The newest highlights compilation in the highlights folder, full screen.
+	void playCompilation(const QString &why = "dock");
+	void stopReplay(const QString &why = "dock");
+	/// A "!replay" from chat: plays if the cooldown has passed. Returns "" or why not.
+	QString chatReplay(const QString &who);
+	bool replaying() const { return replayLengthMs_ > 0; }
+	QString replayWhat() const { return replayWhat_; } // what is playing, for the dock
 	/// Is this Discord username you (your own stream is never a squad mate).
 	bool isMe(const QString &discordUser) const;
 	/// Squad automation (the roster) is for members of the Kennel.gg Discord: the bot publishes
@@ -217,6 +228,14 @@ private:
 
 	QTimer timer_, frameTimer_, downDelay_, upDelay_;
 	QTimer popoutTimer_;
+	QTimer replayTimer_; // polls the playing replay: seek once loaded, stop at its end
+	qint64 replayStartMs_ = 0, replayEndMs_ = 0, replayLengthMs_ = 0;
+	QElapsedTimer replayClock_;
+	bool replaySought_ = false;
+	QString replayWhat_;
+	Clips::Entry pendingReplay_;
+	QDateTime lastChatReplay_;
+	void replayTick();
 	bool popoutsShown_ = false;
 	QString popoutNote_; // the unnamed pop-out we last mentioned, so the log says it once
 	Access lastAccess_ = Access::Unknown;

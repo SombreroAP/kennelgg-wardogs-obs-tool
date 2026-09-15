@@ -2603,6 +2603,17 @@ void SettingsDialog::collect()
 	c.nearCooldownS = nearCooldown_ ? nearCooldown_->value() : c.nearCooldownS;
 	c.nearMaxM = nearMax_ ? nearMax_->value() : c.nearMaxM;
 	c.appFps = appFps_ ? appFps_->value() : c.appFps;
+	if (replayPre_) {
+		c.replayPreS = replayPre_->value();
+		c.replayPostS = replayPost_->value();
+		c.replayScale = replayScale_->value();
+		c.replayVolume = replayVol_->value();
+		c.replayCooldownS = replayCool_->value();
+		c.replayChat = replayChat_->isChecked();
+		c.chatKick = chatKick_->text().trimmed().toStdString();
+		c.chatYouTube = chatYouTube_->text().trimmed().toStdString();
+		c.highlightsFolder = highlightsFolder_->text().trimmed().toStdString();
+	}
 }
 
 /// Counts how many different pictures a feed actually delivers in two seconds. A feed that looks

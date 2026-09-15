@@ -76,6 +76,15 @@ public:
 	/// audio sources are unmuted and every other squad mate's are muted; otherwise all of them are
 	/// muted. Only sources that belong to a squad slot are touched, never the streamer's own.
 	void applyFriendAudio(const Config &cfg, bool showing);
+	/// Play a video file on the stream: a media source, `scalePct` of the canvas, centred, kept
+	/// under the always-on-top list. Loads and starts it; seek and stop are the caller's, on
+	/// timers, since the length is only known once it has loaded. "" or a problem.
+	std::string playMedia(const Config &cfg, const std::string &path, int scalePct, int volumePct);
+	/// The playing file's length in ms (0 until it has loaded), and a seek into it.
+	int64_t mediaDurationMs() const;
+	void seekMedia(int64_t ms);
+	bool mediaEnded() const;
+	void stopMedia(const Config &cfg);
 	/// Choices a source kind offers for one of its list properties (e.g. window_capture "window").
 	static std::vector<std::pair<std::string, std::string>> listProperty(const char *kind,
 									     const char *prop); // name, value

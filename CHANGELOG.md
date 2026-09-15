@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.12.0
+- **Instant replay.** The last highlight played back on the stream, cut to the action: 3 s before the first kill to 5 s after the last (both adjustable), at 75 % of the screen, centred, under your camera and alerts. On the dock, on a hotkey, and the plugin accepts a "!replay" from chat with a cooldown (60 s by default, 30 s to 15 min); reading the chat itself lands in the next build. Press the button again to stop.
+- **Play highlights.** A dock button and hotkey that play the newest video in the highlights folder full screen, for the end-of-stream compilation. Settings, Clips has the folder and every replay setting, plus the Kick and YouTube channel names the chat trigger will read.
+
 ## 0.11.0
 - **Clips know where the kill is.** ClipHound now tells the plugin when each kill-feed row appeared, and the plugin writes the position into the clip: the name ends in `@-7.4s` (the last kill, that many seconds before the end of the file) and a `.json` sidecar next to the file carries every kill's offset, the first kill of a multi-kill, killer, victim, distance and weapon. Kennel Cut reads both, so a compilation cuts on the moment instead of a guess. The sidecar follows the file through the rolling-highlights renames.
 - Backtrack clips are now written to clips.csv like replay-buffer clips (they never were), with three new columns: moment, first kill, kill count.

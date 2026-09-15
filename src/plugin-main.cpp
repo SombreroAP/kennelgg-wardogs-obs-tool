@@ -29,7 +29,8 @@ OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 static Engine *g_engine = nullptr;
 static Dock *g_dock = nullptr;
 static obs_hotkey_id g_hkToggle = OBS_INVALID_HOTKEY_ID, g_hkCapture = OBS_INVALID_HOTKEY_ID,
-		     g_hkClip = OBS_INVALID_HOTKEY_ID, g_hkDual = OBS_INVALID_HOTKEY_ID;
+		     g_hkClip = OBS_INVALID_HOTKEY_ID, g_hkDual = OBS_INVALID_HOTKEY_ID,
+		     g_hkReplay = OBS_INVALID_HOTKEY_ID, g_hkHighlights = OBS_INVALID_HOTKEY_ID;
 
 static void hotkeyToggle(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
 {
@@ -41,6 +42,32 @@ static void hotkeyDual(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
 {
 	if (pressed && g_engine)
 		QMetaObject::invokeMethod(g_engine, "toggleDual", Qt::QueuedConnection);
+}
+
+static void hotkeyReplay(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
+{
+	if (pressed && g_engine)
+		QMetaObject::invokeMethod(
+			g_engine,
+			[] {
+				if (g_engine)
+					g_engine->replaying() ? g_engine->stopReplay("hotkey")
+							      : g_engine->playReplay("hotkey");
+			},
+			Qt::QueuedConnection);
+}
+
+static void hotkeyHighlights(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
+{
+	if (pressed && g_engine)
+		QMetaObject::invokeMethod(
+			g_engine,
+			[] {
+				if (g_engine)
+					g_engine->replaying() ? g_engine->stopReplay("hotkey")
+							      : g_engine->playCompilation("hotkey");
+			},
+			Qt::QueuedConnection);
 }
 
 static void hotkeyCapture(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
@@ -87,6 +114,16 @@ static void loadHotkeys()
 		obs_hotkey_load(g_hkDual, a);
 		obs_data_array_release(a);
 	}
+	a = obs_data_get_array(d, "replay");
+	if (a) {
+		obs_hotkey_load(g_hkReplay, a);
+		obs_data_array_release(a);
+	}
+	a = obs_data_get_array(d, "highlights");
+	if (a) {
+		obs_hotkey_load(g_hkHighlights, a);
+		obs_data_array_release(a);
+	}
 	obs_data_release(d);
 }
 
@@ -104,6 +141,12 @@ static void saveHotkeys()
 	obs_data_array_release(a);
 	a = obs_hotkey_save(g_hkClip);
 	obs_data_set_array(d, "clip", a);
+	obs_data_array_release(a);
+	a = obs_hotkey_save(g_hkReplay);
+	obs_data_set_array(d, "replay", a);
+	obs_data_array_release(a);
+	a = obs_hotkey_save(g_hkHighlights);
+	obs_data_set_array(d, "highlights", a);
 	obs_data_array_release(a);
 	obs_data_save_json_safe(d, Config::configFile("hotkeys.json").c_str(), "tmp", "bak");
 	obs_data_release(d);
@@ -162,6 +205,11 @@ bool obs_module_load(void)
 						hotkeyClip, nullptr);
 	g_hkDual = obs_hotkey_register_frontend("kennel.dual.toggle", obs_module_text("KennelWardogs.Hotkey.Dual"),
 						hotkeyDual, nullptr);
+	g_hkReplay = obs_hotkey_register_frontend("kennel.replay.play", obs_module_text("KennelWardogs.Hotkey.Replay"),
+						  hotkeyReplay, nullptr);
+	g_hkHighlights = obs_hotkey_register_frontend("kennel.replay.highlights",
+						      obs_module_text("KennelWardogs.Hotkey.Highlights"),
+						      hotkeyHighlights, nullptr);
 	loadHotkeys();
 	obs_frontend_add_event_callback(onFrontendEvent, nullptr);
 	obs_log(LOG_INFO, "Kennel.gg Wardogs OBS Tool loaded (version %s)", PLUGIN_VERSION);
@@ -179,6 +227,10 @@ void obs_module_unload(void)
 		obs_hotkey_unregister(g_hkDual);
 	if (g_hkClip != OBS_INVALID_HOTKEY_ID)
 		obs_hotkey_unregister(g_hkClip);
+	if (g_hkReplay != OBS_INVALID_HOTKEY_ID)
+		obs_hotkey_unregister(g_hkReplay);
+	if (g_hkHighlights != OBS_INVALID_HOTKEY_ID)
+		obs_hotkey_unregister(g_hkHighlights);
 	if (g_engine)
 		g_engine->stop();
 	g_engine = nullptr; // owned by the main window

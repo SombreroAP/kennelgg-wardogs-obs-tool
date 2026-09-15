@@ -1185,6 +1185,93 @@ void Switcher::applyFriendAudio(const Config &cfg, bool showing)
 		setMute(n, false);
 }
 
+std::string Switcher::playMedia(const Config &cfg, const std::string &path, int scalePct, int volumePct)
+{
+	obs_data_t *st = obs_data_create();
+	obs_data_set_string(st, "local_file", path.c_str());
+	obs_data_set_bool(st, "is_local_file", true);
+	obs_data_set_bool(st, "looping", false);
+	obs_data_set_bool(st, "restart_on_activate", false);
+	obs_data_set_bool(st, "close_when_inactive", true);
+	obs_data_set_bool(st, "clear_on_media_end", true);
+	obs_data_set_bool(st, "hw_decode", true);
+	obs_data_set_int(st, "speed_percent", 100);
+	std::string e = createInScene(cfg, "ffmpeg_source", Config::replaySourceName(), st, false, false);
+	obs_data_release(st);
+	if (!e.empty())
+		return e;
+	obs_source_t *ss = sceneSource(cfg);
+	if (!ss)
+		return "no scene";
+	obs_scene_t *scene = obs_scene_from_source(ss);
+	obs_sceneitem_t *item = obs_scene_find_source(scene, Config::replaySourceName());
+	obs_source_t *src = obs_get_source_by_name(Config::replaySourceName());
+	if (!item || !src) {
+		if (src)
+			obs_source_release(src);
+		obs_source_release(ss);
+		return "the replay source is not in the scene";
+	}
+	struct obs_video_info ovi;
+	obs_get_video_info(&ovi);
+	float f = std::clamp(scalePct, 10, 100) / 100.0f;
+	float w = ovi.base_width * f, h = ovi.base_height * f;
+	struct vec2 pos = {(ovi.base_width - w) / 2.0f, (ovi.base_height - h) / 2.0f}, bounds = {w, h};
+	obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_INNER);
+	obs_sceneitem_set_bounds(item, &bounds);
+	obs_sceneitem_set_pos(item, &pos);
+	obs_source_set_volume(src, std::clamp(volumePct, 0, 100) / 100.0f);
+	obs_source_set_muted(src, volumePct <= 0);
+	obs_source_media_restart(src);
+	obs_sceneitem_set_visible(item, true);
+	moveToTop(item);
+	raiseOnTop(cfg); // camera and alerts back over it
+	obs_source_release(src);
+	obs_source_release(ss);
+	return "";
+}
+
+int64_t Switcher::mediaDurationMs() const
+{
+	obs_source_t *src = obs_get_source_by_name(Config::replaySourceName());
+	if (!src)
+		return 0;
+	int64_t d = obs_source_media_get_duration(src);
+	obs_source_release(src);
+	return d;
+}
+
+void Switcher::seekMedia(int64_t ms)
+{
+	obs_source_t *src = obs_get_source_by_name(Config::replaySourceName());
+	if (!src)
+		return;
+	obs_source_media_set_time(src, ms);
+	obs_source_release(src);
+}
+
+bool Switcher::mediaEnded() const
+{
+	obs_source_t *src = obs_get_source_by_name(Config::replaySourceName());
+	if (!src)
+		return true;
+	enum obs_media_state st = obs_source_media_get_state(src);
+	obs_source_release(src);
+	return st == OBS_MEDIA_STATE_ENDED || st == OBS_MEDIA_STATE_STOPPED || st == OBS_MEDIA_STATE_ERROR ||
+	       st == OBS_MEDIA_STATE_NONE;
+}
+
+void Switcher::stopMedia(const Config &cfg)
+{
+	obs_source_t *src = obs_get_source_by_name(Config::replaySourceName());
+	if (src) {
+		obs_source_media_stop(src);
+		obs_source_release(src);
+	}
+	hideEverywhere(Config::replaySourceName());
+	(void)cfg;
+}
+
 /// Your own POV, and nothing else: every squad mate's video and audio hidden in every scene.
 int Switcher::hideAllFriends(const Config &cfg)
 {
