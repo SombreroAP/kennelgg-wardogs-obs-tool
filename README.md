@@ -44,8 +44,10 @@ Other squad-mate feeds still work when Discord is not an option: Twitch, Kick, Y
    the Discord page. Your Discord username is filled in from the Discord app when it is running.
 3. Join the Kennel.gg Discord if you are not in it yet (the dock's **Discord** button). Squad
    automation runs through the Kennel Ops bot there and is for members.
-4. Play. Sit in voice with your squad, pop out the streams of the people whose POV you might show,
-   press **Add pop-outs**. **Get downed once**: the dock turns red and your stream shows the squad
+4. Play. Sit in voice with your squad, pop out the streams of the people whose POV you might show
+   and **mute each one in Discord** (right-click the stream, Mute), or its game sound plays in your
+   headphones and goes out on your stream through Desktop Audio the whole time. Then press
+   **Add pop-outs**. **Get downed once**: the dock turns red and your stream shows the squad
    mate; it comes back the instant you are revived.
 
 Do not minimise a pop-out. A minimised window stops drawing and its feed freezes. Tucked away is fine,

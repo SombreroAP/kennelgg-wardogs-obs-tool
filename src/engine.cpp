@@ -1072,7 +1072,9 @@ QString Engine::addPopouts(QStringList *addedOut)
 	QStringList out;
 	if (!added.isEmpty())
 		out << "Added " + added.join(", ") +
-				". Discord's sound is not handled: Discord hands OBS one mix for the whole call, so it comes through whatever already carries Discord on your stream, and your own game sound stays up while they are shown.";
+				". Mute each of their streams in Discord (right-click the stream, Mute): Discord hands OBS one "
+				"mix for the whole call, so an unmuted stream's game sound plays in your headphones and goes out "
+				"on your stream through Desktop Audio the whole time. The plugin does not handle it.";
 	if (!already.isEmpty())
 		out << already.join(", ") + (already.size() == 1 ? " is" : " are") + " already in the squad.";
 	if (!failed.isEmpty())
@@ -1085,7 +1087,7 @@ QString Engine::addPopouts(QStringList *addedOut)
 		out << "Your own stream is popped out; it is not added.";
 	if (out.isEmpty())
 		out << "No popped-out Discord stream found. In Discord, right-click a squad mate's stream and "
-		       "choose Pop Out, then press Add.";
+		       "choose Pop Out, mute the stream (right-click it again), then press Add.";
 	// nothing was added: say exactly which Discord windows were seen, so a title that does not look
 	// the way this expects can be read straight off the panel
 	if (added.isEmpty()) {

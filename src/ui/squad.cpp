@@ -15,10 +15,11 @@ SquadPanel::SquadPanel(Engine *engine, QWidget *parent) : QDialog(parent), e_(en
 	setMinimumWidth(460);
 	auto *v = new QVBoxLayout(this);
 
-	auto *how = new QLabel("In Discord, right-click a squad mate's stream and choose <b>Pop Out</b>. "
-			       "Then press Add: every popped-out stream becomes a squad mate, named by their "
-			       "Discord username and showing that window and no other.",
-			       this);
+	auto *how = new QLabel(
+		"In Discord, right-click a squad mate's stream and choose <b>Pop Out</b>. Then right-click the stream again and <b>mute it</b>: its game sound would otherwise play in your headphones and go out on your stream through Desktop Audio the whole time. "
+		"Then press Add: every popped-out stream becomes a squad mate, named by their "
+		"Discord username and showing that window and no other.",
+		this);
 	how->setWordWrap(true);
 	v->addWidget(how);
 

@@ -144,8 +144,10 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	// and bring the pop-outs back to reach their controls
 	auto *quick = new QHBoxLayout();
 	auto *addPop = new QPushButton("Add pop-outs", this);
-	addPop->setToolTip("Every popped-out Discord stream becomes a squad mate, named by its username. Same as the "
-			   "Add on the Squad panel.");
+	addPop->setToolTip(
+		"Every popped-out Discord stream becomes a squad mate, named by its username. Same as the "
+		"Add on the Squad panel. Right-click each stream in Discord and mute it first: its game sound "
+		"would otherwise play in your headphones and go out on your stream through Desktop Audio.");
 	showPop_ = new QPushButton("Show pop-outs", this);
 	showPop_->setCheckable(true);
 	showPop_->setToolTip(

@@ -138,7 +138,7 @@ QWizardPage *SetupWizard::pageSquad()
 	auto *v = new QVBoxLayout(p);
 	v->addWidget(note(
 		"<b>Every session:</b> join your squad's voice channel, watch a squad mate's stream and pop it out "
-		"(right-click their stream, <b>Pop Out</b>), then press <b>Add pop-outs</b> on the dock. Their slot is made, "
+		"(right-click their stream, <b>Pop Out</b>). Then right-click the stream again and <b>mute it</b>: its game sound would otherwise play in your headphones and go out on your stream through Desktop Audio the whole time. Then press <b>Add pop-outs</b> on the dock. Their slot is made, "
 		"named after them, and their window is tucked to the edge of your screen where Discord keeps drawing it. "
 		"Pop out everyone whose POV you might show.<br><br>"
 		"<b>Do not minimise a pop-out.</b> A minimised window stops drawing and its feed freezes. Tucked away is "
