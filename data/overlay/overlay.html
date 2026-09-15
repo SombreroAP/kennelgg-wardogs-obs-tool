@@ -66,6 +66,15 @@ body.s #name.pos-br { right: 3vw; }
 /* frame: a thin edge round the whole picture, so the small window reads as a window */
 #frame { display: none; position: absolute; inset: 0.8vw; border: 0.4vw solid rgba(255,255,255,.85); box-shadow: 0 0 0 0.2vw rgba(0,0,0,.55), inset 0 0 0 0.2vw rgba(0,0,0,.55); pointer-events: none; }
 body.s #frame { display: block; }
+/* the Kennel.gg mark: small, bottom-right, faint. Off the camcorder battery when that is on. */
+#mark { display: none; position: absolute; right: 3vw; bottom: 3vw; align-items: center; gap: 0.6vw; opacity: .55; filter: drop-shadow(0 1px 4px rgba(0,0,0,.7)); pointer-events: none; }
+#mark img { height: 2.4vw; width: auto; }
+#mark span { font-family: "Saira Condensed", "Segoe UI", sans-serif; font-weight: 700; font-size: 1.6vw; letter-spacing: 0.12vw; color: #ece7db; line-height: 1; }
+#mark span b { color: #C99A3B; font-weight: 700; }
+body.cam #mark { right: 8.5vw; bottom: 6.6vw; }
+body.v #mark { right: 4vw; bottom: 12vw; }
+body.v #mark img { height: 4.4vw; } body.v #mark span { font-size: 3vw; }
+body.s #mark { display: none !important; }
 </style></head>
 <body>
 <canvas id="grain"></canvas>
@@ -78,6 +87,7 @@ body.s #frame { display: block; }
 </div>
 <div id="name"><small>POV</small><b>FRIEND</b></div>
 <div id="frame"></div>
+<div id="mark"><img src="hound_mark.png" alt=""><span>kennel<b>.gg</b></span></div>
 <script>
 (function () {
   var q = new URLSearchParams(location.search);
@@ -95,6 +105,8 @@ body.s #frame { display: block; }
 
   if (name) { var n = document.getElementById("name"); n.style.display = "block"; n.querySelector("small").textContent = label; n.querySelector("b").textContent = name; if (plate) n.classList.add("plate"); n.classList.add("pos-" + (small ? "bl" : (q.get("pos") || (portrait ? "tc" : "ml")))); }
   if (vig) document.getElementById("vig").style.display = "block";
+  if (q.get("mark") === "1") document.getElementById("mark").style.display = "flex";
+  if (cam) document.body.classList.add("cam");
   if (cam) {
     document.getElementById("cam").style.display = "block";
     var t0 = Date.now(), clock = document.getElementById("clock");

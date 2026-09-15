@@ -1073,6 +1073,8 @@ QWidget *SettingsDialog::buildLookTab()
 	f->addRow(lookGrain_, grain_);
 	lookVig_ = new QCheckBox("Vignette  (darkened edges)", g);
 	f->addRow(lookVig_);
+	lookMark_ = new QCheckBox("Kennel.gg mark  (small and faint, bottom-right; on by default)", g);
+	f->addRow(lookMark_);
 	preview_ = new QPushButton("Preview look in OBS", g);
 	f->addRow(preview_);
 	f->addRow(muted(
@@ -1085,13 +1087,14 @@ QWidget *SettingsDialog::buildLookTab()
 	lookCam_->setChecked(e_->cfg.lookCam);
 	lookGrain_->setChecked(e_->cfg.lookGrain);
 	lookVig_->setChecked(e_->cfg.lookVignette);
+	lookMark_->setChecked(e_->cfg.lookMark);
 	auto relook = [this]() {
 		saveAndApply();
 		if (previewing_ || e_->applied())
 			e_->previewLook(true);
 	};
 	connect(lookPos_, &QComboBox::currentIndexChanged, this, [relook](int) { relook(); });
-	for (auto *c : {lookName_, lookPlate_, lookCam_, lookGrain_, lookVig_})
+	for (auto *c : {lookName_, lookPlate_, lookCam_, lookGrain_, lookVig_, lookMark_})
 		connect(c, &QCheckBox::toggled, this, [relook](bool) { relook(); });
 	connect(lookLabel_, &QLineEdit::editingFinished, this, relook);
 	connect(grain_, &QSlider::sliderReleased, this, relook);
@@ -2554,6 +2557,7 @@ void SettingsDialog::collect()
 	c.lookCam = lookCam_->isChecked();
 	c.lookGrain = lookGrain_->isChecked();
 	c.lookVignette = lookVig_->isChecked();
+	c.lookMark = lookMark_ ? lookMark_->isChecked() : c.lookMark;
 	c.lookLabel = lookLabel_->text().trimmed().isEmpty() ? "POV" : lookLabel_->text().trimmed().toStdString();
 	c.grainAmount = grain_->value();
 	c.threshold = thr_->value() / 100.0;

@@ -133,6 +133,7 @@ struct Config {
 
 	// look overlay
 	bool lookName = true, lookPlate = true, lookCam = false, lookGrain = false, lookVignette = false;
+	bool lookMark = true; // a small Kennel.gg mark in the corner while a squad mate is on screen
 	std::string lookLabel = "POV";
 	int grainAmount = 40;
 
@@ -212,7 +213,7 @@ struct Config {
 	{
 		return activeFriend >= 0 && activeFriend < (int)friends.size() ? &friends[activeFriend] : nullptr;
 	}
-	bool lookEnabled() const { return lookName || lookCam || lookGrain || lookVignette; }
+	bool lookEnabled() const { return lookName || lookCam || lookGrain || lookVignette || lookMark; }
 
 	void load();
 	void save() const;

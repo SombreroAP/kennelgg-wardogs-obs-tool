@@ -129,6 +129,7 @@ void Config::load()
 	DEFB(lookCam);
 	DEFB(lookGrain);
 	DEFB(lookVignette);
+	DEFB(lookMark);
 	DEFS(lookLabel);
 	DEFI(grainAmount);
 	DEFB(autoDetect);
@@ -244,6 +245,7 @@ void Config::load()
 	GETB(lookCam);
 	GETB(lookGrain);
 	GETB(lookVignette);
+	GETB(lookMark);
 	GETS(lookLabel);
 	GETI(grainAmount);
 	GETB(autoDetect);
@@ -486,6 +488,7 @@ void Config::save() const
 	SETB(lookCam);
 	SETB(lookGrain);
 	SETB(lookVignette);
+	SETB(lookMark);
 	SETS(lookLabel);
 	SETI(grainAmount);
 	SETB(autoDetect);

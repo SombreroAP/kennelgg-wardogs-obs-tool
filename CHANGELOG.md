@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.10.1
+- **A Kennel.gg mark on the POV overlay.** While a squad mate is on screen, a small faint hound and "kennel.gg" sit bottom-right of the picture, out of the way of the name tag and the camcorder frame. On by default; the tick box on the Look tab turns it off. Not drawn in the Dual POV window.
+
 ## 0.10.0
 - **Discord is the way squad feeds come in.** The network-discovery and network-share features, their settings group, the link test and the two optional installer downloads are gone, along with that squad-mate kind. Any slot of that kind in an old config is dropped on load. Everything else is untouched: Twitch, Kick, YouTube, VDO.Ninja and OBS-source squad mates still work.
 

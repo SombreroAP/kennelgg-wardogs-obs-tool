@@ -69,7 +69,7 @@ private:
 	QLabel *rosterStatus_ = nullptr;
 	// look
 	QCheckBox *lookName_ = nullptr, *lookPlate_ = nullptr, *lookCam_ = nullptr, *lookGrain_ = nullptr,
-		  *lookVig_ = nullptr;
+		  *lookVig_ = nullptr, *lookMark_ = nullptr;
 	QLineEdit *lookLabel_;
 	QSlider *grain_;
 	QPushButton *preview_;

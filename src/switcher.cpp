@@ -91,6 +91,8 @@ std::string Switcher::overlayUrl(const Config &cfg, const std::string &friendNam
 		q += "&grain=" + std::to_string(std::clamp(cfg.grainAmount, 0, 100));
 	if (cfg.lookVignette)
 		q += "&vig=1";
+	if (cfg.lookMark)
+		q += "&mark=1";
 	if (!q.empty() && q[0] == '&')
 		q.erase(0, 1);
 	return "file:///" + path + "?" + q;
