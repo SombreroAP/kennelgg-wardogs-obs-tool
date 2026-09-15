@@ -2198,7 +2198,8 @@ void Engine::playReplay(const QString &why)
 	}
 	if (replaying())
 		stopReplay("replaced");
-	std::string e = sw.playMedia(cfg, last->path.toStdString(), cfg.replayScale, cfg.replayVolume, true);
+	std::string e = sw.playMedia(cfg, last->path.toStdString(), cfg.replayScale,
+				     cfg.replaySound ? cfg.replayVolume : 0, true);
 	if (!e.empty()) {
 		log("Instant replay: " + QString::fromStdString(e));
 		return;
@@ -2242,7 +2243,8 @@ void Engine::playCompilation(const QString &why)
 	}
 	if (replaying())
 		stopReplay("replaced");
-	std::string e = sw.playMedia(cfg, files.first().absoluteFilePath().toStdString(), 100, cfg.replayVolume);
+	std::string e = sw.playMedia(cfg, files.first().absoluteFilePath().toStdString(), 100,
+				     cfg.replaySound ? cfg.replayVolume : 0);
 	if (!e.empty()) {
 		log("Play highlights: " + QString::fromStdString(e));
 		return;

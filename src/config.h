@@ -111,7 +111,8 @@ struct Config {
 	int replayPreS = 3;           // seconds before the first kill
 	int replayPostS = 5;          // seconds after the last kill
 	int replayScale = 75;         // percent of the canvas it takes, centred, under the always-on-top list
-	int replayVolume = 40;        // the clip's own sound on the stream, percent (it carries your mic too)
+	int replayVolume = 40;        // the clip's own sound on the stream, percent, when replaySound is on
+	bool replaySound = false;     // off by default: the clip carries your mic and the game from a minute ago
 	int replayCooldownS = 60;     // chat may trigger it this often at most (30 s to 15 min)
 	bool replayChat = true;       // "!replay" from subscribers and moderators in chat plays it
 	std::string chatKick;         // your Kick channel, for the chat trigger (Twitch comes from the login)

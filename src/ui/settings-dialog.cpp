@@ -1532,7 +1532,12 @@ QWidget *SettingsDialog::buildClipsTab()
 	fi->addRow("Starts", replayPre_);
 	fi->addRow("Ends", replayPost_);
 	fi->addRow("Size", replayScale_);
-	fi->addRow("Sound", replayVol_);
+	replaySound_ = new QCheckBox("Play the clip's sound (it carries your mic and the game from a minute ago)", gi);
+	replaySound_->setChecked(e_->cfg.replaySound);
+	fi->addRow(replaySound_);
+	fi->addRow("Sound level", replayVol_);
+	replayVol_->setEnabled(e_->cfg.replaySound);
+	connect(replaySound_, &QCheckBox::toggled, replayVol_, &QSpinBox::setEnabled);
 	replayLabel_ = new QLineEdit(QString::fromStdString(e_->cfg.replayLabel), gi);
 	replayLabel_->setPlaceholderText("Instant replay");
 	fi->addRow("Frame says", replayLabel_);
@@ -1554,12 +1559,13 @@ QWidget *SettingsDialog::buildClipsTab()
 		"Instant replay plays the last highlight back on the stream, cut down to the action, framed and tagged, sized "
 		"under your camera and alerts (the always-on-top list on the Switch tab). The dock button and a hotkey play "
 		"it; so can chat, once per cooldown. The clip carries whatever the stream carried, your mic included, so its "
-		"sound is low by default. Play highlights plays the newest video in the highlights folder, full screen.",
+		"sound is off unless you tick it on. Play highlights plays the newest video in the highlights folder, full screen.",
 		gi));
 	v->addWidget(gi);
 	for (auto *sb : {replayPre_, replayPost_, replayScale_, replayVol_, replayCool_})
 		connect(sb, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
 	connect(replayChat_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(replaySound_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	for (auto *le : {chatKick_, chatYouTube_, highlightsFolder_, replayLabel_})
 		connect(le, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
 	connect(hotkeyFilter_, &QLineEdit::textChanged, this, [this](const QString &) { fillHotkeys(); });
@@ -2658,6 +2664,7 @@ void SettingsDialog::collect()
 		c.replayVolume = replayVol_->value();
 		c.replayCooldownS = replayCool_->value();
 		c.replayChat = replayChat_->isChecked();
+		c.replaySound = replaySound_->isChecked();
 		c.chatKick = chatKick_->text().trimmed().toStdString();
 		c.chatYouTube = chatYouTube_->text().trimmed().toStdString();
 		c.highlightsFolder = highlightsFolder_->text().trimmed().toStdString();
