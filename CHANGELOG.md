@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.11.0
+- **Clips know where the kill is.** ClipHound now tells the plugin when each kill-feed row appeared, and the plugin writes the position into the clip: the name ends in `@-7.4s` (the last kill, that many seconds before the end of the file) and a `.json` sidecar next to the file carries every kill's offset, the first kill of a multi-kill, killer, victim, distance and weapon. Kennel Cut reads both, so a compilation cuts on the moment instead of a guess. The sidecar follows the file through the rolling-highlights renames.
+- Backtrack clips are now written to clips.csv like replay-buffer clips (they never were), with three new columns: moment, first kill, kill count.
+
 ## 0.10.10
 - **The roster is fetched through Windows' own HTTP stack.** The Qt that OBS ships has no TLS backend on some PCs, and every read of the roster (and the update check) failed there with "TLS initialization failed", which 0.10.8 then took as "nobody is live with you". Both requests now go through WinHTTP. While the roster cannot be read, the dock says so and the squad shows as it would without a roster, with pop-outs deciding who is live.
 

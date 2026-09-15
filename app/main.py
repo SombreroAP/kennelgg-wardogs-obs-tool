@@ -180,7 +180,13 @@ def main():
                     "decision_lag_s": 10 / cfg["capture"]["fps"] + 0.5,   # VOTES reads + fade-in
                     "distance_m": ev.distance_m if ev else 0,
                     "killer": ev.killer if ev else "", "victim": ev.victim if ev else "",
-                    "icons": ev.icons if ev else [], "kills": len(trig.events)}
+                    "icons": ev.icons if ev else [], "kills": len(trig.events),
+                    # when each kill-feed row first appeared (epoch seconds): the plugin turns these
+                    # into "seconds before the end of the file", so an edit can land on the kill
+                    "moments": [e.ts for e in trig.events if e.ts],
+                    "events": [{"ts": e.ts, "killer": e.killer, "victim": e.victim, "distance_m": e.distance_m,
+                                "icons": list(e.icons), "killer_rel": e.killer_rel, "victim_rel": e.victim_rel}
+                               for e in trig.events]}
             threading.Timer(cfg["obs"]["replay_delay_s"], lambda: _safe(ob.trigger, trig.headline(), trig.tags, info)).start()
 
     if cfg["capture"].get("debug_dump"):

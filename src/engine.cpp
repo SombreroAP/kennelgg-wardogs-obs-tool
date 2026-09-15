@@ -1390,7 +1390,12 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		QStringList tags;
 		for (auto v : o.value("tags").toArray())
 			tags << v.toString();
-		QString err = clips.request(o.value("title").toString(), tags, o.value("source").toString("app"));
+		QList<double> moments;
+		for (auto v : o.value("moments").toArray())
+			moments << v.toDouble();
+		QJsonObject info = o.value("info").toObject();
+		QString err = clips.request(o.value("title").toString(), tags, o.value("source").toString("app"),
+					    moments, info);
 		QJsonObject r;
 		r["type"] = "clip_result";
 		r["ok"] = err.isEmpty();

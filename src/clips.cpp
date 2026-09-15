@@ -1,4 +1,7 @@
 #include "clips.h"
+#include <cmath>
+#include <QJsonDocument>
+#include <QJsonArray>
 #include <QRegularExpression>
 #include "config.h"
 #include <QDir>
@@ -125,16 +128,18 @@ void Clips::pollWatches()
 				if (fi.lastModified().msecsTo(now) < 2000)
 					continue; // still being written
 				w.seen.insert(fi.absoluteFilePath());
-				QString name = nameFor(w.since, w.title, w.tags, "backtrack");
+				QString name = withMoment(nameFor(w.since, w.title, w.tags, "backtrack"), w.momentS);
 				QString target = d.filePath(name + "." + fi.suffix());
 				int n = 2;
 				while (QFile::exists(target))
 					target = d.filePath(name + QString("_%1.").arg(n++) + fi.suffix());
 				if (QFile::rename(fi.absoluteFilePath(), target)) {
-					Entry e{w.since, w.title, w.tags, target};
+					Entry e{w.since, w.title, w.tags, target, w.momentS, w.firstS, w.kills, w.info};
 					history_.push_back(e);
 					emit logged("Backtrack clip named: " + QFileInfo(target).fileName());
 					joinSeries(target, w.since);
+					e.path = history_.back().path; // joinSeries may have renamed it into the run
+					logEntry(e);
 					emit saved(e);
 					done = true;
 				}
@@ -156,6 +161,61 @@ QString Clips::safe(QString s)
 		if (bad.contains(c) || c.unicode() < 32)
 			c = '-';
 	return s.trimmed().left(80);
+}
+
+QString Clips::withMoment(const QString &name, double momentS)
+{
+	if (momentS < 0)
+		return name;
+	return name + QString(" @-%1s").arg(momentS, 0, 'f', 1);
+}
+
+bool Clips::renameClip(const QString &from, const QString &to)
+{
+	if (!QFile::rename(from, to))
+		return false;
+	QFileInfo fi(from), ti(to);
+	QString sfrom = fi.dir().filePath(fi.completeBaseName() + ".json");
+	QString sto = ti.dir().filePath(ti.completeBaseName() + ".json");
+	if (QFile::exists(sfrom) && sfrom != sto)
+		QFile::rename(sfrom, sto);
+	return true;
+}
+
+void Clips::logEntry(const Entry &e)
+{
+	QFile f(logFile());
+	if (f.open(QIODevice::Append | QIODevice::Text)) {
+		QTextStream ts(&f);
+		ts << e.when.toString(Qt::ISODate) << "," << safe(e.title) << "," << e.tags.join("|") << "," << e.path
+		   << "," << (e.momentS < 0 ? QString() : QString::number(e.momentS, 'f', 1)) << ","
+		   << (e.firstS < 0 ? QString() : QString::number(e.firstS, 'f', 1)) << "," << e.kills << "\n";
+	}
+	writeSidecar(e);
+}
+
+/// A JSON file next to the clip with everything known about it. Kennel Cut reads it when the clip
+/// reaches the editing PC, so the cut lands on the kill instead of on a guess.
+void Clips::writeSidecar(const Entry &e)
+{
+	if (e.path.isEmpty())
+		return;
+	QFileInfo fi(e.path);
+	QJsonObject o = e.info;
+	o["file"] = fi.fileName();
+	o["title"] = e.title;
+	o["tags"] = QJsonArray::fromStringList(e.tags);
+	o["created"] = e.when.toString(Qt::ISODate);
+	o["end_epoch"] = (double)e.when.toMSecsSinceEpoch() / 1000.0;
+	if (e.momentS >= 0)
+		o["moment_s_from_end"] = e.momentS;
+	if (e.firstS >= 0)
+		o["first_s_from_end"] = e.firstS;
+	if (e.kills > 0)
+		o["kills"] = e.kills;
+	QFile f(fi.dir().filePath(fi.completeBaseName() + ".json"));
+	if (f.open(QIODevice::WriteOnly | QIODevice::Truncate))
+		f.write(QJsonDocument(o).toJson(QJsonDocument::Indented));
 }
 
 /// "name [2 of 3].mp4" -> "name", so a file can be renumbered as its run grows.
@@ -189,7 +249,7 @@ void Clips::joinSeries(const QString &path, const QDateTime &when)
 			fi.dir().filePath(QString("%1 [%2 of %3].%4").arg(base).arg(i + 1).arg(n).arg(fi.suffix()));
 		if (target == series_.paths[i])
 			continue;
-		if (!QFile::rename(series_.paths[i], target))
+		if (!renameClip(series_.paths[i], target))
 			continue; // still being written by something, or open in a player: try again next clip
 		for (auto &e : history_)
 			if (e.path == series_.paths[i])
@@ -256,7 +316,7 @@ QString Clips::numberPastClips()
 			QString base = stripRunMark(fi.completeBaseName());
 			if (base != fi.completeBaseName()) {
 				QString target = fi.dir().filePath(base + "." + fi.suffix());
-				if (!QFile::exists(target) && QFile::rename(run[0].path, target))
+				if (!QFile::exists(target) && renameClip(run[0].path, target))
 					renamed++;
 			}
 			alone++;
@@ -270,7 +330,7 @@ QString Clips::numberPastClips()
 				QString("%1 [%2 of %3].%4").arg(base).arg(i + 1).arg(n).arg(fi.suffix()));
 			if (target == run[i].path)
 				continue;
-			if (QFile::exists(target) || !QFile::rename(run[i].path, target)) {
+			if (QFile::exists(target) || !renameClip(run[i].path, target)) {
 				failed++;
 				continue;
 			}
@@ -381,9 +441,31 @@ bool Clips::fireHotkey(const QString &name)
 	return true;
 }
 
-QString Clips::request(const QString &title, const QStringList &tags, const QString &source)
+QString Clips::request(const QString &title, const QStringList &tags, const QString &source,
+		       const QList<double> &moments, const QJsonObject &info)
 {
 	QDateTime now = QDateTime::currentDateTime();
+	// the file ends about now (the buffer is saved as of this call): every kill becomes "this many
+	// seconds before the end", which survives the file being moved, renamed or synced
+	double momentS = -1, firstS = -1;
+	int kills = 0;
+	{
+		double endS = (double)now.toMSecsSinceEpoch() / 1000.0;
+		double last = -1, first = -1;
+		for (double m : moments) {
+			if (m <= 0 || m > endS)
+				continue;
+			if (last < 0 || m > last)
+				last = m;
+			if (first < 0 || m < first)
+				first = m;
+			kills++;
+		}
+		if (last > 0) {
+			momentS = std::round((endS - last) * 10) / 10;
+			firstS = std::round((endS - first) * 10) / 10;
+		}
+	}
 	if (lastRequest_.isValid() && lastRequest_.msecsTo(now) < minGapMs)
 		return "ignored: too soon after the last clip";
 	lastRequest_ = now;
@@ -397,6 +479,10 @@ QString Clips::request(const QString &title, const QStringList &tags, const QStr
 		w.since = now;
 		w.title = title;
 		w.tags = tags;
+		w.momentS = momentS;
+		w.firstS = firstS;
+		w.kills = kills;
+		w.info = info;
 		QStringList folders = watchFolders + discoverBacktrackFolders();
 		for (const QString &folder : folders)
 			for (const QFileInfo &fi :
@@ -422,7 +508,7 @@ QString Clips::request(const QString &title, const QStringList &tags, const QStr
 		ensureReplayBuffer();
 		return "replay buffer was off; started it - this moment is lost, the next one will save";
 	}
-	pending_.push_back({now, title, tags, source});
+	pending_.push_back({now, title, tags, source, momentS, firstS, kills, info});
 	obs_frontend_replay_buffer_save();
 	emit logged(QString("Clip requested: %1 [%2]").arg(title.isEmpty() ? "(untitled)" : title, tags.join(", ")));
 	return "";
@@ -444,7 +530,7 @@ void Clips::onReplaySaved()
 		p.title = "manual";
 	}
 	QFileInfo fi(path);
-	QString name = nameFor(p.when, p.title, p.tags, p.source);
+	QString name = withMoment(nameFor(p.when, p.title, p.tags, p.source), p.momentS);
 	QDir outDir = fi.dir();
 	if (!folder.isEmpty()) {
 		QDir want(folder);
@@ -460,18 +546,14 @@ void Clips::onReplaySaved()
 	QString finalPath = path;
 	if (!name.isEmpty() && QFile::rename(path, target))
 		finalPath = target;
-	Entry e{p.when, p.title, p.tags, finalPath};
+	Entry e{p.when, p.title, p.tags, finalPath, p.momentS, p.firstS, p.kills, p.info};
 	history_.push_back(e);
 	joinSeries(finalPath, p.when);
 	finalPath = history_.back().path; // joinSeries may have renamed it into the run
+	e.path = finalPath;
 	while (history_.size() > 200)
 		history_.pop_front();
-	QFile f(logFile());
-	if (f.open(QIODevice::Append | QIODevice::Text)) {
-		QTextStream ts(&f);
-		ts << p.when.toString(Qt::ISODate) << "," << safe(p.title) << "," << p.tags.join("|") << ","
-		   << finalPath << "\n";
-	}
+	logEntry(e);
 	emit logged("Clip saved: " + QFileInfo(finalPath).fileName());
 	emit saved(e);
 }

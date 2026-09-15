@@ -105,7 +105,10 @@ Desktop Audio). A single stream's level is the slider on its pop-out in Discord.
 ## Clips and ClipHound
 
 The plugin saves OBS's replay buffer and renames the file with `{date} {time} {title} {tags} {source}`;
-every clip is logged to `clips.csv` in the plugin's config folder. Sources of clips:
+every clip is logged to `clips.csv` in the plugin's config folder. A clip ClipHound asked for carries
+the kill's position in its name, `@-7.4s` meaning 7.4 s before the end of the file (the last kill of a
+multi-kill), and a `.json` sidecar next to the file with every kill's offset, the killer, victim,
+distance and weapon, so an editor can cut on the moment rather than guess at it. Sources of clips:
 
 - hotkey **Kennel.gg Wardogs: save a clip now**, or the dock's **Clip now**;
 - **clip on downed** (Clips tab);

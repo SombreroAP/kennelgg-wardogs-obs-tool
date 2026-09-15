@@ -250,11 +250,14 @@ class Bridge:
             return self._frame, self._frame_ts
 
     # ---- clips ----
-    def clip(self, title: str, tags: list, source: str = "cliphound", on_saved=None) -> bool:
+    def clip(self, title: str, tags: list, source: str = "cliphound", on_saved=None, info: dict | None = None) -> bool:
         self._seq += 1
         cid = f"c{self._seq}"
         self._pending[cid] = on_saved
-        ok = self.send({"type": "clip", "id": cid, "title": title, "tags": list(tags), "source": source})
+        info = dict(info or {})
+        moments = [float(t) for t in info.pop("moments", []) or []]
+        ok = self.send({"type": "clip", "id": cid, "title": title, "tags": list(tags), "source": source,
+                        "moments": moments, "info": info})
         if not ok:
             self._pending.pop(cid, None)
             print(f"[bridge] not connected, clip '{title}' lost")
@@ -346,4 +349,4 @@ class BridgeOBS:
                 except Exception as e:
                     print(f"[bridge] library index: {e}")
 
-        self.b.clip(title, tags, "cliphound", on_saved=saved)
+        self.b.clip(title, tags, "cliphound", on_saved=saved, info=info)

@@ -6,6 +6,8 @@
 #include <deque>
 #include <QSet>
 #include <QTimer>
+#include <QJsonObject>
+#include <QList>
 
 /// Replay-buffer clipping: save the buffer on demand, rename the file with tags, keep a log.
 class Clips : public QObject {
@@ -16,6 +18,11 @@ public:
 		QString title;
 		QStringList tags;
 		QString path;
+		// where the action is inside the file, in seconds before its end: the last kill (the one the
+		// name carries as "@-Ns"), the first kill of a multi-kill, and how many. -1 = not known
+		double momentS = -1, firstS = -1;
+		int kills = 0;
+		QJsonObject info; // what ClipHound knew: kind, description, killer, victim, icons, events
 	};
 	explicit Clips(QObject *parent = nullptr);
 
@@ -35,7 +42,11 @@ public:
 	int minGapMs = 4000; // ignore clip requests closer than this
 
 	/// Ask OBS to save the replay buffer; the rename happens when OBS reports the file.
-	QString request(const QString &title, const QStringList &tags, const QString &source);
+	/// `moments`: when each kill happened, epoch seconds (ClipHound's clock, same PC); the file's
+	/// end is the moment this is called, so each becomes an offset from the end. `info`: whatever
+	/// else ClipHound knew, written into the clip's JSON sidecar.
+	QString request(const QString &title, const QStringList &tags, const QString &source,
+			const QList<double> &moments = {}, const QJsonObject &info = {});
 	void onReplaySaved(); // wire to OBS_FRONTEND_EVENT_REPLAY_BUFFER_SAVED
 	void ensureReplayBuffer();
 	enum class ReplayChange { None, Written, NeedsRestart };
@@ -54,6 +65,9 @@ private:
 		QString title;
 		QStringList tags;
 		QString source;
+		double momentS = -1, firstS = -1;
+		int kills = 0;
+		QJsonObject info;
 	};
 	std::deque<Pending> pending_;
 	std::deque<Entry> history_;
@@ -63,10 +77,20 @@ private:
 		QString title;
 		QStringList tags;
 		QSet<QString> seen;
+		double momentS = -1, firstS = -1;
+		int kills = 0;
+		QJsonObject info;
 	};
 	std::deque<Watch> watches_;
 	QTimer watchTimer_;
 	void pollWatches();
+	/// "name" -> "name @-7.4s" when the moment is known: the marker Kennel Cut reads off the name.
+	static QString withMoment(const QString &name, double momentS);
+	/// Rename a clip and its .json sidecar together.
+	static bool renameClip(const QString &from, const QString &to);
+	/// The row in clips.csv and the JSON sidecar next to the file, for every clip however it was saved.
+	void logEntry(const Entry &e);
+	void writeSidecar(const Entry &e);
 	QString nameFor(const QDateTime &when, const QString &title, const QStringList &tags,
 			const QString &source) const;
 	QString logFile() const;
