@@ -1,112 +1,119 @@
 # Kennel.gg Wardogs OBS Tool
 
-One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus an optional companion app.
-Made by [The Kennel](https://kennel.gg) — the WARDOGS community: guides, Bootcamp, loadout builder,
-leaderboard and [Discord](https://discord.gg/vHqDR9HHcM). The tool is free, and it is one of the ways
+One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus ClipHound, the companion app that
+watches the kill feed. Made by [The Kennel](https://kennel.gg), the WARDOGS community: guides, Bootcamp,
+loadout builder, leaderboard and [Discord](https://discord.gg/nDyJ7SSM8q). Free, and one of the ways
 people find us.
 
+## What it does
 
-- **POV swap.** Downed? Your stream shows a squad mate's POV until you are back up. Their feed is
-  silent by default, so you keep hearing your own game; one tick box plays theirs instead. Your mic
-  is never touched. Detection reads the damage log on your own screen, with its local brightness taken out so a bright sky behind the see-through panel does not change the score; the
-  friend's feed is watched for "REVIVING" so the switch back is instant.
-- **Clips.** Save OBS's replay buffer on demand and name the file with tags: from a hotkey, the
-  dock, automatically when you get downed, or from **ClipHound**, the companion app that OCRs the
-  kill feed and asks for a clip on a notable kill.
-- **Squad-mate feeds.** Twitch, VDO.Ninja (WebRTC), Discord Go Live, NDI or any OBS source. The
-  plugin creates and places the OBS sources for you.
-- **The closest one.** With more than one feed, the game's NEARBY list decides which POV comes up:
-  the squad mate who is actually next to you, not the one you picked before the match.
-- **Dual POV.** In a tank or a Havoc with a crew mate: your own POV stays up and theirs sits in a
-  small window placed where that seat's HUD leaves room, with presets for tank driver, tank gunner,
-  Havoc pilot and Havoc gunner (CAM view), or drag it anywhere. With ClipHound running it can turn
-  itself on when you get in and off when you get out, reading the seat off the vehicle keybind list.
-- **The look.** Optional name tag, camcorder frame, film grain and vignette over the friend's feed.
-- **No black screen.** Feeds are kept warm, and optionally every squad mate's feed is preloaded and
-  playing behind the scenes so a Twitch stream is not starting up at the moment you go down.
+- **POV swap.** Downed? Your stream shows a squad mate's POV until you are back up, then cuts back the
+  instant you are revived. Detection reads the damage log on your own screen, so it has no latency and
+  works with the companion app closed. Your mic is never touched.
+- **Squad feeds from Discord.** Your squad plays in a Discord voice channel and Go Lives. You pop their
+  streams out into their own windows, press **Add pop-outs**, and each one becomes a squad mate named
+  after them, captured by that exact window, tucked to the edge of your screen where Discord keeps
+  drawing it. The Kennel Ops bot in the Kennel.gg Discord tells the plugin which channel you are in
+  and who is live, so only people with a picture are ever shown, and a slot goes away when its person
+  stops.
+- **The closest one.** With more than one feed, the game's NEARBY list decides which POV comes up: the
+  squad mate who is actually next to you. If nobody near you is live, another live squad mate is shown.
+- **POV sound.** Whoever is on screen is the one feed with sound on your stream; everyone else stays
+  muted, and the unmute moves with the picture. One button on the dock turns it off.
+- **Dual POV.** In a tank or a Havoc with a crew mate: your own POV stays up and theirs sits in a small
+  framed window with their name, placed where that seat's HUD leaves room (presets for tank driver,
+  tank gunner, Havoc pilot and Havoc gunner), or wherever you drag it. Forced by hand from its own row
+  on the dock, or opened by itself when ClipHound sees you get into a vehicle.
+- **Clips.** Save OBS's replay buffer on demand and name the file with tags: from a hotkey, the dock,
+  automatically when you get downed, or from **ClipHound** on a notable kill. Clips within 45 s of each
+  other are numbered as a run (1 of 3, 2 of 3, 3 of 3). Works with Aitum Backtrack instead of the
+  replay buffer.
+- **ClipHound.** OCRs the kill feed with the weapon icons matched at any resolution, reads the NEARBY
+  list while you are down, reads the vehicle seat, and can post the clip to Twitch.
+- **The look.** Optional name tag, camcorder frame, film grain and vignette over the squad mate's feed.
+- **No black screen.** Feeds are kept warm, so the swap is instant.
 
-## Quick start (testers)
+Other squad-mate feeds still work when Discord is not an option: Twitch, Kick, YouTube live, VDO.Ninja
+(WebRTC) or any source already in OBS.
 
-1. Close OBS. Run `kennelgg-<version>-windows-x64-installer.exe`. Windows will warn that the
-   file is unsigned: *More info → Run anyway*. Keep **ClipHound** ticked if you want kill-feed clips;
-   tick **DistroAV** if you will play at a LAN with other people running this.
-2. Start OBS. A short **setup wizard** opens: your name, which source shows WARDOGS (or one click to
-   create a Game Capture), a squad mate (type a Twitch channel, or wait for LAN squad mates to appear),
-   clips. Finish.
-3. Play. **Get downed once**: the Kennel.gg Wardogs dock turns red and your stream shows the squad mate;
-   it comes back the instant you are revived.
+## Quick start
 
-That is all. Settings live under Tools → Kennel.gg Wardogs OBS Tool..., the dock under View → Docks.
+1. Close OBS. Run `kennelgg-<version>-windows-x64-installer.exe`. Windows will warn that the file is
+   unsigned: *More info, Run anyway*. Keep **ClipHound** ticked for kill-feed clips.
+2. Start OBS. **Setup** opens: which source shows WARDOGS (or one click to create a Game Capture), then
+   the Discord page. Your Discord username is filled in from the Discord app when it is running.
+3. Join the Kennel.gg Discord if you are not in it yet (the dock's **Discord** button). Squad
+   automation runs through the Kennel Ops bot there and is for members.
+4. Play. Sit in voice with your squad, pop out the streams of the people whose POV you might show,
+   press **Add pop-outs**. **Get downed once**: the dock turns red and your stream shows the squad
+   mate; it comes back the instant you are revived.
+
+Do not minimise a pop-out. A minimised window stops drawing and its feed freezes. Tucked away is fine,
+and **Show pop-outs** brings them back when you want their own volume slider.
+
+Settings live under Tools, Kennel.gg Wardogs OBS Tool; the dock under View, Docks.
 
 ## Install
 
-Close OBS, run `kennelgg-<version>-windows-x64-installer.exe`, start OBS. The installer puts
-the plugin in `C:\ProgramData\obs-studio\plugins\kennelgg` and, if you keep the ClipHound
-component ticked, the app in `C:\ProgramData\Kennel.gg\ClipHound` (self-contained, Tesseract
-included, no Python install). The plugin finds it there and starts it with OBS. Start-menu
-shortcut: **ClipHound** (it runs in the background with no window; the plugin starts it with OBS
-and all of its settings, including the Twitch login, are on the ClipHound tab in Settings). Two
-optional installer tasks download and run the official **NDI 6 Runtime** (Vizrt) and **DistroAV**
-installers for LAN squad feeds; neither is bundled, both come from their publishers. An optional
-**DistroAV** task downloads the official DistroAV installer (GPL-2, from its GitHub release) and runs
-it; DistroAV then asks you to fetch the NDI Runtime from Vizrt, which nobody may redistribute. Settings open by
-themselves on first run; later they are under **Tools → Kennel.gg Wardogs OBS Tool...** and the
-**Kennel.gg Wardogs** dock is under View → Docks. The zip has the same files for a manual install
-(copy its `kennelgg` folder into `C:\ProgramData\obs-studio\plugins\`).
+Close OBS, run the installer, start OBS. The plugin goes to `C:\ProgramData\obs-studio\plugins\kennelgg`
+and, with the ClipHound component ticked, the app to `C:\ProgramData\Kennel.gg\ClipHound`
+(self-contained, Tesseract included, no Python install). The plugin finds it there and starts it with
+OBS; all of its settings, including the Twitch login, are on the ClipHound tab. The zip has the same
+files for a manual install (copy its `kennelgg` folder into `C:\ProgramData\obs-studio\plugins\`).
 
-## First run
+## The dock
 
-1. **Switch** tab: pick the source that shows WARDOGS or press **Create Game Capture**. **Add...**
-   squad mates, each with their **in-game name**. Nothing of yours is muted by default. The squad
-   mate on screen is the one feed with sound (the dock's **POV sound** button turns that off); tick
-   anything of yours to mute while they are up if you do not want both game sounds at once.
-2. Get downed once with the **Detect** tab open: the bar goes red (~0.9) and the stream cuts to
-   the friend. Nothing to calibrate; capture your own template only if it never locks on.
-3. **Clips** tab: the replay buffer is started for you. Set the file-name template and, if you use
-   ClipHound, its path so OBS starts it.
-4. **Look** tab, optional.
+Top to bottom: the state pill (watching, showing, off), **Add pop-outs** and **Show pop-outs**, one
+button per squad mate who is live (press it to force their feed up, again to come back), the squad-mate
+box with **Auto switch** and **Closest**, **Show friend's POV**, **Back to me** and **POV sound**, the
+Dual POV row with its own person and **Force Dual POV**, then Squad, Setup, Settings, Logs and
+**Discord**, ClipHound start/stop and Save clip, and the last events.
 
-## Squad on the LAN (automatic)
-
-At a LAN party nothing needs typing. Every PC running this plugin announces itself on the network
-(UDP 47821) and, with **DistroAV** installed, publishes its game feed over NDI as `<PC name> (Kennel
-POV)` on audio track 6, with every microphone taken off that track so squad mates hear the game,
-not you. The share is rendered from its own view of the program output, so it carries the main
-canvas only and leaves other plugins' canvases (Aitum's vertical canvas, for one) alone. Squad mates found this way are added to your list by themselves as NDI feeds, and you to
-theirs. Set **Your name** on the Switch tab; untick the options there to opt out.
+When the plugin cannot see the voice roster, the live buttons' place shows greyed out with a link to join
+the Kennel.gg Discord or to detect your username.
 
 ## Squad-mate feeds
 
 | | Latency | Friend's setup |
 |---|---|---|
-| **Twitch stream** | ~2 s with low-latency mode | nothing, they just stream (their mic is in it) |
-| **VDO.Ninja** (WebRTC) | ~0.3 s | opens one link in Chrome/Edge, shares the game window with system audio, no mic |
-| **Discord Go Live** | ~0.5-1 s | Go Live in the call; you pop their stream out and pick the window; 720p without Nitro |
-| **NDI** | ~1 frame | OBS + DistroAV or NDI Screen Capture on the LAN, or over a VPN such as Tailscale |
+| **Discord Go Live** | ~0.5-1 s | Go Live in the call; you pop their stream out and press Add pop-outs; 720p without Nitro |
+| **Twitch / Kick stream** | ~2 s with low-latency mode | nothing, they just stream (their mic is in it) |
+| **YouTube live** | ~5 s+ | nothing, the channel has to allow embedding |
+| **VDO.Ninja** (WebRTC) | ~0.3 s | opens one link in Chrome/Edge, shares the game window with system audio |
 | **OBS source** | depends | anything already in OBS (capture card, second PC) |
 
-"Keep the friend feed warm" leaves the friend's source enabled but transparent (a colour filter
-named `Kennel hide`) and muted between switches, so the switch is instant.
+"Keep the friend feed warm" leaves the friend's source enabled but transparent (a colour filter named
+`Kennel hide`) and muted between switches, so the switch is instant.
+
+## Sound
+
+Nothing of yours is muted by default. The squad mate on screen is the one feed with sound; the dock's
+**POV sound** button (and a hotkey) turns that off. Discord hands OBS one track for the whole call, so
+for Discord squad mates that track is what turns on and off; one stream's own level is the slider on
+its pop-out. Tick anything of your own on the Switch tab to mute while a squad mate is up if you do not
+want both game sounds at once.
 
 ## Clips and ClipHound
 
-The plugin saves OBS's replay buffer and renames the file with `{date} {time} {title} {tags}
-{source}`; every clip is logged to `clips.csv` in the plugin's config folder. Sources of clips:
+The plugin saves OBS's replay buffer and renames the file with `{date} {time} {title} {tags} {source}`;
+every clip is logged to `clips.csv` in the plugin's config folder. Sources of clips:
 
 - hotkey **Kennel.gg Wardogs: save a clip now**, or the dock's **Clip now**;
 - **clip on downed** (Clips tab);
 - **ClipHound** over the local bridge.
 
-**Aitum Backtrack** (or any other plugin with a hotkey): Settings → Clips → tick the OBS hotkeys to
-fire on every clip, e.g. Backtrack's *Save* for the source you want. Works alongside the replay
-buffer or instead of it (untick "Save OBS's replay buffer").
+Clips made within the rolling-highlights window (45 s by default) are named as one run, "[1 of 3]" and
+so on, and Twitch clips get "part 1" in the title; **Number past clips** on the Clips tab does the same
+for clips already on disk.
 
-ClipHound (Python, in `app/`, built into `ClipHound.exe` by CI) OCRs the kill feed. It connects to the plugin at
-`ws://127.0.0.1:47820`, subscribes to native-resolution crops of the game source, and sends
-`{"type":"clip","title":...,"tags":[...]}` on a notable row. The plugin replies with the saved
-path and also sends POV events (`downed`, `reviving`, `up`) so those can be tagged. The app can
-force `pov` if it ever knows better, but downed detection lives in the plugin: no OCR needed,
-no extra latency, and the swap works with the app closed.
+**Aitum Backtrack** (or any other plugin with a hotkey): Settings, Clips, tick the OBS hotkeys to fire on
+every clip. Works alongside the replay buffer or instead of it.
+
+ClipHound (Python, in `app/`, built into `ClipHound.exe` by CI) OCRs the kill feed. It connects to the
+plugin at `ws://127.0.0.1:47820`, subscribes to native-resolution crops of the game source, and sends
+`{"type":"clip","title":...,"tags":[...]}` on a notable row. The plugin replies with the saved path and
+also sends POV events (`downed`, `reviving`, `up`) so those can be tagged. Downed detection lives in the
+plugin: no OCR needed, no extra latency, and the swap works with the app closed.
 
 ### Bridge protocol (v1)
 
@@ -117,73 +124,75 @@ uint16 height, uint64 timestamp ms (little endian), then JPEG.
 |---|---|
 | plugin | `hello {plugin, version, protocol}` on connect; `config {gameSource, povState}` |
 | app | `subscribe {frames:true, fps:4, roi:[x,y,w,h], width:0}` (fractions of the game source; width 0 = native) |
-| app | `clip {id, title, tags:[...], source}` → plugin `clip_result {id, ok, error}` then `clip_saved {path, title, tags}` |
+| app | `clip {id, title, tags:[...], source}`, then plugin `clip_result {id, ok, error}` and `clip_saved {path, title, tags}` |
 | app | `status {text}` shown in the dock |
 | plugin | `pov {state: downed|reviving|up, friend}` |
 | app | `pov {force: downed|up}` |
-| plugin | `app_config {set: {..., fps, roi:[x,y,w,h], nearby:{enabled, roi, names:[...]}}}` → app `app_config {values}` |
-| plugin | `nearby_now` - read the NEARBY panel now (sent the moment the damage log appears) |
-| app | `nearby {list:[{name, dist, match}]}` - who the game says is near you, nearest first |
+| plugin | `app_config {set: {..., fps, roi:[x,y,w,h], series_window, nearby:{enabled, roi, names:[...]}}}`, then app `app_config {values}` |
+| plugin | `nearby_now`: read the NEARBY panel now (sent the moment the damage log appears) |
+| app | `nearby {list:[{name, dist, match}]}`: who the game says is near you, nearest first |
+| app | `vehicle {seat}`: the seat read off the vehicle keybind list, for Dual POV |
+
+## The Discord roster
+
+Discord gives a third-party program no way to ask who is in a voice call, so the Kennel Ops bot in the
+Kennel.gg Discord publishes it: who is in which voice channel, their usernames, and Discord's own
+go-live flag for each. The plugin polls that every six seconds, finds your own username in it, follows
+whichever channel you are sitting in, and shows only people who are live. Your Discord username is read
+from the Discord app on your PC (its local pipe names the logged-in user on a plain handshake; nothing
+more is asked of it), or typed in Setup.
+
+Squad automation is for members of the Kennel.gg Discord: the bot publishes a hashed member list and
+the plugin checks your username against it. Pop-outs and every manual control work either way. The bot
+can also be added to another server you play on; that server then appears in the Squad panel.
 
 ## Settings at a glance
 
 | Tab | What is there |
 |---|---|
-| Switch | game source and scene; squad mates (Twitch, Kick, YouTube live, VDO.Ninja, Discord or an OBS source; in-game name), the vertical scene for a portrait canvas; **Show whoever is closest** with Wait between swaps and the 50 m range; squad-mate sound and what of yours to mute; LAN discovery and NDI share; Extras: keep warm, preload every feed |
-| Dual POV | on/off, crew mate, vehicle and seat preset or a dragged box, opacity |
+| Switch | game source and scene; squad mates and their in-game names; the vertical scene for a portrait canvas; **Show whoever is closest** with Wait between swaps and the 50 m range; the sound of the squad mate on screen and what of yours to mute; Squad from Discord; Extras: keep warm, preload every feed |
+| Dual POV | on/off, crew mate, vehicle and seat preset or a dragged box, opacity, the frame and name size, auto mode |
 | Look | name tag, plate, camcorder frame, grain, vignette; preview |
-| Detect | live picture with the damage-log match, the header box and the blue **NEARBY box**; **Test read**; the match threshold and **Hold down to**, confirm frames, the 2 s delay before showing and the delay before coming back |
-| Clips | replay buffer, file-name template, clip folder, Backtrack hotkeys and folder, clip on downed, ClipHound path and start/close with OBS |
+| Detect | live picture with the damage-log match, the header box and the blue **NEARBY box**; **Test read**; thresholds and delays |
+| Clips | replay buffer, file-name template, clip folder, Backtrack hotkeys and folder, clip on downed, rolling highlights window, Number past clips, ClipHound path and start/close with OBS |
 | ClipHound | your kill-feed name, clip library, clip every kill, multi-kill window, the kill-feed box and the reading rate, Twitch login |
 | Logs | the plugin's log and ClipHound's, Copy all |
 | Help | the version you are running, the check for a newer build, and what everything does |
 
-The dock has the state line, the squad-mate box with the **Closest** tick box, the Nearby line,
-Show / Back / **POV sound**, Start ClipHound and Save clip. POV sound is the sound of whoever is on
-screen: on (the default) their feed is the one with sound and the unmute moves with the picture;
-off, every squad mate is silent. It has a hotkey under OBS Settings → Hotkeys.
+The Squad panel (dock, **Squad**) is the mid-broadcast view: Add pop-outs, Make active, Show in Dual POV,
+In-game name, Remove, where the pop-outs live (tucked to the edge, or parked on another monitor), the
+Discord audio level on stream, and which Discord server counts.
 
 ## Show whoever is closest
 
-WARDOGS lists the squad mates near you in the bottom-right corner of the HUD, with a distance each,
-and that list stays up while you are down. From the moment the damage log appears until you are back
-up, ClipHound reads it and tells the plugin, which makes the nearest squad mate the active one just
-before your stream cuts to them - so the POV your viewers get is the one running towards you.
-Nothing is read while you are up, so it costs nothing between fights.
+WARDOGS lists the squad mates near you in the bottom-right corner of the HUD, with a distance each, and
+that list stays up while you are down. From the moment the damage log appears until you are back up,
+ClipHound reads it and tells the plugin, which makes the nearest live squad mate the active one just
+before your stream cuts to them. Nothing is read while you are up.
 
-Tick **Closest** in the dock (or Settings → Switch → **Show whoever is closest**), drag the blue box
-round the NEARBY list on the Detect tab, and give each squad mate their **in-game name** in the Edit
-dialog. The dock's squad-mate box then follows the closest one by itself; untick Closest to choose a
-squad mate yourself. Only names you have configured are ever matched, so a stranger in the list
-cannot move your feed. While you are going down every reading picks the nearest one outright; once a
-squad mate is on screen, a swap to a nearer one waits for the **Wait between swaps** slider (1-10 s,
-4 by default) and only happens for someone within **Swap over only for someone ... m or closer**
-(50 m by default) while the one on screen is still in the list, so nothing flaps. Players who are not
-set up as a feed are never matched: with five in the squad and two streaming, the nearer streamer is
-shown however far they are, and if no streamer is in the list the selected squad mate stays. The list is cleared the moment you are back up and the dock
-reads "N/A while you are up". ClipHound must be running: ticking Closest without it asks to start it.
+Tick **Closest** in the dock, drag the blue box round the NEARBY list on the Detect tab, and give each
+squad mate their in-game name (asked for when a pop-out is added). Only names you have configured are
+ever matched. While you are going down every reading picks the nearest one outright; once a squad mate
+is on screen, a swap to a nearer one waits for **Wait between swaps** (4 s by default) and only happens
+for someone within 50 m while the one on screen is still in the list, so nothing flaps. Someone the
+roster says is not streaming is never picked; if nobody close is live, any live squad mate is shown.
+ClipHound must be running: ticking Closest without it asks to start it.
 
 Coming back up is absolute: every squad mate's video and audio is hidden in every scene, so your own
 POV is what the stream shows the moment you are revived.
-
-If it reads nobody, press **Test read** next to the box: it shows the crop the plugin is sending and
-the rows, names and metres ClipHound got out of it, which says whether the box is in the wrong place,
-the text is unreadable, or the in-game names do not match.
 
 ## CPU
 
 The plugin's downed search is template matching on an 800 px frame: near zero once locked on, and
 while you are alive it runs on every third poll, about 1-2 % of one core. ClipHound's OCR is the
-heavier part, and it is one tesseract run per frame for the whole feed however many rows are on
-screen (rows are only read until they are decided, 0.75 s after they appear). At the default 10
-frames a second that is roughly 10-20 % of one core while kills are being read and a few per cent
-between them. The NEARBY panel is only read while you are down, one run every 0.4 s, and
-names are only re-read when they change. Drop the rate on the ClipHound tab if the CPU matters
-more to you than the second it saves.
+heavier part: one tesseract run per frame for the whole feed. At the default 10 frames a second that
+is roughly 10-20 % of one core while kills are being read and a few per cent between them. The NEARBY
+panel is only read while you are down.
 
 ## Build
 
-Official [obs-plugintemplate](https://github.com/obsproject/obs-plugintemplate). GitHub Actions
-builds the plugin, then `app/build_exe.ps1` (PyInstaller + choco Tesseract) and the Inno Setup
-installer with both components, on every push: `kennelgg-<version>-windows-x64.zip`
-(plugin only) and `kennelgg-<version>-windows-x64-installer.exe` (plugin + app).
+Official [obs-plugintemplate](https://github.com/obsproject/obs-plugintemplate). GitHub Actions builds
+the plugin, then `app/build_exe.ps1` (PyInstaller + choco Tesseract, and the build fails if Tesseract
+is missing) and the Inno Setup installer with both components, on every push:
+`kennelgg-<version>-windows-x64.zip` (plugin only) and `kennelgg-<version>-windows-x64-installer.exe`
+(plugin + app).

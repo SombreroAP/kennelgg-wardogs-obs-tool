@@ -1,5 +1,4 @@
 #include "switcher.h"
-#include "ndi.h"
 #include <util/platform.h>
 #include <obs-module.h>
 #include <obs-frontend-api.h>
@@ -135,13 +134,6 @@ std::vector<std::pair<std::string, std::string>> Switcher::listProperty(const ch
 	if (c != cache.end() && now - c->second.first < 5000000000ULL)
 		return c->second.second;
 
-	// DistroAV's finder keeps hold of whichever source asked for the list and signals it from its
-	// own thread; our probe is gone by then and OBS dies on the dangling handler. Use kennelNdi.
-	if (strncmp(kind, "ndi_", 4) == 0) {
-		obs_log(LOG_WARNING, "listProperty refused for %s - use kennelNdi::sources()", kind);
-		return {};
-	}
-
 	std::vector<std::pair<std::string, std::string>> out;
 	obs_source_t *tmp = obs_source_create_private(kind, "kennel-probe", nullptr);
 	if (!tmp)
@@ -161,28 +153,6 @@ std::vector<std::pair<std::string, std::string>> Switcher::listProperty(const ch
 		obs_properties_destroy(props);
 	obs_source_release(tmp);
 	cache[key] = {now, out};
-	return out;
-}
-
-/// NDI senders already referenced by a source in this OBS. Reads what is set on them; it never
-/// creates one, so DistroAV's finder is not involved.
-std::vector<std::string> Switcher::ndiSourceNames()
-{
-	std::vector<std::string> out;
-	auto cb = [](void *param, obs_source_t *src) {
-		auto *v = (std::vector<std::string> *)param;
-		const char *id = obs_source_get_id(src);
-		if (id && strncmp(id, "ndi_", 4) == 0) {
-			obs_data_t *st = obs_source_get_settings(src);
-			const char *n = st ? obs_data_get_string(st, "ndi_source_name") : nullptr;
-			if (n && *n && std::find(v->begin(), v->end(), n) == v->end())
-				v->emplace_back(n);
-			if (st)
-				obs_data_release(st);
-		}
-		return true;
-	};
-	obs_enum_sources(cb, &out);
 	return out;
 }
 
@@ -290,103 +260,13 @@ std::string Switcher::createInScene(const Config &cfg, const char *kind, const s
 	return item ? "" : "could not add '" + name + "' to the scene";
 }
 
-/// How a squad mate's NDI feed should be received. Frame sync is the important one: it hands OBS a
-/// frame on OBS's own clock instead of whenever the network delivers one, which is what turns a
-/// feed that judders and drops on a busy LAN into a steady one.
-/// What a squad mate's feed is really called on the network.
-///
-/// The name we compose from their beacon is "<their computer> (Kennel POV)", but NDI advertises the
-/// machine name in its own form - upper case, or the DNS name, or whatever the NDI runtime settled
-/// on - and DistroAV matches the string exactly. One letter's difference and the receiver connects
-/// to nothing and shows nothing, with no error anywhere. So we ask the NDI runtime what is actually
-/// out there and match on the part in brackets, which is the half we control.
-std::string Switcher::resolveNdiName(const std::string &wanted, std::vector<std::string> *sawOut)
-{
-	std::vector<std::string> have = kennelNdi::sources(1200);
-	if (sawOut)
-		*sawOut = have;
-	if (have.empty())
-		return wanted; // nothing to check against; leave it alone
-	auto lower = [](std::string v) {
-		std::transform(v.begin(), v.end(), v.begin(), ::tolower);
-		return v;
-	};
-	auto inner = [](const std::string &v) {
-		size_t a = v.rfind('('), b = v.rfind(')');
-		return a != std::string::npos && b != std::string::npos && b > a ? v.substr(a + 1, b - a - 1) : v;
-	};
-	for (const auto &h : have)
-		if (h == wanted)
-			return h;
-	for (const auto &h : have)
-		if (lower(h) == lower(wanted))
-			return h;
-	std::string want = lower(inner(wanted));
-	for (const auto &h : have)
-		if (lower(inner(h)) == want)
-			return h;
-	return "";
-}
-
-obs_data_t *Switcher::ndiSettings(const Friend &f)
-{
-	obs_data_t *st = obs_data_create();
-	obs_data_set_string(st, "ndi_source_name", f.channel.c_str());
-	obs_data_set_int(st, "ndi_bw_mode", std::clamp(f.ndiBw, 0, 1));
-	// How the feed is timed on the way in. 0 leaves DistroAV's own settings alone, which is the
-	// default: 0.5.4 forced frame sync on every feed to smooth it, and on some setups the picture
-	// then never appears at all. Frame sync is worth trying by hand, but not behind your back.
-	switch (std::clamp(f.ndiSync, 0, 4)) {
-	case 1:
-		obs_data_set_bool(st, "ndi_framesync", true);
-		break;
-	case 2:
-		obs_data_set_bool(st, "ndi_framesync", false);
-		obs_data_set_int(st, "ndi_sync", 1); // network timestamps
-		break;
-	case 3:
-		obs_data_set_bool(st, "ndi_framesync", false);
-		obs_data_set_int(st, "ndi_sync", 2); // the sender's timecode
-		break;
-	case 4:
-		obs_data_set_bool(st, "ndi_framesync", false);
-		obs_data_set_int(st, "ndi_sync", 0); // internal: show frames as they land
-		break;
-	default:
-		obs_data_set_bool(st, "ndi_framesync", false); // undo what 0.5.4 wrote onto the source
-		break;
-	}
-	return st;
-}
-
-/// Put those settings on the NDI feeds that already exist, once, without touching anything else -
-/// updating an ndi_source restarts the receiver, so only when something actually differs.
-void Switcher::tuneNdiSources(Config &cfg)
-{
-	bool changed = false;
-	for (auto &f : cfg.friends) {
-		if (f.kind != FriendKind::Ndi || f.source.empty())
-			continue;
-		obs_source_t *src = obs_get_source_by_name(f.source.c_str());
-		if (!src)
-			continue;
-		obs_data_t *st = ndiSettings(f);
-		if (!alreadySet(src, st))
-			obs_source_update(src, st);
-		obs_data_release(st);
-		obs_source_release(src);
-	}
-	if (changed)
-		cfg.save();
-}
-
 /// The sources this plugin made for one squad mate, taken out of every scene and deleted. Only ever
 /// ours: a squad mate set up as "an OBS source you already have" keeps their source, and the shared
 /// browser source everyone uses when feeds are not preloaded is left alone.
 std::vector<std::string> Switcher::friendSourceNames(const Config &cfg, const Friend &f)
 {
 	std::vector<std::string> names;
-	if (f.ownsSources()) { // Discord and NDI: we created these
+	if (f.ownsSources()) { // Discord: we created these
 		if (!f.source.empty())
 			names.push_back(f.source);
 		if (!f.baseSource.empty() && f.baseSource != f.source) // parked while a pop-out is bound
@@ -512,32 +392,6 @@ std::string Switcher::createFriendSources(const Config &cfg, Friend &f)
 		if (!e.empty())
 			return e;
 		f.audioSource = audio;
-		return "";
-	}
-	if (f.kind == FriendKind::Ndi) {
-		if (!kindAvailable("ndi_source"))
-			return "the NDI source type is missing: install DistroAV (obs-ndi) first";
-		std::vector<std::string> saw;
-		std::string real = resolveNdiName(f.channel, &saw);
-		if (real.empty()) {
-			std::string list;
-			for (const auto &h : saw)
-				list += (list.empty() ? "" : ", ") + h;
-			return "nothing on the network is publishing '" + f.channel + "'" +
-			       (list.empty() ? " - and NDI cannot see any feed at all right now"
-					     : " - NDI can see: " + list);
-		}
-		if (real != f.channel) {
-			if (log)
-				log("NDI: '" + f.channel + "' is really called '" + real + "' - using that.");
-			f.channel = real;
-		}
-		obs_data_t *st = ndiSettings(f);
-		std::string e = createInScene(cfg, "ndi_source", base, st, true, false);
-		obs_data_release(st);
-		if (!e.empty())
-			return e;
-		f.source = base;
 		return "";
 	}
 	return "";
@@ -808,115 +662,6 @@ std::string Switcher::createGameCapture(Config &cfg)
 	if (e.empty())
 		cfg.gameSource = "Game";
 	return e;
-}
-
-bool Switcher::outputKindAvailable(const char *kind)
-{
-	const char *id;
-	for (size_t i = 0; obs_enum_output_types(i, &id); i++)
-		if (strcmp(id, kind) == 0)
-			return true;
-	return false;
-}
-
-std::string Switcher::startNdiShare(const std::string &ndiName, int shareHeight, int shareFps)
-{
-	bool sizeChanged = shareHeight_ != shareHeight || shareFps_ != shareFps;
-	shareHeight_ = shareHeight;
-	shareFps_ = shareFps;
-	if (!outputKindAvailable("ndi_output"))
-		return "DistroAV (obs-ndi) is not installed, so the game feed cannot be shared over NDI";
-	const uint32_t track6 = 1u << 5;
-	// microphones off track 6: squad mates should hear the game, not the streamer
-	obs_enum_sources(
-		[](void *, obs_source_t *src) {
-			const char *id = obs_source_get_id(src);
-			if (id && strstr(id, "input_capture")) {
-				uint32_t m = obs_source_get_audio_mixers(src);
-				if (m & (1u << 5))
-					obs_source_set_audio_mixers(src, m & ~(1u << 5));
-			}
-			return true;
-		},
-		nullptr);
-	if (ndiOut_) {
-		obs_data_t *cur = obs_output_get_settings(ndiOut_);
-		std::string curName = obs_data_get_string(cur, "ndi_name");
-		obs_data_release(cur);
-		if (curName == ndiName && obs_output_active(ndiOut_) && !sizeChanged)
-			return "";
-		stopNdiShare();
-	}
-	obs_data_t *st = obs_data_create();
-	obs_data_set_string(st, "ndi_name", ndiName.c_str());
-	obs_data_set_bool(st, "uses_video", true);
-	obs_data_set_bool(st, "uses_audio", true);
-	ndiOut_ = obs_output_create("ndi_output", "Kennel.gg NDI share", st, nullptr);
-	obs_data_release(st);
-	if (!ndiOut_)
-		return "could not create the NDI output";
-	// Render the share from a view of our own on the program output, never from OBS's main video
-	// mix: an output tapped onto the mix broke other plugins' extra canvases (Aitum's vertical
-	// canvas went black). The view shows what the program shows, follows scene changes by itself,
-	// and only ever carries the main canvas.
-	struct obs_video_info ovi;
-	obs_get_video_info(&ovi);
-	// Send a smaller picture than the canvas. NDI's full-quality stream is barely compressed:
-	// 1440p60 is around 200 Mbit, which is more than most networks carry steadily, and that is what
-	// makes a squad mate's feed judder. Our own view renders it, so the stream itself pays nothing.
-	//
-	// Only the output size is changed. The mix keeps the canvas size and - importantly - OBS's own
-	// frame rate: a mix running at a different rate to the rest of OBS is what blacked out other
-	// plugins' extra canvases (Aitum's vertical canvas) in 0.5.4.
-	if (shareHeight_ > 0 && ovi.base_height > 0 && (uint32_t)shareHeight_ < ovi.base_height) {
-		ovi.output_height = (uint32_t)shareHeight_;
-		ovi.output_width = (uint32_t)(((uint64_t)ovi.base_width * shareHeight_ / ovi.base_height + 1) & ~1u);
-		ovi.scale_type = OBS_SCALE_LANCZOS; // sharper than bicubic on a big downscale, costs nothing to send
-	}
-	ndiView_ = obs_view_create();
-	obs_source_t *program = obs_get_output_source(0);
-	obs_view_set_source(ndiView_, 0, program);
-	if (program)
-		obs_source_release(program);
-	ndiVideo_ = obs_view_add2(ndiView_, &ovi);
-	if (!ndiVideo_) {
-		stopNdiShare();
-		return "could not create a video output for the NDI share";
-	}
-	obs_output_set_media(ndiOut_, ndiVideo_, obs_get_audio());
-	obs_output_set_mixer(ndiOut_, 5);
-	if (!obs_output_start(ndiOut_)) {
-		const char *e = obs_output_get_last_error(ndiOut_);
-		ndiErr_ = e ? e : "the NDI output would not start";
-		stopNdiShare();
-		return ndiErr_;
-	}
-	ndiErr_.clear();
-	ndiName_ = ndiName;
-	(void)track6;
-	if (log)
-		log("Sharing your feed over NDI as \"" + ndiName + "\" at " + std::to_string(ovi.output_width) + "x" +
-		    std::to_string(ovi.output_height) + " " +
-		    std::to_string(ovi.fps_den ? ovi.fps_num / ovi.fps_den : 0) + " fps (game audio only).");
-	return "";
-}
-
-void Switcher::stopNdiShare()
-{
-	if (ndiOut_) {
-		if (obs_output_active(ndiOut_))
-			obs_output_stop(ndiOut_);
-		obs_output_release(ndiOut_);
-		ndiOut_ = nullptr;
-	}
-	if (ndiView_) {
-		obs_view_set_source(ndiView_, 0, nullptr);
-		if (ndiVideo_)
-			obs_view_remove(ndiView_);
-		obs_view_destroy(ndiView_);
-		ndiView_ = nullptr;
-		ndiVideo_ = nullptr;
-	}
 }
 
 obs_source_t *Switcher::sceneSource(const Config &cfg)
@@ -1320,11 +1065,8 @@ void Switcher::armWarm(const Config &cfg)
 {
 	if (cfg.preloadFeeds) {
 		// Every browser feed loaded and playing behind the scenes, so a swap is instant - a Twitch
-		// or VDO.Ninja page takes seconds to come up and is worth the wait.
-		//
-		// NDI is the other way round. A warm NDI feed is a receiver decoding a full stream the whole
-		// time, and four of those at 1440p is a stuttering mess for no gain: an NDI receiver is back
-		// in well under a second. So only the squad mate we would actually show is kept warm.
+		// or VDO.Ninja page takes seconds to come up and is worth the wait. A window capture is
+		// back in well under a second, so only the squad mate we would actually show is kept warm.
 		const Friend *act = cfg.active();
 		for (const auto &f : cfg.friends) {
 			if (f.isWeb() || (act && f.name == act->name))
@@ -1369,13 +1111,9 @@ void Switcher::armOne(const Config &cfg, const Friend &f)
 			obs_source_release(hf);
 		}
 		obs_source_set_muted(src, true);
-		// A browser feed goes on playing while its scene item is hidden, so hide it and let it play.
-		//
-		// An NDI feed is the opposite problem. Kept in the scene it stays connected and swaps
-		// instantly - but it is then pulling its full stream the whole time you are alive, which is
-		// a constant load on the network and on both PCs for something you need only when you go
-		// down. Off by default; the tick box on the Switch tab trades that bandwidth for the swap.
-		bool keepUp = !f.isWeb() && (cfg.warmNdi || f.kind == FriendKind::Discord);
+		// A browser feed goes on playing while its scene item is hidden, so hide it and let it play;
+		// a Discord capture stays up so its picture is there the moment it is needed.
+		bool keepUp = !f.isWeb() && f.kind == FriendKind::Discord;
 		obs_sceneitem_set_visible(item, keepUp);
 	} else if (log)
 		log("Warm feed: '" + name + "' is not in the scene.");
@@ -1450,8 +1188,6 @@ int Switcher::hideAllFriends(const Config &cfg)
 /// browser page while obs-browser is still loaded.
 void Switcher::shutdown()
 {
-	stopNdiShare();
-	kennelNdi::shutdown();
 	if (!dualScene_)
 		return;
 	obs_source_t *dualSrc = obs_scene_get_source(dualScene_);

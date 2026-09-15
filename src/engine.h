@@ -12,8 +12,6 @@
 #include "bridge.h"
 #include "capture.h"
 #include "clips.h"
-#include "lan.h"
-#include "speed.h"
 #include "roster.h"
 #include "config.h"
 #include "detector.h"
@@ -30,10 +28,6 @@ public:
 	Switcher sw;
 	Bridge bridge;
 	Clips clips;
-	Lan lan;
-	QTimer ndiHealth_; // is our own share really running, and can NDI see it?
-	Speed speed;       // measures the link to a squad mate, so the NDI size can be picked on a number
-	QString ndiShareName() const { return "Kennel POV"; }
 	QString playerName() const;
 	Roster roster; // who is in Discord voice and who is sharing (published by the Kennel.gg bot)
 	void applyRosterConfig();
@@ -73,11 +67,8 @@ public:
 	/// Ask the Discord app on this PC who it is logged in as, off the UI thread, and take that as
 	/// the username when none was given (or always, byHand). Fires discordUserDetected either way.
 	void detectDiscordUser(bool byHand = false);
-	void applyLan();
 	void applyReplaySeconds();
 	void syncAppPort();
-	void checkNdiShare();
-	bool ndiWasSharing_ = false, ndiWarned_ = false; // (re)start discovery + NDI share from cfg
 	QString appStatus() const { return appStatus_; }
 	bool appConnected() const { return bridge.clients() > 0; }
 	void onReplaySaved() { clips.onReplaySaved(); }
@@ -180,12 +171,6 @@ public slots:
 	void clipNow(const QString &title = "manual", const QStringList &tags = {"manual"},
 		     const QString &source = "hotkey");
 	void log(const QString &msg);
-	/// What the NDI share is actually doing, for the Switch tab. Not the same as the tick box.
-	QString ndiStatus() const;
-	/// One line saying what is actually true about NDI here: running, discoverable, adapters.
-	QString ndiReport();
-	/// Put the squad's addresses into NDI's machine settings, for a network where discovery fails.
-	QString addSquadToNdiConfig();
 
 signals:
 	void stateChanged();
@@ -245,7 +230,7 @@ private:
 	QDateTime appStartedAt_;
 	bool appCrashReported_ = false;
 	Detector detGame_, detRevive_;
-	bool dualOn_ = false, dualAutoOn_ = false, ndiDelayed_ = false;
+	bool dualOn_ = false, dualAutoOn_ = false;
 	QString vehicleSeat_;
 	QNetworkAccessManager *net_ = nullptr;
 	QString updateState_, newVersion_, newUrl_, newNotes_;

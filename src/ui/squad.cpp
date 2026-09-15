@@ -198,9 +198,6 @@ void SquadPanel::refresh()
 		case FriendKind::ObsSource:
 			where = "OBS source";
 			break;
-		case FriendKind::Ndi:
-			where = "NDI";
-			break;
 		}
 		if (f.fromRoster)
 			where += ", from Kennel.gg voice";

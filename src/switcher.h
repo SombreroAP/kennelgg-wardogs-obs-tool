@@ -77,8 +77,6 @@ public:
 	/// muted. Only sources that belong to a squad slot are touched, never the streamer's own.
 	void applyFriendAudio(const Config &cfg, bool showing);
 	/// Choices a source kind offers for one of its list properties (e.g. window_capture "window").
-	/// NDI senders already used by a source in this OBS.
-	static std::vector<std::string> ndiSourceNames();
 	static std::vector<std::pair<std::string, std::string>> listProperty(const char *kind,
 									     const char *prop); // name, value
 	static bool kindAvailable(const char *kind);
@@ -94,34 +92,10 @@ public:
 	/// Sources a squad mate needs, created and placed. Fills f.source / f.audioSource.
 	std::string createFriendSources(const Config &cfg, Friend &f);
 	std::string createGameCapture(Config &cfg);
-	/// What a squad mate's feed is really called on the network ("" = nobody is publishing it).
-	static std::string resolveNdiName(const std::string &wanted, std::vector<std::string> *sawOut = nullptr);
-	/// Receiving settings for a squad mate's NDI feed (frame sync on, their bandwidth choice).
-	static obs_data_t *ndiSettings(const Friend &f); // caller releases
-	/// Apply those to the NDI feeds already in OBS.
-	void tuneNdiSources(Config &cfg);
-	/// Publish the program feed over NDI (DistroAV's output type) on mixer track 6, with every microphone
-	/// input taken off that track so squad mates get game audio only. Returns "" or an error.
-	std::string startNdiShare(const std::string &ndiName, int shareHeight, int shareFps);
-	void stopNdiShare();
-	/// Is our own feed actually going out? Ticking the box is not the same as the output running.
-	bool ndiSharing() const { return ndiOut_ && obs_output_active(ndiOut_); }
-	const std::string &ndiShareError() const { return ndiErr_; }
-	const std::string &ndiShareName() const { return ndiName_; }
-	static bool outputKindAvailable(const char *kind);
-	static std::string ndiFullName(const std::string &host, const std::string &ndiName)
-	{
-		return host + " (" + ndiName + ")";
-	}
 
 private:
-	int shareHeight_ = 0, shareFps_ = 0; // what the NDI share is scaled to
-	Capture trimCap_, hashCap_;          // renders a frame of a feed to find its borders
-	obs_scene_t *dualScene_ = nullptr;   // the private nested scene behind the dual-POV window
-	obs_output_t *ndiOut_ = nullptr;
-	std::string ndiErr_, ndiName_;
-	obs_view_t *ndiView_ = nullptr; // our own render of the program, so the share never taps the main mix
-	video_t *ndiVideo_ = nullptr;
+	Capture trimCap_, hashCap_;        // renders a frame of a feed to find its borders
+	obs_scene_t *dualScene_ = nullptr; // the private nested scene behind the dual-POV window
 
 public:
 	static std::vector<std::pair<std::string, std::string>> inputs(); // name, id

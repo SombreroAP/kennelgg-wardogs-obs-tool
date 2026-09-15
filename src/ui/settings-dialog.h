@@ -57,13 +57,10 @@ private:
 	// switch
 	QComboBox *scene_ = nullptr, *game_ = nullptr, *gameDetect_ = nullptr;
 	QTableWidget *friends_;
-	QPushButton *speedBtn_ = nullptr;
-	QLabel *ndiStatus_ = nullptr;
 	QComboBox *sceneV_ = nullptr;
-	QComboBox *lookPos_ = nullptr, *ndiQuality_ = nullptr;
+	QComboBox *lookPos_ = nullptr;
 	QListWidget *onTop_ = nullptr;
 	QListWidget *mute_ = nullptr;
-	QCheckBox *warmNdi_ = nullptr;
 	QSpinBox *replaySecs_ = nullptr;
 	QCheckBox *keepWarm_, *bringFront_;
 	QCheckBox *preload_ = nullptr, *friendAudio_ = nullptr;
@@ -138,9 +135,6 @@ private:
 	QPushButton *twitchLogin_ = nullptr, *twitchLogout_ = nullptr;
 	void refreshAppTab();
 	QLineEdit *playerName_ = nullptr;
-	QCheckBox *lanOn_, *ndiShare_, *autoAdd_;
-	QListWidget *peers_;
-	QLabel *lanStatus_;
 	QCheckBox *bridgeOn_ = nullptr, *launchApp_ = nullptr, *autoReplay_ = nullptr, *clipDowned_ = nullptr;
 	QSpinBox *bridgePort_;
 	QLineEdit *appPath_, *nameTpl_;
@@ -157,5 +151,4 @@ private:
 	void collect(); // UI -> cfg
 	void saveAndApply();
 	void testFeed();
-	void testLink();
 };

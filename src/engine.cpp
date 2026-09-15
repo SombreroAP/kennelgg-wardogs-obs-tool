@@ -1,5 +1,5 @@
 #include "engine.h"
-#include "ndi.h"
+#include <QSysInfo>
 #include "discord-ipc.h"
 #include <optional>
 #include <obs-frontend-api.h>
@@ -86,43 +86,6 @@ Engine::Engine(QObject *parent) : QObject(parent)
 		emit stateChanged();
 	});
 	connect(&clips, &Clips::logged, this, &Engine::log);
-	connect(&lan, &Lan::peersChanged, this, [this]() {
-		if (cfg.autoAddPeers) {
-			bool added = false;
-			for (auto &kv : lan.peers()) {
-				const Lan::Peer &p = kv.second;
-				if (p.ndi.isEmpty())
-					continue;
-				std::string full = Switcher::ndiFullName(p.host.toStdString(), p.ndi.toStdString());
-				bool known = false;
-				for (auto &f : cfg.friends)
-					if (f.kind == FriendKind::Ndi && f.channel == full)
-						known = true;
-				if (known)
-					continue;
-				Friend f;
-				f.name = p.name.isEmpty() ? p.host.toStdString() : p.name.toStdString();
-				f.kind = FriendKind::Ndi;
-				f.channel = full;
-				std::string e = sw.createFriendSources(cfg, f);
-				if (!e.empty()) {
-					log("Squad mate on the LAN (" + p.name +
-					    ") found, but: " + QString::fromStdString(e));
-					continue;
-				}
-				cfg.friends.push_back(f);
-				added = true;
-				log("Squad mate on the LAN added: " + QString::fromStdString(f.name) + " (NDI " +
-				    p.ndi + ").");
-			}
-			if (added) {
-				cfg.save();
-				if (cfg.keepWarm && !applied_)
-					sw.armWarm(cfg);
-			}
-		}
-		emit stateChanged();
-	});
 	connect(&clips, &Clips::saved, this, [this](const Clips::Entry &e) {
 		QJsonObject o;
 		o["type"] = "clip_saved";
@@ -136,244 +99,7 @@ Engine::Engine(QObject *parent) : QObject(parent)
 
 QString Engine::playerName() const
 {
-	return cfg.playerName.empty() ? Lan::hostName() : QString::fromStdString(cfg.playerName);
-}
-
-/// Once every 15 s: is our own share up, is NDI able to see it, and hand NDI the addresses of the
-/// squad mates our own beacon already found.
-void Engine::checkNdiShare()
-{
-	if (stopping_)
-		return;
-	std::vector<std::string> ips;
-	for (const auto &kv : lan.peers())
-		if (!kv.second.addr.isEmpty())
-			ips.push_back(kv.second.addr.toStdString());
-	kennelNdi::setExtraIps(ips); // used only when something actually asks NDI a question
-	if (!cfg.ndiShare)
-		return;
-	if (!sw.ndiSharing()) {
-		if (ndiWasSharing_ || !ndiWarned_) {
-			ndiWasSharing_ = false;
-			ndiWarned_ = true;
-			QString e = QString::fromStdString(sw.ndiShareError());
-			log("NDI share has STOPPED" + (e.isEmpty() ? QString(".") : " (" + e + ").") +
-			    " Squad mates cannot see your feed. Starting it again...");
-		}
-		std::string e = sw.startNdiShare(ndiShareName().toStdString(), cfg.ndiShareHeight, cfg.ndiShareFps);
-		if (!e.empty())
-			return;
-	}
-	if (!ndiWasSharing_) {
-		ndiWasSharing_ = true;
-		ndiWarned_ = false;
-		emit stateChanged();
-		// Nothing here asks NDI anything by itself any more. Until 0.6.4 the plugin loaded its own
-		// copy of the NDI runtime and kept a finder open inside OBS, alongside DistroAV's - two NDI
-		// stacks on the same discovery sockets, which stopped both PCs seeing each other at all.
-		// Press Check NDI when you want to know; that asks once and lets go.
-	}
-	lan.setSelf(playerName(), Lan::hostName(), sw.ndiSharing() ? ndiShareName() : "", PLUGIN_VERSION);
-}
-
-/// NDI keeps its machine-wide settings in a JSON file that NDI Access Manager writes. Two of them
-/// switch discovery off entirely and are the usual reason a machine sees no feeds at all, its own
-/// included: a discovery server that is set but not answering, and a receive group that is not the
-/// one everybody else is sending to.
-static QString ndiConfigNote()
-{
-	QStringList paths;
-	QByteArray pd = qgetenv("PROGRAMDATA");
-	if (!pd.isEmpty()) {
-		paths << QString::fromLocal8Bit(pd) + "/NDI/ndi-config.v1.json";
-		paths << QString::fromLocal8Bit(pd) + "/NewTek/NDI/ndi-config.v1.json";
-	}
-	for (const QString &p : paths) {
-		QFile f(p);
-		if (!f.exists() || !f.open(QIODevice::ReadOnly))
-			continue;
-		QJsonObject o = QJsonDocument::fromJson(f.readAll()).object();
-		QStringList odd;
-		QJsonObject net = o.value("ndi").toObject().value("networks").toObject();
-		QString disc = net.value("discovery").toString();
-		if (!disc.isEmpty())
-			odd << "a discovery server is set (" + disc +
-					") - if it is not answering, this machine finds nothing at all";
-		QJsonObject groups = o.value("ndi").toObject().value("groups").toObject();
-		QString recv = groups.value("recv").toString(), send = groups.value("send").toString();
-		if (!recv.isEmpty() && recv.compare("public", Qt::CaseInsensitive) != 0)
-			odd << "it only receives the group \"" + recv + "\"";
-		if (!send.isEmpty() && send.compare("public", Qt::CaseInsensitive) != 0)
-			odd << "it only sends to the group \"" + send + "\"";
-		if (!odd.isEmpty())
-			return "NDI Access Manager on this PC: " + odd.join("; ") + " (" + p + ")";
-		return "NDI Access Manager settings look normal";
-	}
-	return QString();
-}
-
-#ifdef _WIN32
-/// Windows hands whole ranges of TCP ports to Hyper-V, WSL, Docker and the like, and a program
-/// running as a normal user then cannot bind anything inside them. NDI's ports (5960 upwards) land
-/// in one of those ranges on a lot of machines, which is why NDI suddenly works when OBS is started
-/// as administrator - an administrator may bind them, an ordinary user may not. Nothing about the
-/// network is wrong on such a PC, and no firewall rule will fix it.
-static QString ndiPortNote()
-{
-	QProcess p;
-	p.setProcessChannelMode(QProcess::MergedChannels);
-	p.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
-		args->flags |= CREATE_NO_WINDOW; // no console window flashing up
-	});
-	p.start("netsh", {"int", "ipv4", "show", "excludedportrange", "protocol=tcp"});
-	if (!p.waitForFinished(4000))
-		return QString();
-	const QString out = QString::fromLocal8Bit(p.readAll());
-	static const QRegularExpression rx("(\\d+)\\s+(\\d+)");
-	for (auto it = rx.globalMatch(out); it.hasNext();) {
-		QRegularExpressionMatch m = it.next();
-		int start = m.captured(1).toInt(), end = m.captured(2).toInt();
-		if (end < start || start < 1024)
-			continue;
-		if (start <= 5970 && end >= 5960) // NDI's own range sits inside a reserved one
-			return QString("Windows has reserved TCP ports %1-%2 for something else (Hyper-V, WSL, "
-				       "Docker or similar) and NDI's ports 5960-5970 are inside it - which is "
-				       "exactly why NDI works when OBS is started as administrator and not "
-				       "otherwise. In an admin Command Prompt: net stop winnat, then netsh int "
-				       "ipv4 add excludedportrange protocol=tcp startport=5960 numberofports=11 "
-				       "store=persistent, then net start winnat, then reboot")
-				.arg(start)
-				.arg(end);
-	}
-	return QString();
-}
-#endif
-
-/// Everything we can actually establish about NDI on this PC, in one line. Guessing at causes was
-/// making things worse: a report says what is true and lets the cause follow from it.
-QString Engine::ndiReport()
-{
-	QStringList bits;
-	bits << (sw.ndiSharing() ? "your feed IS running as \"" + ndiShareName() + "\""
-				 : "your feed is NOT running" +
-					   (sw.ndiShareError().empty()
-						    ? QString()
-						    : " (" + QString::fromStdString(sw.ndiShareError()) + ")"));
-	if (!kennelNdi::available()) {
-		bits << "DistroAV has not loaded the NDI runtime in this OBS yet, so there is nothing here to "
-			"ask (turn the share on, or add an NDI source, then try again). The plugin will not "
-			"load a second copy itself - doing that put two NDI stacks in OBS and stopped both "
-			"PCs seeing anything";
-		return "NDI check: " + bits.join("; ") + ".";
-	}
-#ifdef _WIN32
-	bool admin = false;
-	{
-		HANDLE tok = nullptr;
-		TOKEN_ELEVATION el{};
-		DWORD sz = sizeof(el);
-		if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &tok)) {
-			if (GetTokenInformation(tok, TokenElevation, &el, sizeof(el), &sz))
-				admin = el.TokenIsElevated;
-			CloseHandle(tok);
-		}
-	}
-	bits << (admin ? "OBS is running as administrator" : "OBS is running as a normal user");
-	QString portNote = ndiPortNote();
-	if (!portNote.isEmpty())
-		bits << portNote;
-#endif
-	QString cfgNote = ndiConfigNote();
-	if (!cfgNote.isEmpty())
-		bits << cfgNote;
-	std::vector<std::string> seen = kennelNdi::sources(1500);
-	QStringList names;
-	for (const auto &n : seen)
-		names << QString::fromStdString(n);
-	bits << (names.isEmpty() ? "NDI can see no feeds at all on this network" : "NDI can see: " + names.join(", "));
-	bool mine = false;
-	for (const auto &n : names)
-		if (n.contains(ndiShareName(), Qt::CaseInsensitive))
-			mine = true;
-	if (sw.ndiSharing() && !mine) {
-		bits << "it cannot see your own feed, which means nobody else will either";
-		// The usual cause on a gaming PC is not the firewall but a second network adapter: NDI
-		// advertises on one interface, and Hyper-V, WSL, Docker, VirtualBox and VPN clients all
-		// add adapters that win that choice while ordinary traffic still routes correctly.
-		QStringList nets;
-		for (const QNetworkInterface &i : QNetworkInterface::allInterfaces()) {
-			if (!(i.flags() & QNetworkInterface::IsUp) || (i.flags() & QNetworkInterface::IsLoopBack))
-				continue;
-			for (const QNetworkAddressEntry &e : i.addressEntries())
-				if (e.ip().protocol() == QAbstractSocket::IPv4Protocol)
-					nets << i.humanReadableName() + " " + e.ip().toString();
-		}
-		if (nets.size() > 1)
-			bits << QString("this PC has %1 active network adapters (%2) - NDI advertises on one of "
-					"them, and a Hyper-V, WSL, Docker, VirtualBox or VPN adapter will take "
-					"that choice while everything else still works. Disable the ones you do "
-					"not use, or pick the right one in NDI Access Manager")
-					.arg(nets.size())
-					.arg(nets.join(", "));
-		else
-			bits << "check Windows Firewall is allowing OBS on a Private network";
-	}
-	return "NDI check: " + bits.join("; ") + ".";
-}
-
-/// Writes the squad's addresses into NDI's own machine settings, so a receiver looks at them
-/// directly instead of waiting to discover them. This is NDI's documented answer to a network where
-/// discovery does not work, and it is the only thing here that changes a setting outside OBS - so it
-/// is behind a button and a question, never automatic.
-QString Engine::addSquadToNdiConfig()
-{
-	QStringList ips;
-	for (const auto &kv : lan.peers())
-		if (!kv.second.addr.isEmpty() && !ips.contains(kv.second.addr))
-			ips << kv.second.addr;
-	if (ips.isEmpty())
-		return "No squad mates have been seen on the LAN yet, so there are no addresses to add.";
-	QByteArray pd = qgetenv("PROGRAMDATA");
-	if (pd.isEmpty())
-		return "Could not find the ProgramData folder.";
-	QString dir = QString::fromLocal8Bit(pd) + "/NDI";
-	QString path = dir + "/ndi-config.v1.json";
-	QJsonObject root;
-	QFile in(path);
-	if (in.open(QIODevice::ReadOnly))
-		root = QJsonDocument::fromJson(in.readAll()).object();
-	in.close();
-	QJsonObject ndi = root.value("ndi").toObject();
-	QJsonObject nets = ndi.value("networks").toObject();
-	QStringList have = nets.value("ips").toString().split(',', Qt::SkipEmptyParts);
-	for (const QString &ip : ips)
-		if (!have.contains(ip))
-			have << ip;
-	nets["ips"] = have.join(",");
-	ndi["networks"] = nets;
-	root["ndi"] = ndi;
-	QDir().mkpath(dir);
-	QFile out(path);
-	if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate))
-		return "Could not write " + path +
-		       " - it needs an OBS started as administrator, or edit it by hand in NDI Access Manager.";
-	out.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
-	out.close();
-	log("NDI: added " + have.join(", ") + " to " + path + " - restart OBS on both PCs.");
-	return "Added " + have.join(", ") +
-	       " to NDI's settings on this PC.\n\nRestart OBS (on both PCs, "
-	       "with the same done on theirs) and their feed should appear in the source list even though "
-	       "discovery is not working.";
-}
-
-QString Engine::ndiStatus() const
-{
-	if (!cfg.ndiShare)
-		return "Not sharing.";
-	if (sw.ndiSharing())
-		return "Sharing as \"" + ndiShareName() + "\".";
-	QString e = QString::fromStdString(sw.ndiShareError());
-	return "NOT sharing" + (e.isEmpty() ? QString(" yet.") : ": " + e);
+	return cfg.playerName.empty() ? QSysInfo::machineHostName() : QString::fromStdString(cfg.playerName);
 }
 
 /// Put the clip length into OBS and, if the buffer is already running, restart it so the new length
@@ -457,41 +183,6 @@ void Engine::applyReplaySeconds()
 		});
 		return;
 	}
-}
-
-void Engine::applyLan()
-{
-	// only tell the squad we are sharing when the output is actually up: a ticked box that failed
-	// to start looked exactly like a working feed from the other end
-	lan.setSelf(playerName(), Lan::hostName(), sw.ndiSharing() ? ndiShareName() : "", PLUGIN_VERSION);
-	if (cfg.lanEnabled) {
-		if (!lan.running())
-			lan.start((quint16)cfg.lanPort);
-		// the far end of a squad mate's link test: it swallows what they send and tells them what landed
-		if (!speed.listening() && !speed.listen((quint16)(cfg.lanPort + 1)))
-			log(QString("Could not open the link-test port %1 - squad mates cannot measure the "
-				    "network to you.")
-				    .arg(cfg.lanPort + 1));
-	} else {
-		lan.stop();
-		speed.stop();
-	}
-	if (cfg.ndiShare) {
-		auto start = [this]() {
-			if (!cfg.ndiShare || stopping_)
-				return;
-			std::string e =
-				sw.startNdiShare(ndiShareName().toStdString(), cfg.ndiShareHeight, cfg.ndiShareFps);
-			if (!e.empty())
-				log("NDI share: " + QString::fromStdString(e));
-		};
-		if (!ndiDelayed_) {
-			ndiDelayed_ = true; // first time: let every other plugin finish setting up its outputs
-			QTimer::singleShot(4000, this, start);
-		} else
-			start();
-	} else
-		sw.stopNdiShare();
 }
 
 void Engine::launchApp()
@@ -779,24 +470,7 @@ void Engine::start()
 		    "and start OBS again - with both installed they fight over ClipHound's bridge and clips "
 		    "never fire.");
 #endif
-	applyLan();
 	applyRosterConfig();
-#ifdef _WIN32
-	// Say this once, unprompted: a reserved port range silently stops NDI working for anyone not
-	// running OBS as administrator, and nothing on screen would ever hint at it.
-	if (cfg.ndiShare || cfg.lanEnabled)
-		std::thread([this]() {
-			QString note = ndiPortNote();
-			if (note.isEmpty())
-				return;
-			QMetaObject::invokeMethod(
-				this, [this, note]() { log("NDI: " + note + "."); }, Qt::QueuedConnection);
-		}).detach();
-#endif
-	ndiHealth_.setInterval(15000);
-	connect(&ndiHealth_, &QTimer::timeout, this, [this]() { checkNdiShare(); });
-	ndiHealth_.start();
-	sw.tuneNdiSources(cfg); // frame sync on the squad mates' feeds we already have
 	timer_.start(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
@@ -1043,8 +717,7 @@ void Engine::stop()
 	downDelay_.stop();
 	upDelay_.stop();
 	bridge.close();
-	lan.stop();
-	sw.shutdown(); // NDI output, the dual-POV scene and its browser page, before obs-browser unloads
+	sw.shutdown(); // the dual-POV scene and its browser page, before obs-browser unloads
 	for (int i = 0; i < 50 && busy_; i++)
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
@@ -1610,7 +1283,6 @@ void Engine::reloadConfig()
 				    .arg(cfg.bridgePort));
 	} else if (!cfg.bridgeEnabled && bridge.listening())
 		bridge.close();
-	applyLan();
 	applyRosterConfig();
 	armPopoutWatch();
 	applyReplaySeconds();
@@ -1622,8 +1294,7 @@ void Engine::reloadConfig()
 		sw.armWarm(cfg);
 	sw.raiseOnTop(cfg);                 // the camera and alerts list may have just changed
 	sw.applyFriendAudio(cfg, applied_); // the Switch tab's tick box takes effect on the spot
-	sw.tuneNdiSources(cfg);
-	pushAppConfig(); // areas, names and rules the app reads
+	pushAppConfig();                    // areas, names and rules the app reads
 	emit stateChanged();
 }
 

@@ -1,6 +1,6 @@
 # ClipHound
 
-Runs on the **streaming PC**. It pulls the game frame from OBS (the capture-card / NDI
+Runs on the **streaming PC**. It pulls the game frame from OBS (the capture-card
 source) over obs-websocket, crops to the kill-feed strip (~4% of the pixels), OCRs it a few
 times a second, and when it sees **Sombrero** get a multi-kill or a long-range kill it:
 
@@ -22,7 +22,7 @@ macOS → `brew install tesseract`.
 ### 1. Setup wizard
 OBS → Tools → WebSocket Server Settings → Enable, set a password, port 4455. Then run
 `setup.bat` (or `python setup.py`). It connects to OBS, lists every video input and asks which
-one shows the gameplay: on a two-PC setup that is the **capture card** or NDI input, on one PC
+one shows the gameplay: on a two-PC setup that is the **capture card**, on one PC
 the Game Capture. It also asks your in-game name, the clip library folder and (optionally)
 the Twitch app id/secret, writes `config.yaml`, saves `roi.png` and reports whether the replay
 buffer is running. `python setup.py --check` re-tests without asking questions.

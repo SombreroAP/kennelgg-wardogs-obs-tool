@@ -3,6 +3,7 @@
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QPushButton>
+#include <QSysInfo>
 #include <QFileInfo>
 #include <obs-module.h>
 
@@ -47,7 +48,7 @@ SetupWizard::SetupWizard(Engine *engine, QWidget *parent) : QWizard(parent), e_(
 					"<p>Press Finish, then <b>get downed once</b> with WARDOGS on screen. The dock (View → Docks → Kennel.gg Wardogs) turns red "
 					"and your stream shows the squad mate; it comes back the instant you are revived.</p>"
 					"<p>Everything here can be changed under Tools → Kennel.gg Wardogs OBS Tool...</p>")
-					.arg(name_->text().trimmed().isEmpty() ? Lan::hostName()
+					.arg(name_->text().trimmed().isEmpty() ? QSysInfo::machineHostName()
 									       : name_->text().trimmed(),
 					     g.isEmpty() ? "(none yet)" : g)
 					.arg(n == 0 ? "none yet - add one from the dock later" : QString::number(n))
@@ -64,7 +65,7 @@ QWizardPage *SetupWizard::pageWelcome()
 		"Downed in WARDOGS? Your stream will show a squad mate's POV until you are back up. Your mic is never touched.");
 	auto *f = new QFormLayout(p);
 	name_ = new QLineEdit(QString::fromStdString(e_->cfg.playerName), p);
-	name_->setPlaceholderText(Lan::hostName());
+	name_->setPlaceholderText(QSysInfo::machineHostName());
 	f->addRow("Your name", name_);
 	f->addRow(note(
 		"Shown to squad mates on the same network and on the POV name tag. Leave blank to use this PC's name.",
@@ -192,19 +193,14 @@ QWizardPage *SetupWizard::pageSquad()
 	if (!e_->roster.running())
 		e_->roster.configure(QString::fromStdString(e_->cfg.rosterUrl), e_->cfg.rosterPollS, QString(),
 				     QString());
-	v->addWidget(note("Squad mates on Twitch, Kick, YouTube or VDO.Ninja are added under Settings, Squad, Add. "
-			  "A slot for someone on this network sharing over NDI is made by itself.",
-			  p));
+	v->addWidget(
+		note("Squad mates on Twitch, Kick, YouTube or VDO.Ninja are added under Settings, Squad, Add.", p));
 	squad_ = new QListWidget(p);
 	squad_->setMaximumHeight(90);
 	v->addWidget(squad_);
 	twitch_ = new QLineEdit(p); // kept for the by-hand Twitch add, off the page
 	twitch_->hide();
-	lanShare_ = new QCheckBox(p);
-	lanShare_->setChecked(e_->cfg.ndiShare);
-	lanShare_->hide();
 	v->addStretch(1);
-	connect(&e_->lan, &Lan::peersChanged, this, [this]() { fillSquad(); });
 	connect(e_, &Engine::stateChanged, this, [this]() { fillSquad(); });
 	return p;
 }
@@ -219,21 +215,9 @@ void SetupWizard::fillSquad()
 			       : f.kind == FriendKind::YouTube  ? "YouTube"
 			       : f.kind == FriendKind::VdoNinja ? "VDO.Ninja"
 			       : f.kind == FriendKind::Discord  ? "Discord"
-			       : f.kind == FriendKind::Ndi      ? "NDI (LAN)"
 								: "OBS source";
 		squad_->addItem(QString::fromStdString(f.name) + "  ·  " + kind +
 				((int)i == e_->cfg.activeFriend ? "  ·  active" : ""));
-	}
-	for (auto &kv : e_->lan.peers()) {
-		bool known = false;
-		for (auto &f : e_->cfg.friends)
-			if (f.kind == FriendKind::Ndi &&
-			    f.channel ==
-				    Switcher::ndiFullName(kv.second.host.toStdString(), kv.second.ndi.toStdString()))
-				known = true;
-		if (!known)
-			squad_->addItem(kv.second.name + "  ·  on the network" +
-					(kv.second.ndi.isEmpty() ? " (not sharing)" : ", will be added"));
 	}
 	if (squad_->count() == 0)
 		squad_->addItem("(nobody yet)");
@@ -302,7 +286,6 @@ void SetupWizard::accept()
 	c.lookName = lookName_->isChecked();
 	if (game_->currentIndex() >= 0)
 		c.gameSource = game_->currentText().toStdString();
-	c.ndiShare = lanShare_->isChecked();
 	c.myDiscord = me_->text().trimmed().toLower().remove('@').toStdString();
 	c.rosterEnabled = rosterOn_->isChecked();
 	c.setupDone = true;

@@ -4,7 +4,7 @@
 # kill feed. Backend "screen" grabs a monitor instead (e.g. a fullscreen projector).
 capture:
   backend: "bridge"        # "bridge" (frames from the Kennel.gg Wardogs OBS plugin, no obs-websocket) | "obs" | "screen"
-  obs_source: "Game Capture"   # exact name of the OBS input carrying the game (capture card / NDI)
+  obs_source: "Game Capture"   # exact name of the OBS input carrying the game (capture card)
   monitor: 1               # screen backend only: mss monitor index. `python calibrate.py --list`
   fps: 10                  # frames per second read from the plugin. A kill is decided after ~0.75 s of
                            # reading, so a higher rate means a faster clip, not more OCR per kill.

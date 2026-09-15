@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.10.0
+- **Discord is the way squad feeds come in.** The network-discovery and LAN-share features, their settings group, the link test and the two optional installer downloads are gone, along with that squad-mate kind. Any slot of that kind in an old config is dropped on load. Everything else is untouched: Twitch, Kick, YouTube, VDO.Ninja and OBS-source squad mates still work.
+
 ## 0.9.3
 - **Your Discord username fills itself in.** The Discord app on the PC is asked who it is logged in as (its local pipe answers that on a plain handshake; nothing more is asked of it) a few seconds after OBS starts, in Setup, and from the dock's Detect link. Typed names still work, and a mismatch between the two is said in the log.
 

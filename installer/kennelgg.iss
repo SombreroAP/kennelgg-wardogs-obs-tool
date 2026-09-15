@@ -49,10 +49,6 @@ Name: "custom"; Description: "Custom"; Flags: iscustom
 Name: "plugin"; Description: "Kennel.gg Wardogs OBS plugin (POV swap, clips)"; Types: full plugin custom; Flags: fixed
 Name: "app"; Description: "ClipHound - kill-feed OCR clipping app (auto-started by the plugin)"; Types: full
 
-[Tasks]
-Name: "distroav"; Description: "Download and install DistroAV 6.2.1 (NDI for OBS, GPL-2) so squad mates on the same network can share feeds"; Flags: unchecked
-Name: "ndiruntime"; Description: "Download and install the NDI 6 Runtime from Vizrt (required by DistroAV; you accept Vizrt's licence in its installer)"; Flags: unchecked
-
 [InstallDelete]
 ; the plugin used to live under its old module id; two copies would both load
 Type: filesandordirs; Name: "{commonappdata}\obs-studio\plugins\kennel-wardogs"
@@ -106,51 +102,6 @@ Name: "{commonprograms}\Kennel.gg\ClipHound"; Filename: "{commonappdata}\Kennel.
 WelcomeLabel2=This installs the Kennel.gg Wardogs OBS plugin into OBS Studio's plugin folder and, optionally, the ClipHound clipping app, which the plugin starts and configures from inside OBS.%n%nClose OBS before continuing. After installing, start OBS and open View > Docks > Kennel.gg Wardogs.%n%nMade by The Kennel [KNL], the WARDOGS community at kennel.gg - guides, Bootcamp, loadout builder, leaderboard and Discord. Free, and built from what streamers ask for.
 
 [Code]
-var
-  DlPage: TDownloadWizardPage;
-
-function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
-begin
-  Result := True;
-end;
-
-procedure InitializeWizard;
-begin
-  DlPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), @OnDownloadProgress);
-end;
-
-function NextButtonClick(CurPageID: Integer): Boolean;
-var
-  ResultCode: Integer;
-begin
-  Result := True;
-  if (CurPageID = wpReady) and (WizardIsTaskSelected('distroav') or WizardIsTaskSelected('ndiruntime')) then
-  begin
-    DlPage.Clear;
-    if WizardIsTaskSelected('ndiruntime') then
-      DlPage.Add('https://ndi.link/NDIRedistV6', 'ndi-runtime-installer.exe', '');
-    if WizardIsTaskSelected('distroav') then
-      DlPage.Add('https://github.com/DistroAV/DistroAV/releases/download/6.2.1/distroav-6.2.1-windows-x64-Installer.exe', 'distroav-installer.exe', '');
-    DlPage.Show;
-    try
-      try
-        DlPage.Download;
-        { runtime first, so DistroAV finds it and does not ask again }
-        if WizardIsTaskSelected('ndiruntime') then
-          if not Exec(ExpandConstant('{tmp}\ndi-runtime-installer.exe'), '', '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
-            MsgBox('The NDI Runtime installer could not be started. Get it from https://ndi.video later.', mbInformation, MB_OK);
-        if WizardIsTaskSelected('distroav') then
-          if not Exec(ExpandConstant('{tmp}\distroav-installer.exe'), '', '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode) then
-            MsgBox('DistroAV installer could not be started. Get it from https://distroav.org later.', mbInformation, MB_OK);
-      except
-        MsgBox('Download failed: ' + GetExceptionMessage + #13#10 + 'DistroAV: https://distroav.org   NDI Runtime: https://ndi.video', mbInformation, MB_OK);
-      end;
-    finally
-      DlPage.Hide;
-    end;
-  end;
-end;
-
 function IsOBSRunning(): Boolean;
 var
   ResultCode: Integer;

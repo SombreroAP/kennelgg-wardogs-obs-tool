@@ -88,7 +88,6 @@ void Config::load()
 	DEFB(friendAudio);
 	DEFB(audioDefaults2);
 	DEFB(audioDefaults3);
-	DEFB(ndiShelved);
 	DEFB(discordShared1);
 	DEFB(audioDefaults4);
 	DEFB(audioDefaults5);
@@ -137,12 +136,7 @@ void Config::load()
 	DEFD(threshold);
 	DEFB(thresholdV2);
 	DEFB(onTopV1);
-	DEFB(warmNdi);
 	DEFS(lookPos);
-	DEFI(ndiShareHeight);
-	DEFI(ndiShareFps);
-	DEFB(ndiShareV1);
-	DEFB(ndiShareV2);
 	DEFB(lookPosV1);
 	DEFD(holdDrop);
 	DEFB(holdV2);
@@ -192,10 +186,6 @@ void Config::load()
 	DEFB(clipUseReplay);
 	DEFS(backtrackFolder);
 	DEFS(playerName);
-	DEFB(lanEnabled);
-	DEFI(lanPort);
-	DEFB(ndiShare);
-	DEFB(autoAddPeers);
 	DEFD(reviveThreshold);
 	DEFB(wideSearch);
 	DEFD(customTemplateWidthFrac);
@@ -213,7 +203,6 @@ void Config::load()
 	GETB(friendAudio);
 	GETB(audioDefaults2);
 	GETB(audioDefaults3);
-	GETB(ndiShelved);
 	GETB(discordShared1);
 	GETB(audioDefaults4);
 	GETB(audioDefaults5);
@@ -262,12 +251,7 @@ void Config::load()
 	GETD(threshold);
 	GETB(thresholdV2);
 	GETB(onTopV1);
-	GETB(warmNdi);
 	GETS(lookPos);
-	GETI(ndiShareHeight);
-	GETI(ndiShareFps);
-	GETB(ndiShareV1);
-	GETB(ndiShareV2);
 	GETB(lookPosV1);
 	GETD(holdDrop);
 	GETB(holdV2);
@@ -317,10 +301,6 @@ void Config::load()
 	GETB(clipUseReplay);
 	GETS(backtrackFolder);
 	GETS(playerName);
-	GETB(lanEnabled);
-	GETI(lanPort);
-	GETB(ndiShare);
-	GETB(autoAddPeers);
 	GETD(reviveThreshold);
 	GETB(wideSearch);
 	GETD(customTemplateWidthFrac);
@@ -341,6 +321,10 @@ void Config::load()
 			Friend f;
 			f.name = obs_data_get_string(it, "name");
 			f.kind = (FriendKind)obs_data_get_int(it, "kind");
+			if ((int)f.kind == 4) { // a retired kind from before 0.10.0
+				obs_data_release(it);
+				continue;
+			}
 			f.source = obs_data_get_string(it, "source");
 			f.audioSource = obs_data_get_string(it, "audioSource");
 			f.channel = obs_data_get_string(it, "channel");
@@ -351,8 +335,6 @@ void Config::load()
 			f.handle = obs_data_get_string(it, "handle");
 			f.popout = obs_data_get_string(it, "popout");
 			f.baseSource = obs_data_get_string(it, "baseSource");
-			f.ndiBw = (int)obs_data_get_int(it, "ndiBw");
-			f.ndiSync = (int)obs_data_get_int(it, "ndiSync");
 			if (obs_data_has_user_value(it, "vdoHeight")) {
 				f.vdoHeight = (int)obs_data_get_int(it, "vdoHeight");
 				f.vdoFps = (int)obs_data_get_int(it, "vdoFps");
@@ -394,13 +376,6 @@ void Config::load()
 	// 0.5.4 dropped the share to 720p30. The size was right; the frame rate was not - it is half the
 	// frames, and a mix running at its own rate blacked out other plugins' extra canvases. The share
 	// always goes at OBS's rate now, and 1080p is the middle of the sizes.
-	ndiShareV1 = true;
-	if (!ndiShareV2) {
-		ndiShareV2 = true;
-		if (ndiShareHeight == 720)
-			ndiShareHeight = 1080;
-	}
-	ndiShareFps = 0;
 	// the tag sat bottom-left, over the game's map and score; halfway up the left is clear of both
 	if (!lookPosV1) {
 		lookPosV1 = true;
@@ -448,14 +423,6 @@ void Config::load()
 	// address is not a setting, and the channel is whichever one you are sitting in.
 	rosterUrl = kennelRosterUrl();
 	rosterChannel.clear();
-	// NDI is shelved: LAN discovery, the share and auto-adding are off and out of the way until
-	// they are ready. Squad mates already set up as NDI keep working.
-	if (!ndiShelved) {
-		ndiShelved = true;
-		lanEnabled = false;
-		ndiShare = false;
-		autoAddPeers = false;
-	}
 	// the file is named with the same plain-English title as the Twitch clip; only a template
 	// someone typed themselves is left alone
 	if (clipNameTemplate == "{date}_{time}_{tags}" || clipNameTemplate == "{title}_{tags}_{date}_{time}")
@@ -478,7 +445,6 @@ void Config::save() const
 	SETB(friendAudio);
 	SETB(audioDefaults2);
 	SETB(audioDefaults3);
-	SETB(ndiShelved);
 	SETB(discordShared1);
 	SETB(audioDefaults4);
 	SETB(audioDefaults5);
@@ -527,12 +493,7 @@ void Config::save() const
 	SETD(threshold);
 	SETB(thresholdV2);
 	SETB(onTopV1);
-	SETB(warmNdi);
 	SETS(lookPos);
-	SETI(ndiShareHeight);
-	SETI(ndiShareFps);
-	SETB(ndiShareV1);
-	SETB(ndiShareV2);
 	SETB(lookPosV1);
 	SETD(holdDrop);
 	SETB(holdV2);
@@ -582,10 +543,6 @@ void Config::save() const
 	SETB(clipUseReplay);
 	SETS(backtrackFolder);
 	SETS(playerName);
-	SETB(lanEnabled);
-	SETI(lanPort);
-	SETB(ndiShare);
-	SETB(autoAddPeers);
 	SETD(reviveThreshold);
 	SETB(wideSearch);
 	SETD(customTemplateWidthFrac);
@@ -610,8 +567,6 @@ void Config::save() const
 		obs_data_set_string(it, "handle", f.handle.c_str());
 		obs_data_set_string(it, "popout", f.popout.c_str());
 		obs_data_set_string(it, "baseSource", f.baseSource.c_str());
-		obs_data_set_int(it, "ndiBw", f.ndiBw);
-		obs_data_set_int(it, "ndiSync", f.ndiSync);
 		obs_data_set_int(it, "vdoHeight", f.vdoHeight);
 		obs_data_set_int(it, "vdoFps", f.vdoFps);
 		obs_data_set_int(it, "vdoKbps", f.vdoKbps);

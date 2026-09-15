@@ -52,8 +52,6 @@ Python/numpy on the user's three screenshots (`My Drive/screenshots/`), frames r
 - Ask before pushing to GitHub or posting anywhere. User is on a phone: deliver builds via Drive.
 - No emoji-laden prose; short messages, lead with what changed.
 
-| `src/lan.*` | UDP 47821 JSON beacon every 2 s + listener; peers keyed by host, pruned after 60 s |
-| `src/switcher.*` (`startNdiShare`) | DistroAV `ndi_output` created by us on mixer track 6 (`obs_output_set_mixer(out, 5)`), all `*input_capture` sources removed from track 6 → squad feed without the mic; `Engine::applyLan` wires beacon + share, auto-adds peers as `FriendKind::Ndi` with channel `"<host> (Kennel POV)"` |
 | `src/ui/wizard.*` | first-run `QWizard` (name → game source → squad → clips → done); opened on first load and from the dock's Setup button |
 | `src/engine.cpp` NEARBY block | ClipHound reads the game's NEARBY panel and sends `nearby {list:[{name,dist,match}]}`; `pickClosest()` makes the nearest configured squad mate active when the damage log appears and (with `nearFollow`) while the swap is on screen, with a 15 m margin and a 4 s floor so it cannot flap. `feed*` is picked on the ClipHound tab, `near*` on the Detect tab, both pushed in `app_config.set`; the plugin is authoritative for them |
 | `app/` | ClipHound (Python). `app/bridge.py` = client of the plugin bridge; `app/nearby.py` = NEARBY panel reader (chip found by eroding the Otsu mask, names and chips OCR'd as one stacked sheet each, names cached by glyph overlap); `app/cliphound.spec` + `app/build_exe.ps1` = PyInstaller bundle with Tesseract copied in (CI, Windows job) |

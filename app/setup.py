@@ -4,7 +4,7 @@
   python setup.py --check    just re-test the current config (OBS reachable, source found, feed region)
 
 Works for one-PC and two-PC layouts: you pick whichever OBS input carries the gameplay,
-a capture card, NDI feed or Game Capture, from the list OBS reports.
+a capture card or Game Capture, from the list OBS reports.
 """
 import os
 import sys
@@ -71,7 +71,7 @@ def main():
         return
     inputs = [i for i in cl.get_input_list().inputs if not i["inputKind"].startswith(("wasapi", "coreaudio", "pulse"))]
     print("\nVideo inputs OBS reports (pick the one that shows the GAMEPLAY - on a two-PC setup that is")
-    print("the capture card or NDI input, on one PC it is the Game Capture):")
+    print("the capture card, on one PC it is the Game Capture):")
     cur = cfg["capture"].get("obs_source")
     for n, i in enumerate(inputs, 1):
         mark = "  <- current" if i["inputName"] == cur else ""

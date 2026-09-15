@@ -1,5 +1,5 @@
 #include "ui/settings-dialog.h"
-#include "ndi.h"
+#include <QListView>
 #include <algorithm>
 #include <QEventLoop>
 #include <QNetworkReply>
@@ -176,15 +176,15 @@ public:
 		kind_ = new QComboBox(this);
 		kind_->addItems({"Twitch stream (~2 s, nothing for them to set up)",
 				 "VDO.Ninja / WebRTC (~0.3 s, they open one link)", "OBS source I already have",
-				 "Discord Go Live (~0.5-1 s, they Go Live in the call)", "NDI on the LAN (shelved)",
+				 "Discord Go Live (~0.5-1 s, they Go Live in the call)", "(unused)",
 				 "Kick stream (~2 s, nothing for them to set up)",
 				 "YouTube live stream (~5 s+, nothing for them to set up)"});
-		// NDI is shelved: the row stays so an existing NDI squad mate still edits, but nobody new
-		// is offered it
-		if (result.kind != FriendKind::Ndi) {
+		{ // slot 4 is retired: the row is kept so the numbers behind the other kinds stay put
 			auto *m = qobject_cast<QStandardItemModel *>(kind_->model());
-			if (m && m->item((int)FriendKind::Ndi))
-				m->item((int)FriendKind::Ndi)->setEnabled(false);
+			if (m && m->item(4))
+				m->item(4)->setEnabled(false);
+			if (auto *lv = qobject_cast<QListView *>(kind_->view()))
+				lv->setRowHidden(4, true);
 		}
 		form_->addRow("Comes in as", kind_);
 
@@ -239,7 +239,7 @@ public:
 				source_->addItem(QString::fromStdString(s.first));
 		source_->setCurrentText(QString::fromStdString(result.source));
 		form_->addRow("OBS source", source_);
-		// Discord / NDI picker
+		// Discord window picker
 		pick_ = new QComboBox(this);
 		auto *pickRow = new QHBoxLayout();
 		pickRow->addWidget(pick_, 1);
@@ -249,23 +249,6 @@ public:
 		pickWidget_->setLayout(pickRow);
 		pickLbl_ = new QLabel("Discord window", this);
 		form_->addRow(pickLbl_, pickWidget_);
-
-		ndiBw_ = new QComboBox(this);
-		ndiBw_->addItem("full quality", 0);
-		ndiBw_->addItem("low bandwidth  (small picture, steadier on a busy network)", 1);
-		ndiBw_->setCurrentIndex(result.ndiBw == 1 ? 1 : 0);
-		form_->addRow("Receive at", ndiBw_);
-		ndiSync_ = new QComboBox(this);
-		ndiSync_->addItem("leave DistroAV's own setting alone  (default)", 0);
-		ndiSync_->addItem("frame sync", 1);
-		ndiSync_->addItem("network timestamps", 2);
-		ndiSync_->addItem("the sender's timecode", 3);
-		ndiSync_->addItem("none  (show frames as they land)", 4);
-		ndiSync_->setCurrentIndex(std::clamp(result.ndiSync, 0, 4));
-		ndiSync_->setToolTip("How their feed is timed on the way in. Left alone by default. If a feed "
-				     "judders, try frame sync first, then the others - senders differ. If a feed "
-				     "shows nothing at all, put this back to the first line.");
-		form_->addRow("Timing", ndiSync_);
 
 		trim_ = new QCheckBox("Show the game only, not Discord's window", this);
 		trim_->setChecked(result.trim);
@@ -321,7 +304,6 @@ private:
 	QWidget *qualityRow_, *linkWidget_, *pickWidget_;
 	QLabel *pickLbl_, *hint_, *err_;
 	QCheckBox *trim_ = nullptr;
-	QComboBox *ndiBw_ = nullptr, *ndiSync_ = nullptr;
 	FriendKind kind() const { return (FriendKind)kind_->currentIndex(); }
 	/// "kick.com/pup", "@pup", "PUP" -> "pup"
 	static std::string kickSlug(QString v)
@@ -386,8 +368,6 @@ private:
 		f.name = name_->text().trimmed().toStdString();
 		f.gameName = gameName_->text().trimmed().toStdString();
 		f.trim = trim_->isChecked();
-		f.ndiBw = ndiBw_->currentData().toInt();
-		f.ndiSync = ndiSync_->currentData().toInt();
 		f.kind = kind();
 		f.vdoHeight = res_->currentIndex() == 2 ? 1440 : res_->currentIndex() == 1 ? 1080 : 720;
 		f.vdoFps = fps_->currentIndex() == 1 ? 60 : 30;
@@ -404,7 +384,6 @@ private:
 		else if (f.kind == FriendKind::ObsSource)
 			f.source = source_->currentText().trimmed().toStdString();
 		else {
-			// the NDI picker can be typed into, for a sender that is not on the network yet
 			QString v = pick_->currentData().toString();
 			if (v.isEmpty() && pick_->isEditable()) {
 				v = pick_->currentText().trimmed();
@@ -415,7 +394,6 @@ private:
 		}
 		return f;
 	}
-	bool ndiLooked_ = false;
 	void fillPick()
 	{
 		pick_->clear();
@@ -444,35 +422,6 @@ private:
 			pick_->addItem("Any Discord window (not popped out: the Discord window itself)",
 				       Friend::anyDiscordWindow());
 			pick_->setCurrentIndex(first);
-		} else if (k == FriendKind::Ndi) {
-			// Never ask a throwaway ndi_source for this list: DistroAV's finder signals the
-			// source that asked, after we have released it, and OBS goes down with it.
-			for (const auto &n : kennelNdi::sources(400))
-				pick_->addItem(QString::fromStdString(n), QString::fromStdString(n));
-			for (const auto &n : Switcher::ndiSourceNames()) { // ones already set up in this OBS
-				QString v = QString::fromStdString(n);
-				if (pick_->findData(v) < 0)
-					pick_->addItem(v + "  (in use here)", v);
-			}
-			if (pick_->count() == 0)
-				pick_->addItem(!Switcher::kindAvailable("ndi_source") ? "(DistroAV is not installed)"
-					       : kennelNdi::available()
-						       ? "(nothing sending NDI on the network yet)"
-						       : "(no NDI runtime - type the name, or install DistroAV's)",
-					       "");
-			pick_->setEditable(true); // a sender that is not up yet can still be typed in
-			if (!ndiLooked_) {
-				// the finder has only just started listening; look again in a moment
-				// rather than holding the window still while it does
-				ndiLooked_ = true;
-				QTimer::singleShot(1500, this, [this]() {
-					QString typed = pick_->currentText().trimmed();
-					bool own = pick_->currentData().toString().isEmpty() && !typed.isEmpty() &&
-						   !typed.startsWith('(');
-					if (kind() == FriendKind::Ndi && !own) // never wipe a typed-in name
-						fillPick();
-				});
-			}
 		} else
 			pick_->setEditable(false);
 		if (!result.channel.empty()) {
@@ -491,12 +440,9 @@ private:
 		form_->setRowVisible(qualityRow_, k == FriendKind::VdoNinja);
 		form_->setRowVisible(linkWidget_, k == FriendKind::VdoNinja);
 		form_->setRowVisible(source_, k == FriendKind::ObsSource);
-		form_->setRowVisible(pickWidget_, k == FriendKind::Discord || k == FriendKind::Ndi);
+		form_->setRowVisible(pickWidget_, k == FriendKind::Discord);
 		form_->setRowVisible(trim_, k == FriendKind::Discord);
-		form_->setRowVisible(ndiBw_, k == FriendKind::Ndi);
-		form_->setRowVisible(ndiSync_, k == FriendKind::Ndi);
-		pickLbl_->setText(k == FriendKind::Ndi ? "NDI source" : "Discord window");
-		if (k == FriendKind::Discord || k == FriendKind::Ndi)
+		if (k == FriendKind::Discord)
 			fillPick();
 		err_->clear();
 		switch (k) {
@@ -512,10 +458,6 @@ private:
 			hint_->setText(
 				"They press Go Live in the call. Open their stream in Discord and pop it out into its own window. \"Any Discord window\" follows the pop-out automatically; pick a specific window only if you have several. On Save a Window Capture and an Application Audio Capture of Discord are created in your scene. 720p without Nitro.");
 			break;
-		case FriendKind::Ndi:
-			hint_->setText(
-				"NDI is shelved for now: this squad mate keeps working as set up, but NDI is not offered for new ones. Lowest latency on a LAN when it behaves; it did not, reliably, and it is parked until it does.");
-			break;
 		case FriendKind::Kick:
 			hint_->setText(
 				"Kick's own player in a browser source, like Twitch. Type the channel as it appears in the address bar (kick.com/<name>). They just need to be live. Their stream includes their mic; its sound is not played unless you tick that on the Switch tab.");
@@ -526,7 +468,7 @@ private:
 			break;
 		default:
 			hint_->setText(
-				"Any source already in OBS: a capture card, a second PC, an NDI Source you set up yourself. Its audio comes with it.");
+				"Any source already in OBS: a capture card or a second PC. Its audio comes with it.");
 		}
 		updateLink();
 	}
@@ -578,11 +520,6 @@ private:
 			err_->setText(
 				"No popped-out stream to pick. In Discord, right-click their stream and choose Pop "
 				"Out, then open this again - or choose \"Any Discord window\".");
-			return;
-		}
-		if (f.kind == FriendKind::Ndi && f.channel.empty()) {
-			err_->setText(
-				"No NDI source picked. They need DistroAV's NDI output or NDI Screen Capture running on the same network.");
 			return;
 		}
 		if (f.kind == FriendKind::Discord && f.channel.empty())
@@ -972,11 +909,6 @@ QWidget *SettingsDialog::buildSwitchTab()
 	});
 	connect(nearFollow_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(e_, &Engine::stateChanged, this, [this]() {
-		if (ndiStatus_) {
-			QString t = e_->ndiStatus();
-			ndiStatus_->setText(t);
-			ndiStatus_->setStyleSheet(t.startsWith("NOT") ? "color: #ce6050;" : "");
-		}
 		if (nearLbl_)
 			nearLbl_->setText(e_->nearbyStatus());
 		if (nearOn_ && nearOn_->isChecked() != e_->cfg.nearEnabled) {
@@ -986,112 +918,8 @@ QWidget *SettingsDialog::buildSwitchTab()
 		}
 	});
 
-	auto *gl = new QGroupBox("Squad on this network  (NDI - shelved)", w);
-	gl->setVisible(false); // shelved: the widgets exist so settings still round-trip, but nobody sees them
-	auto *fl = new QFormLayout(gl);
-	playerName_ = new QLineEdit(QString::fromStdString(e_->cfg.playerName), gl);
-	playerName_->setPlaceholderText(Lan::hostName());
-	fl->addRow("Your name", playerName_);
-	auto *lr = new QHBoxLayout();
-	lanOn_ = new QCheckBox("Find squad mates on the LAN", gl);
-	ndiShare_ = new QCheckBox("Share my game feed over NDI (no mic)", gl);
-	autoAdd_ = new QCheckBox("Add them automatically", gl);
-	for (auto *c : {lanOn_, ndiShare_, autoAdd_})
-		lr->addWidget(c);
-	lr->addStretch(1);
-	fl->addRow(lr);
-	auto *qr = new QHBoxLayout();
-	ndiQuality_ = new QComboBox(gl);
-	for (auto &p : {std::pair<const char *, int>{"720p   (smallest)", 720},
-			{"900p", 900},
-			{"1080p   (default)", 1080},
-			{"the full canvas   (heaviest)", 0}})
-		ndiQuality_->addItem(p.first, p.second);
-	int qi = ndiQuality_->findData(e_->cfg.ndiShareHeight);
-	ndiQuality_->setCurrentIndex(qi >= 0 ? qi : 0);
-	qr->addWidget(ndiQuality_);
-	qr->addWidget(muted("What your squad mates receive. NDI sends a barely-compressed picture, so the full "
-			    "canvas at 60 is around 200 Mbit and judders on anything but a quiet wired network - "
-			    "720p 30 is a tenth of that and is plenty to revive from. Your own stream and "
-			    "recording are not affected in any way.",
-			    gl),
-		      1);
-	fl->addRow("Share at", qr);
-	peers_ = new QListWidget(gl);
-	peers_->setMaximumHeight(90);
-	auto *peerRow = new QHBoxLayout();
-	peerRow->addWidget(peers_, 1);
-	speedBtn_ = new QPushButton("Test the link\nto this squad mate", gl);
-	speedBtn_->setToolTip("Sends flat out to them for four seconds and reports what actually arrived, then "
-			      "says which size their network will carry. Nothing is recorded or streamed.");
-	peerRow->addWidget(speedBtn_);
-	fl->addRow("Seen", peerRow);
-	connect(speedBtn_, &QPushButton::clicked, this, [this]() { testLink(); });
-	ndiStatus_ = new QLabel(gl);
-	ndiStatus_->setWordWrap(true);
-	ndiStatus_->setText(e_->ndiStatus());
-	auto *nsRow = new QHBoxLayout();
-	nsRow->addWidget(ndiStatus_, 1);
-	auto *ndiCheck = new QPushButton("Check NDI", gl);
-	ndiCheck->setToolTip("Says what is actually true here: whether your feed is running, what NDI can see "
-			     "on the network, and - when it cannot see your own feed - which of your network "
-			     "adapters is likely to be the reason.");
-	nsRow->addWidget(ndiCheck);
-	auto *ndiFix = new QPushButton("Fix discovery", gl);
-	ndiFix->setToolTip("For a network where NDI cannot discover anything: writes your squad's addresses "
-			   "into NDI's own settings so it looks at them directly. Changes a setting outside "
-			   "OBS, so it asks first.");
-	nsRow->addWidget(ndiFix);
-	fl->addRow("NDI share", nsRow);
-	connect(ndiFix, &QPushButton::clicked, this, [this]() {
-		if (QMessageBox::question(
-			    this, "Kennel.gg Wardogs",
-			    "This writes the addresses of the squad mates on your LAN into NDI's own settings "
-			    "for this PC (ProgramData\\NDI\\ndi-config.v1.json), so NDI looks at them directly "
-			    "instead of waiting to discover them. It is NDI's own answer to a network where "
-			    "discovery does not work, and it affects every NDI program on this PC, not just "
-			    "OBS.\n\nDo it?") != QMessageBox::Yes)
-			return;
-		QMessageBox::information(this, "Kennel.gg Wardogs", e_->addSquadToNdiConfig());
-	});
-	connect(ndiCheck, &QPushButton::clicked, this, [this]() {
-		QString r = e_->ndiReport();
-		e_->log(r);
-		QMessageBox::information(this, "Kennel.gg Wardogs", r);
-	});
-	lanStatus_ = muted("", gl);
-	fl->addRow(lanStatus_);
-	v->addWidget(gl);
-	lanOn_->setChecked(e_->cfg.lanEnabled);
-	ndiShare_->setChecked(e_->cfg.ndiShare);
-	connect(ndiQuality_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
-	autoAdd_->setChecked(e_->cfg.autoAddPeers);
-	for (auto *c : {lanOn_, ndiShare_, autoAdd_})
-		connect(c, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
-	connect(playerName_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
-	auto fillPeers = [this]() {
-		peers_->clear();
-		for (auto &kv : e_->lan.peers()) {
-			auto *it = new QListWidgetItem(kv.second.name + "  ·  " + kv.second.host +
-							       (kv.second.ndi.isEmpty() ? "  (not sharing NDI)"
-											: "  ·  NDI " + kv.second.ndi),
-						       peers_);
-			it->setData(Qt::UserRole, kv.second.addr);
-			it->setData(Qt::UserRole + 1, kv.second.name);
-		}
-		if (peers_->count() == 0)
-			peers_->addItem(
-				e_->cfg.lanEnabled
-					? "(no squad mates found yet - they need this plugin running in OBS on the same network)"
-					: "(off)");
-		bool ndi = Switcher::kindAvailable("ndi_source") && Switcher::outputKindAvailable("ndi_output");
-		lanStatus_->setText(
-			ndi ? "Everyone on the LAN with this plugin and DistroAV sees each other; their feed appears in the list above and as a squad mate, no typing. Your own feed is sent on audio track 6 with microphones removed from it."
-			    : "DistroAV (obs-ndi) is not installed, so NDI sharing is off. Install it from distroav.org on every PC that should share or receive a feed.");
-		fillFriends();
-	};
-	fillPeers();
-	connect(&e_->lan, &Lan::peersChanged, this, fillPeers);
+	playerName_ = new QLineEdit(QString::fromStdString(e_->cfg.playerName), w);
+	playerName_->hide(); // set in Setup; kept here so it round-trips with the rest
 
 	auto *gRoster = new QGroupBox("Squad from Discord", w);
 	auto *fRoster = new QFormLayout(gRoster);
@@ -1181,7 +1009,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 	auto *v4 = new QVBoxLayout(g4);
 	bringFront_ = new QCheckBox("Move the friend source to the top of the scene when shown", g4);
 	keepWarm_ = new QCheckBox(
-		"Keep the friend feed warm: leave the source on but invisible and muted, so NDI / the player never reconnects (instant switch)",
+		"Keep the friend feed warm: leave the source on but invisible and muted, so the player never reconnects (instant switch)",
 		g4);
 	preload_ = new QCheckBox(
 		"Keep every squad mate's feed loaded and playing, hidden and silent, so there is no black screen while it starts (uses their bandwidth for each one)",
@@ -1191,14 +1019,6 @@ QWidget *SettingsDialog::buildSwitchTab()
 	v4->addWidget(preload_);
 	connect(preload_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	v4->addWidget(keepWarm_);
-	warmNdi_ = new QCheckBox("Keep a squad mate's NDI feed connected while you are alive - swaps to them "
-				 "with no delay at all, but their stream then runs across the network the whole "
-				 "time. Leave it off if anything judders.",
-				 g4);
-	warmNdi_->setChecked(e_->cfg.warmNdi);
-	warmNdi_->setVisible(false); // NDI is shelved
-	v4->addWidget(warmNdi_);
-	connect(warmNdi_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	v->addWidget(g4);
 	connect(rosterOn_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(rosterSources_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
@@ -1256,7 +1076,7 @@ QWidget *SettingsDialog::buildLookTab()
 	preview_ = new QPushButton("Preview look in OBS", g);
 	f->addRow(preview_);
 	f->addRow(muted(
-		"Drawn by a browser source named \"Kennel look\" that the plugin adds to your scene and shows on top of the friend while you are downed. Nothing touches the friend's feed itself, so it is the same for Twitch, VDO.Ninja and NDI.",
+		"Drawn by a browser source named \"Kennel look\" that the plugin adds to your scene and shows on top of the friend while you are downed. Nothing touches the friend's feed itself, so it is the same for a Discord pop-out, Twitch or VDO.Ninja.",
 		g));
 	v->addWidget(g);
 	v->addStretch(1);
@@ -2126,7 +1946,7 @@ QWidget *SettingsDialog::buildDualTab()
 		"The dashed box is the dual POV window over your game. Drag on the picture to place it (switches to Custom).");
 	v->addWidget(dualPick_, 1);
 	v->addWidget(muted(
-		"Their feed is whatever you set up for them on the Switch tab: Twitch, VDO.Ninja, Discord or NDI. A Twitch feed runs a couple of seconds behind you; VDO.Ninja or NDI is the one for a tight crew. If they are also the squad mate the POV swap uses, that keeps working.",
+		"Their feed is whatever you set up for them: a Discord pop-out, Twitch, Kick, YouTube or VDO.Ninja. A Twitch feed runs a couple of seconds behind you; Discord and VDO.Ninja are the ones for a tight crew. If they are also the squad mate the POV swap uses, that keeps working.",
 		w));
 
 	dualToUi();
@@ -2469,7 +2289,6 @@ QWidget *SettingsDialog::buildAboutTab()
 		"</ol>"
 		"<p><b>Squad mate feeds.</b> Twitch: nothing for them to do, ~2 s behind with low-latency mode, includes their mic. "
 		"VDO.Ninja: they open one link in Chrome/Edge and share their game window with system audio, ~0.3 s, no mic. "
-		"NDI: OBS + DistroAV or NDI Screen Capture on the LAN, or over a VPN such as Tailscale. "
 		"Discord Go Live (~0.5-1 s, 720p without Nitro): they Go Live in the call, you pop their stream out into its own window, add a Window Capture of it "
 		"(Windows 10 method, keep it unminimised) plus an Application Audio Capture of Discord, and add the squad mate as an OBS source pointing at that capture.</p>"
 		"<p><b>Timing the switch back.</b> While your friend is on screen, the plugin also watches their feed for the word REVIVING and the progress ring. "
@@ -2636,7 +2455,6 @@ void SettingsDialog::fillFriends()
 				   : f.kind == FriendKind::YouTube  ? "YouTube live"
 				   : f.kind == FriendKind::VdoNinja ? "VDO.Ninja (WebRTC)"
 				   : f.kind == FriendKind::Discord  ? "Discord Go Live"
-				   : f.kind == FriendKind::Ndi      ? "NDI (shelved)"
 								    : "OBS source";
 		friends_->setItem(r, 0, new QTableWidgetItem(name));
 		friends_->setItem(r, 1, new QTableWidgetItem(kind));
@@ -2722,23 +2540,14 @@ void SettingsDialog::collect()
 	c.playerName = playerName_->text().trimmed().toStdString();
 	if (sceneV_)
 		c.sceneV = sceneV_->currentData().toString().toStdString();
-	c.lanEnabled = lanOn_->isChecked();
 	c.rosterEnabled = rosterOn_->isChecked();
 	c.rosterUrl = Config::kennelRosterUrl();
 	c.rosterChannel.clear(); // whichever channel you are in
 	c.rosterAddSources = rosterSources_->isChecked();
-	c.ndiShare = ndiShare_->isChecked();
-	c.autoAddPeers = autoAdd_->isChecked();
 	c.keepWarm = keepWarm_->isChecked();
-	if (warmNdi_)
-		c.warmNdi = warmNdi_->isChecked();
 	c.preloadFeeds = preload_ ? preload_->isChecked() : c.preloadFeeds;
 	c.friendAudio = friendAudio_ ? friendAudio_->isChecked() : c.friendAudio;
 	c.lookName = lookName_->isChecked();
-	if (ndiQuality_) {
-		c.ndiShareHeight = ndiQuality_->currentData().toInt();
-		c.ndiShareFps = 0; // always at OBS's own rate: a mix on its own clock blacked out other canvases
-	}
 	c.lookPlate = lookPlate_->isChecked();
 	if (lookPos_)
 		c.lookPos = lookPos_->currentData().toString().toStdString();
@@ -2795,95 +2604,6 @@ void SettingsDialog::collect()
 /// Counts how many different pictures a feed actually delivers in two seconds. A feed that looks
 /// choppy either is not arriving at the rate you think (network or sender) or is arriving fine and
 /// being drawn badly (this PC) - and there is no way to tell those apart by eye.
-/// Measures what the network to a squad mate actually carries, then says which NDI size fits in it.
-/// "It is gigabit" is not a measurement: one cable negotiated at 100, a powerline adapter or a Wi-Fi
-/// hop all look the same from the desk and none of them carry a full-canvas NDI stream.
-void SettingsDialog::testLink()
-{
-	auto *it = peers_->currentItem();
-	QString addr = it ? it->data(Qt::UserRole).toString() : QString();
-	QString who = it ? it->data(Qt::UserRole + 1).toString() : QString();
-	if (addr.isEmpty()) {
-		QMessageBox::information(
-			this, "Kennel.gg Wardogs",
-			"Pick a squad mate in the list first. They need this plugin running in "
-			"OBS, with \"Find squad mates on the LAN\" ticked, on version 0.5.8 or newer.");
-		return;
-	}
-	if (e_->speed.busy())
-		return;
-	speedBtn_->setEnabled(false);
-	speedBtn_->setText("measuring...");
-	e_->log("Measuring the link to " + who + " (" + addr + ")...");
-	auto *conn = new QMetaObject::Connection();
-	*conn = connect(&e_->speed, &Speed::done, this, [this, conn, who, addr](double mbps, const QString &note) {
-		disconnect(*conn);
-		delete conn;
-		speedBtn_->setEnabled(true);
-		speedBtn_->setText("Test the link\nto this squad mate");
-		if (mbps < 0) {
-			QMessageBox::warning(this, "Kennel.gg Wardogs",
-					     "Could not measure the link to " + who + ": " + note +
-						     "\n\nThey need this plugin (0.5.8 or newer) running in OBS with "
-						     "\"Find squad mates on the LAN\" ticked, and Windows Firewall "
-						     "has to allow OBS on a private network.");
-			return;
-		}
-		struct obs_video_info ovi;
-		bool haveOvi = obs_get_video_info(&ovi) && ovi.fps_den > 0;
-		double fps = haveOvi ? (double)ovi.fps_num / ovi.fps_den : 60.0;
-		int bw = haveOvi ? (int)ovi.base_width : 1920, bh = haveOvi ? (int)ovi.base_height : 1080;
-		QString msg = QString("The link to %1 carries about %2 Mbit a second  (%3).\n\n")
-				      .arg(who)
-				      .arg(mbps, 0, 'f', 0)
-				      .arg(note);
-		// NDI finds feeds by multicast, which does not cross subnets: a squad mate we can reach
-		// perfectly well may still never appear in the source list
-		if (!addr.isEmpty()) {
-			QString theirs = addr.section('.', 0, 2);
-			bool sameNet = false;
-			for (const QHostAddress &a : QNetworkInterface::allAddresses())
-				if (a.protocol() == QAbstractSocket::IPv4Protocol &&
-				    a.toString().section('.', 0, 2) == theirs)
-					sameNet = true;
-			if (!sameNet)
-				msg += "They are on a different subnet to you (" + addr +
-				       "). NDI finds feeds by multicast, which does not cross subnets - so their "
-				       "feed may never appear in the source list even though the link is fine. Put "
-				       "both PCs on the same subnet, or add each other by address in NDI Access "
-				       "Manager.\n\n";
-		}
-		// NDI needs headroom: a link run at its limit is a link that judders on every burst
-		const double room = 0.6;
-		struct Opt {
-			const char *label;
-			int height;
-		} opts[] = {{"the full canvas", 0}, {"1080p", 1080}, {"900p", 900}, {"720p", 720}};
-		QString fits;
-		for (const auto &o : opts) {
-			int h = o.height ? o.height : bh, w = o.height ? (int)((double)bw * h / bh) : bw;
-			double need = Speed::needMbps(w, h, fps);
-			msg += QString("  %1 at %2 needs about %3 Mbit%4\n")
-				       .arg(o.label, -16)
-				       .arg(fps, 0, 'f', 0)
-				       .arg(need, 4, 'f', 0)
-				       .arg(need <= mbps * room ? "   fits" : "");
-			if (fits.isEmpty() && need <= mbps * room)
-				fits = o.label;
-		}
-		msg += fits.isEmpty()
-			       ? "\nEven 720p is more than this link will hold steadily. That is a network fault "
-				 "rather than a setting: check for a 100 Mbit port, a powerline adapter or a Wi-Fi "
-				 "hop in the path, and use Receive at -> low bandwidth until it is sorted."
-			       : "\nSet Share at to " + fits +
-					 " on the SENDING PC. The rest is headroom: NDI "
-					 "bursts, and a link run at its limit judders.";
-		QMessageBox::information(this, "Kennel.gg Wardogs", msg);
-		e_->log(QString("Link to %1: %2 Mbit/s.").arg(who).arg(mbps, 0, 'f', 0));
-	});
-	e_->speed.measure(addr, (quint16)(e_->cfg.lanPort + 1), 4);
-}
-
 void SettingsDialog::testFeed()
 {
 	int r = friends_->currentRow();
@@ -2924,7 +2644,7 @@ void SettingsDialog::testFeed()
 		       : fps >= 25 ? "\n\nThat is a 30-ish feed. It will look like half frames next to your own "
 				     "game. If the sender is on 60, their network or ours is not carrying it."
 				   : "\n\nThat is well under 30: the feed itself is not arriving properly. Try a "
-				     "smaller size in Share at on the sending PC, or Receive at -> low bandwidth.";
+				     "lower quality on their side.";
 		QMessageBox::information(this, "Kennel.gg Wardogs", msg);
 		delete count;
 		delete last;

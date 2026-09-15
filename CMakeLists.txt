@@ -45,9 +45,6 @@ target_sources(
     src/engine.cpp
     src/bridge.cpp
     src/clips.cpp
-    src/lan.cpp
-    src/ndi.cpp
-    src/speed.cpp
     src/roster.cpp
     src/discord-ipc.cpp
     src/ui/dock.cpp
