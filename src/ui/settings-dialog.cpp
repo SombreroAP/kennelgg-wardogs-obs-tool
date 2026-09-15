@@ -1555,6 +1555,18 @@ QWidget *SettingsDialog::buildClipsTab()
 	highlightsFolder_ = new QLineEdit(QString::fromStdString(e_->cfg.highlightsFolder), gi);
 	highlightsFolder_->setPlaceholderText("<clip folder>\\highlights");
 	fi->addRow("Highlights folder", highlightsFolder_);
+	highlightsAuto_ = new QCheckBox("Build the session's highlights compilation when the stream stops", gi);
+	highlightsAuto_->setChecked(e_->cfg.highlightsAuto);
+	fi->addRow(highlightsAuto_);
+	highlightsMax_ = spin(3, 30, e_->cfg.highlightsMax, " clips at most");
+	fi->addRow("Compilation", highlightsMax_);
+	fi->addRow(muted(
+		"The compilation is cut by ClipHound on this PC: each clip's action (5 s before the first kill to "
+		"3 s after the last) is pre-cut as the clip lands, held back whenever OBS drops frames, and at the "
+		"end the best ones are joined with a title card and a kennel.gg card. Drop music you may use into a "
+		"music folder inside the highlights folder and one track is laid under it. Play highlights builds it "
+		"first when there is nothing newer than your last clip.",
+		gi));
 	fi->addRow(muted(
 		"Instant replay plays the last highlight back on the stream, cut down to the action, framed and tagged, sized "
 		"under your camera and alerts (the always-on-top list on the Switch tab). The dock button and a hotkey play "
@@ -1566,6 +1578,8 @@ QWidget *SettingsDialog::buildClipsTab()
 		connect(sb, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
 	connect(replayChat_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(replaySound_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(highlightsAuto_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(highlightsMax_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
 	for (auto *le : {chatKick_, chatYouTube_, highlightsFolder_, replayLabel_})
 		connect(le, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
 	connect(hotkeyFilter_, &QLineEdit::textChanged, this, [this](const QString &) { fillHotkeys(); });
@@ -2665,6 +2679,8 @@ void SettingsDialog::collect()
 		c.replayCooldownS = replayCool_->value();
 		c.replayChat = replayChat_->isChecked();
 		c.replaySound = replaySound_->isChecked();
+		c.highlightsAuto = highlightsAuto_->isChecked();
+		c.highlightsMax = highlightsMax_->value();
 		c.chatKick = chatKick_->text().trimmed().toStdString();
 		c.chatYouTube = chatYouTube_->text().trimmed().toStdString();
 		c.highlightsFolder = highlightsFolder_->text().trimmed().toStdString();

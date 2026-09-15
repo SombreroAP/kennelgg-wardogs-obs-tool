@@ -54,6 +54,9 @@ class Bridge:
         self.cfg = None              # full config dict (set by main) for app_config / twitch messages
         self.save_cfg = None         # callable(cfg) that writes config.yaml
         self.on_config = None        # callable(cfg) after the plugin changed settings
+        self.on_clip_saved = None    # callable(path, msg): every clip the plugin named
+        self.on_highlights = None    # callable(msg): build the compilation
+        self.on_obs_health = None    # callable(msg): OBS's dropped-frame counters
         # the game's NEARBY panel: the plugin says whether to read it, where it is and whose names
         # to look for; nearby_burst is a deadline until which we read it every quarter second
         self.nearby_cfg = {"enabled": False, "roi": [0.80, 0.79, 0.19, 0.14], "names": [], "interval": 0.4}
@@ -214,8 +217,19 @@ class Bridge:
             if not o.get("ok"):
                 print(f"[bridge] clip refused: {o.get('error')}")
                 self._pending.pop(o.get("id"), None)
+        elif t == "highlights_build":
+            if self.on_highlights:
+                self.on_highlights(o)
+        elif t == "obs_health":
+            if self.on_obs_health:
+                self.on_obs_health(o)
         elif t == "clip_saved":
             print(f"[bridge] clip saved: {o.get('path')}")
+            if self.on_clip_saved:
+                try:
+                    self.on_clip_saved(o.get("path", ""), o)
+                except Exception as e:
+                    print(f"[bridge] on_clip_saved: {e}")
             # the plugin does not echo our id on clip_saved; pair with the oldest pending request
             if self._pending:
                 cid = next(iter(self._pending))

@@ -49,6 +49,9 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	downSince_ = lastReviveSeen_;
 	lastPick_ = lastNearbyWarn_ = lastReviveSeen_;
 	connect(&replayTimer_, &QTimer::timeout, this, &Engine::replayTick);
+	connect(&healthTimer_, &QTimer::timeout, this, &Engine::sendObsHealth);
+	healthTimer_.start(5000);
+	sessionStart_ = QDateTime::currentDateTime();
 	connect(&roster, &Roster::changed, this, &Engine::checkAccess);
 	connect(&roster, &Roster::polled, this, &Engine::checkAccess);
 	connect(&roster, &Roster::changed, this, &Engine::syncRoster);
@@ -1410,6 +1413,25 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		bridge.sendJson(r);
 		if (!err.isEmpty())
 			log("Clip request: " + err);
+	} else if (type == "highlights_status") {
+		appStatus_ = o.value("text").toString();
+		emit stateChanged();
+	} else if (type == "highlights_ready") {
+		highlightsBuilding_ = false;
+		if (o.value("ok").toBool()) {
+			QString path = o.value("path").toString();
+			log(QString("Highlights ready: %1 (%2 clips).")
+				    .arg(QFileInfo(path).fileName())
+				    .arg(o.value("clips").toInt()));
+			addEvent(QDateTime::currentDateTime().toString("HH:mm:ss") + "  HIGHLIGHTS READY " +
+				 QFileInfo(path).fileName());
+			if (highlightsThenPlay_) {
+				highlightsThenPlay_ = false;
+				playCompilation("built");
+			}
+		} else
+			log("Highlights: could not build - " + o.value("error").toString() + ".");
+		emit stateChanged();
 	} else if (type == "replay") {
 		QString who = o.value("who").toString("chat");
 		QString err = chatReplay(who);
@@ -2216,29 +2238,110 @@ void Engine::playReplay(const QString &why)
 	emit stateChanged();
 }
 
-void Engine::playCompilation(const QString &why)
+QString Engine::highlightsDir() const
 {
 	QString folder = QString::fromStdString(cfg.highlightsFolder);
-	if (folder.isEmpty()) {
-		QString base = QString::fromStdString(cfg.clipFolder);
-		if (base.isEmpty())
-			base = QString::fromStdString(cfg.backtrackFolder);
-		if (base.isEmpty()) {
-			QStringList bt = Clips::discoverBacktrackFolders();
-			if (!bt.isEmpty())
-				base = bt.first();
-		}
-		folder = base.isEmpty() ? QString() : base + "/highlights";
+	if (!folder.isEmpty())
+		return folder;
+	QString base = QString::fromStdString(cfg.clipFolder);
+	if (base.isEmpty())
+		base = QString::fromStdString(cfg.backtrackFolder);
+	if (base.isEmpty()) {
+		QStringList bt = Clips::discoverBacktrackFolders();
+		if (!bt.isEmpty())
+			base = bt.first();
 	}
-	if (folder.isEmpty() || !QDir(folder).exists()) {
-		log("Play highlights: no highlights folder yet" +
-		    (folder.isEmpty() ? QString(".") : " (" + folder + ").") +
-		    " Settings, Clips sets where the compilations live.");
+	if (base.isEmpty() && !clips.history().empty())
+		base = QFileInfo(clips.history().back().path).absolutePath();
+	return base.isEmpty() ? QString() : base + "/highlights";
+}
+
+void Engine::onStreaming(bool live)
+{
+	QJsonObject o;
+	o["type"] = "stream";
+	o["state"] = live ? "started" : "stopped";
+	bridge.sendJson(o);
+	if (live) {
+		sessionStart_ = QDateTime::currentDateTime();
+		log("Streaming: the highlights session starts here.");
+	} else if (cfg.highlightsAuto)
+		requestHighlights("stream ended", false);
+}
+
+void Engine::requestHighlights(const QString &why, bool thenPlay)
+{
+	if (!appConnected()) {
+		log("Highlights: ClipHound is not running, so nothing can be built.");
 		return;
 	}
-	QFileInfoList files = QDir(folder).entryInfoList({"*.mp4", "*.mkv", "*.mov"}, QDir::Files, QDir::Time);
-	if (files.isEmpty()) {
-		log("Play highlights: nothing in " + folder + " yet.");
+	QJsonArray arr;
+	for (const auto &e : clips.history()) {
+		if (e.when < sessionStart_.addSecs(-5) || e.path.isEmpty() || !QFileInfo::exists(e.path))
+			continue;
+		QJsonObject c;
+		c["path"] = e.path;
+		c["title"] = e.title;
+		c["tags"] = QJsonArray::fromStringList(e.tags);
+		c["when"] = e.when.toString(Qt::ISODate);
+		arr.append(c);
+	}
+	if (arr.isEmpty()) {
+		log("Highlights: no clips saved this session yet, nothing to build.");
+		return;
+	}
+	QJsonObject o;
+	o["type"] = "highlights_build";
+	o["clips"] = arr;
+	o["out"] = highlightsDir();
+	o["player"] = playerName();
+	o["max"] = cfg.highlightsMax;
+	bridge.sendJson(o);
+	highlightsBuilding_ = true;
+	highlightsThenPlay_ = thenPlay;
+	log(QString("Highlights: building from %1 clip%2 - %3.")
+		    .arg(arr.size())
+		    .arg(arr.size() == 1 ? "" : "s")
+		    .arg(why));
+	emit stateChanged();
+}
+
+void Engine::sendObsHealth()
+{
+	if (!appConnected())
+		return;
+	QJsonObject o;
+	o["type"] = "obs_health";
+	o["lagged"] = (double)obs_get_lagged_frames();
+	o["total"] = (double)obs_get_total_frames();
+	double dropped = 0;
+	if (obs_output_t *out = obs_frontend_get_streaming_output()) {
+		dropped = (double)obs_output_get_frames_dropped(out);
+		obs_output_release(out);
+	}
+	o["dropped"] = dropped;
+	bridge.sendJson(o);
+}
+
+void Engine::playCompilation(const QString &why)
+{
+	QString folder = highlightsDir();
+	QFileInfoList files =
+		folder.isEmpty() || !QDir(folder).exists()
+			? QFileInfoList()
+			: QDir(folder).entryInfoList({"*.mp4", "*.mkv", "*.mov"}, QDir::Files, QDir::Time);
+	// nothing built yet, or clips saved since the last one: build first, then play
+	QDateTime lastClip;
+	for (const auto &e : clips.history())
+		if (e.when >= sessionStart_.addSecs(-5))
+			lastClip = e.when;
+	if (files.isEmpty() || (lastClip.isValid() && files.first().lastModified() < lastClip)) {
+		if (highlightsBuilding_) {
+			highlightsThenPlay_ = true;
+			log("Highlights: still building; it will play when it is ready.");
+			return;
+		}
+		requestHighlights(why, true);
 		return;
 	}
 	if (replaying())

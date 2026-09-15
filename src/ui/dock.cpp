@@ -670,7 +670,7 @@ void Dock::refresh()
 	if (replay_) {
 		bool on = e_->replaying();
 		replay_->setText(on ? "Stop replay" : "Instant replay");
-		highlights_->setText(on ? "Stop" : "Play highlights");
+		highlights_->setText(on ? "Stop" : e_->highlightsBuilding() ? "Building..." : "Play highlights");
 		replay_->setStyleSheet(on ? "QPushButton { border-left: 4px solid #ce6050; }" : "");
 	}
 	if (locked_) {

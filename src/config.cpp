@@ -114,6 +114,8 @@ void Config::load()
 	DEFI(replayCooldownS);
 	DEFB(replayChat);
 	DEFB(replaySound);
+	DEFB(highlightsAuto);
+	DEFI(highlightsMax);
 	DEFS(chatKick);
 	DEFS(chatYouTube);
 	DEFS(highlightsFolder);
@@ -243,6 +245,8 @@ void Config::load()
 	GETI(replayCooldownS);
 	GETB(replayChat);
 	GETB(replaySound);
+	GETB(highlightsAuto);
+	GETI(highlightsMax);
 	GETS(chatKick);
 	GETS(chatYouTube);
 	GETS(highlightsFolder);
@@ -516,6 +520,8 @@ void Config::save() const
 	SETI(replayCooldownS);
 	SETB(replayChat);
 	SETB(replaySound);
+	SETB(highlightsAuto);
+	SETI(highlightsMax);
 	SETS(chatKick);
 	SETS(chatYouTube);
 	SETS(highlightsFolder);

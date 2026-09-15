@@ -55,6 +55,13 @@ public:
 	void playReplay(const QString &why = "dock");
 	/// The newest highlights compilation in the highlights folder, full screen.
 	void playCompilation(const QString &why = "dock");
+	/// Ask ClipHound to build this session's compilation from the clips saved since the stream (or
+	/// OBS) started. `thenPlay`: play it on the stream when it is ready.
+	void requestHighlights(const QString &why, bool thenPlay = false);
+	QString highlightsDir() const;
+	bool highlightsBuilding() const { return highlightsBuilding_; }
+	/// OBS started or stopped streaming: the session boundary for the compilation.
+	void onStreaming(bool live);
 	void stopReplay(const QString &why = "dock");
 	/// A "!replay" from chat: plays if the cooldown has passed. Returns "" or why not.
 	QString chatReplay(const QString &who);
@@ -234,6 +241,10 @@ private:
 	bool replaySought_ = false;
 	QString replayWhat_;
 	Clips::Entry pendingReplay_;
+	QDateTime sessionStart_;
+	bool highlightsBuilding_ = false, highlightsThenPlay_ = false;
+	QTimer healthTimer_; // OBS's dropped-frame counters to ClipHound, so segment work backs off
+	void sendObsHealth();
 	QDateTime lastChatReplay_;
 	void replayTick();
 	bool popoutsShown_ = false;

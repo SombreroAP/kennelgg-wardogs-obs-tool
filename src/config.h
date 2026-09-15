@@ -119,6 +119,8 @@ struct Config {
 	std::string chatYouTube;      // your YouTube channel or @handle, for the chat trigger
 	std::string highlightsFolder; // where the highlights compilations live ("" = <clip folder>/highlights)
 	std::string replayLabel = "Instant replay"; // the tag on the replay's frame
+	bool highlightsAuto = true;                 // build the session's highlights compilation when the stream stops
+	int highlightsMax = 12;                     // at most this many clips in it
 	static const char *replaySourceName() { return "Kennel.gg · Replay"; }
 	static const char *replayFrameName() { return "Kennel.gg · Replay frame"; }
 	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (wired or fibre: 12-20 Mbit/s)

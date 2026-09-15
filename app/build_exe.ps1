@@ -12,6 +12,20 @@ if (Test-Path $tess) {
   Copy-Item "$tess\*.exe","$tess\*.dll" "dist/ClipHound/tesseract/"
   Copy-Item "$tess\tessdata\eng.traineddata","$tess\tessdata\osd.traineddata" "dist/ClipHound/tesseract/tessdata/" -ErrorAction SilentlyContinue
 }
+# ffmpeg: choco puts the gyan.dev build under chocolatey\lib; the highlights compilation needs it
+$ffs = @("C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin\ffmpeg.exe", "C:\ProgramData\chocolatey\bin\ffmpeg.exe")
+foreach ($ff in $ffs) {
+  if (Test-Path $ff) {
+    New-Item -ItemType Directory -Force "dist/ClipHound/ffmpeg" | Out-Null
+    Copy-Item $ff "dist/ClipHound/ffmpeg/ffmpeg.exe"
+    break
+  }
+}
+# the brand font for the compilation's title cards
+if (Test-Path "../data/overlay/SairaCondensed-Bold.ttf") {
+  New-Item -ItemType Directory -Force "dist/ClipHound/fonts" | Out-Null
+  Copy-Item "../data/overlay/SairaCondensed-Bold.ttf" "dist/ClipHound/fonts/"
+}
 Copy-Item config.yaml dist/ClipHound/config.default.yaml
 Remove-Item dist/ClipHound/config.yaml -ErrorAction SilentlyContinue
 Copy-Item README.md dist/ClipHound/README.md

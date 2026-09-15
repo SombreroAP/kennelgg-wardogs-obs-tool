@@ -156,6 +156,14 @@ def main():
             state["tw"] = None
     if bridge is not None:
         bridge.on_config = apply_live
+        try:
+            from highlights import Highlights
+            hl = Highlights(bridge, cfg)
+            bridge.on_clip_saved = hl.on_clip_saved
+            bridge.on_highlights = hl.on_build
+            bridge.on_obs_health = hl.on_obs_health
+        except Exception as e:
+            print(f"[highlights] not available: {e}")
 
     run = {"last": 0.0, "n": 0}
 

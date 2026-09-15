@@ -166,6 +166,12 @@ static void onFrontendEvent(enum obs_frontend_event event, void *)
 	} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED) {
 		if (g_engine)
 			g_engine->reloadConfig();
+	} else if (event == OBS_FRONTEND_EVENT_STREAMING_STARTED) {
+		if (g_engine)
+			g_engine->onStreaming(true);
+	} else if (event == OBS_FRONTEND_EVENT_STREAMING_STOPPED) {
+		if (g_engine)
+			g_engine->onStreaming(false);
 	} else if (event == OBS_FRONTEND_EVENT_REPLAY_BUFFER_SAVED) {
 		if (g_engine)
 			g_engine->onReplaySaved();
