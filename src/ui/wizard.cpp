@@ -145,8 +145,20 @@ QWizardPage *SetupWizard::pageSquad()
 		p));
 	auto *form = new QFormLayout();
 	me_ = new QLineEdit(QString::fromStdString(e_->cfg.myDiscord), p);
-	me_->setPlaceholderText("your Discord username - the lower-case one under your display name");
-	form->addRow("Your Discord username", me_);
+	me_->setPlaceholderText("filled in from the Discord app when it is running, or type the lower-case one");
+	auto *meRow = new QHBoxLayout();
+	meRow->addWidget(me_, 1);
+	auto *detect = new QPushButton("Detect", p);
+	detect->setToolTip("Ask the Discord app on this PC who it is logged in as.");
+	meRow->addWidget(detect);
+	form->addRow("Your Discord username", meRow);
+	connect(detect, &QPushButton::clicked, this, [this]() { e_->detectDiscordUser(true); });
+	connect(e_, &Engine::discordUserDetected, this, [this](const QString &u, bool byHand) {
+		if (!u.isEmpty() && (byHand || me_->text().trimmed().isEmpty()))
+			me_->setText(u);
+	});
+	if (me_->text().trimmed().isEmpty())
+		e_->detectDiscordUser(false);
 	v->addLayout(form);
 	rosterOn_ = new QCheckBox("See who is in my channel and who is live, by itself (recommended)", p);
 	rosterOn_->setChecked(true);

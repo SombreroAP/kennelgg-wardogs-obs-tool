@@ -3,6 +3,7 @@
 #include "ui/wizard.h"
 #include "ui/squad.h"
 #include <QVBoxLayout>
+#include <functional>
 #include <QHBoxLayout>
 #include <QDialog>
 #include <QMenu>
@@ -188,8 +189,25 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	locked_->setOpenExternalLinks(false);
 	locked_->hide();
 	v->addWidget(locked_);
-	connect(locked_, &QLabel::linkActivated, this, [this](const QString &href) {
-		if (href == "kennel:username") {
+	std::function<void()> askUser = [this]() {
+		bool ok = false;
+		QString v = QInputDialog::getText(
+			this, "Your Discord username",
+			"Your Discord username - the lower-case one under your display name. The Kennel.gg bot "
+			"checks it is in the server, and then follows whichever voice channel you are in.",
+			QLineEdit::Normal, QString::fromStdString(e_->cfg.myDiscord), &ok);
+		if (ok)
+			e_->setMyDiscord(v);
+	};
+	// Detect asks the Discord app; when it is not running, the question falls back to typing
+	connect(e_, &Engine::discordUserDetected, this, [askUser](const QString &u, bool byHand) {
+		if (byHand && u.isEmpty())
+			askUser();
+	});
+	connect(locked_, &QLabel::linkActivated, this, [this, askUser](const QString &href) {
+		if (href == "kennel:detect")
+			e_->detectDiscordUser(true);
+		else if (href == "kennel:username") {
 			bool ok = false;
 			QString v = QInputDialog::getText(
 				this, "Your Discord username",
@@ -640,15 +658,15 @@ void Dock::refresh()
 			locked_->setText(
 				"<a style=\"color:#c99a3b\" href=\"" + url +
 				"\">Join Kennel.gg Discord for more automation</a>: live squad mates appear "
-				"here. Already in? <a style=\"color:#c99a3b\" href=\"kennel:username\">Enter your "
-				"Discord username</a>.");
+				"here. Already in? <a style=\"color:#c99a3b\" href=\"kennel:detect\">Detect my "
+				"Discord username</a> (or <a style=\"color:#c99a3b\" href=\"kennel:username\">type it</a>).");
 		else
 			locked_->setText(
 				"<a style=\"color:#c99a3b\" href=\"" + url +
 				"\">Join Kennel.gg Discord for more automation</a>: \"" +
 				QString::fromStdString(e_->cfg.myDiscord).toHtmlEscaped() +
-				"\" is not in the server. <a style=\"color:#c99a3b\" href=\"kennel:username\">Change "
-				"the username</a>.");
+				"\" is not in the server. <a style=\"color:#c99a3b\" href=\"kennel:detect\">Detect</a> or "
+				"<a style=\"color:#c99a3b\" href=\"kennel:username\">change</a> the username.");
 	}
 	if (sound_) {
 		sound_->blockSignals(true);

@@ -49,6 +49,7 @@ target_sources(
     src/ndi.cpp
     src/speed.cpp
     src/roster.cpp
+    src/discord-ipc.cpp
     src/ui/dock.cpp
     src/ui/squad.cpp
     src/ui/wizard.cpp

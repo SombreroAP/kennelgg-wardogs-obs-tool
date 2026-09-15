@@ -70,6 +70,9 @@ public:
 	QString discordUrl() const;
 	/// Save the streamer's Discord username and turn the roster on: the dock's unlock path.
 	void setMyDiscord(const QString &user);
+	/// Ask the Discord app on this PC who it is logged in as, off the UI thread, and take that as
+	/// the username when none was given (or always, byHand). Fires discordUserDetected either way.
+	void detectDiscordUser(bool byHand = false);
 	void applyLan();
 	void applyReplaySeconds();
 	void syncAppPort();
@@ -117,6 +120,8 @@ signals:
 	void appConfigReceived();
 	void updateChecked();
 	void nearbyTested(const QJsonObject &result);
+	/// Discord on this PC answered who it is logged in as ("" when it did not). byHand: from a button.
+	void discordUserDetected(const QString &user, bool byHand);
 
 public:
 	bool applied() const { return applied_; }

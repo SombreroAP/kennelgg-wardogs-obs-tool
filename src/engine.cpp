@@ -1,5 +1,7 @@
 #include "engine.h"
 #include "ndi.h"
+#include "discord-ipc.h"
+#include <optional>
 #include <obs-frontend-api.h>
 #include <QNetworkInterface>
 #include <QFile>
@@ -698,6 +700,11 @@ void Engine::autoPickAudio()
 void Engine::start()
 {
 	autoPickAudio();
+	// the Discord app knows who you are; a moment after start, so OBS is up first
+	QTimer::singleShot(3000, this, [this]() {
+		if (!stopping_)
+			detectDiscordUser(false);
+	});
 	if (cfg.appPath.empty()) {
 		// the installer puts ClipHound here; adopt it once so the app starts with OBS
 		QString def = "C:/ProgramData/Kennel.gg/ClipHound/ClipHound.exe";
@@ -1099,6 +1106,38 @@ void Engine::setMyDiscord(const QString &user)
 				  : QString("Discord username set to %1; checking the Kennel.gg Discord for it.")
 					    .arg(QString::fromStdString(cfg.myDiscord)));
 	emit stateChanged();
+}
+
+void Engine::detectDiscordUser(bool byHand)
+{
+	std::thread([this, byHand]() {
+		std::optional<DiscordIpc::User> u = DiscordIpc::currentUser(1500);
+		QString name = u ? u->username.trimmed().toLower() : QString();
+		QMetaObject::invokeMethod(
+			this,
+			[this, name, byHand]() {
+				if (stopping_)
+					return;
+				QString mine = QString::fromStdString(cfg.myDiscord).toLower();
+				if (name.isEmpty()) {
+					if (byHand)
+						log("Could not ask Discord who you are: is the Discord desktop app running on "
+						    "this PC and logged in?");
+				} else if (mine.isEmpty() || byHand) {
+					if (mine != name) {
+						log("Discord is logged in as " + name +
+						    ": taken as your Discord username.");
+						setMyDiscord(name);
+					} else if (byHand)
+						log("Discord confirms your username: " + name + ".");
+				} else if (mine != name)
+					log("Discord on this PC is logged in as " + name +
+					    ", but the plugin was given " + mine +
+					    ". Detect (Setup, or the dock) switches to " + name + ".");
+				emit discordUserDetected(name, byHand);
+			},
+			Qt::QueuedConnection);
+	}).detach();
 }
 
 void Engine::checkAccess()

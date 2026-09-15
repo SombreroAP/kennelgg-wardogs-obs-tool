@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.9.3
+- **Your Discord username fills itself in.** The Discord app on the PC is asked who it is logged in as (its local pipe answers that on a plain handshake; nothing more is asked of it) a few seconds after OBS starts, in Setup, and from the dock's Detect link. Typed names still work, and a mismatch between the two is said in the log.
+
 ## 0.9.2
 - **Squad automation is for members of the Kennel.gg Discord.** The Kennel Ops bot now publishes its member list (hashed), and the plugin checks the Discord username from Setup against it. Not in the server, or no username entered: the roster is locked, the live buttons' place on the dock shows greyed out with **Join Kennel.gg Discord for more automation** and a link to enter the username, and the log says so once. Pop-outs and the manual controls keep working either way.
 - **A Discord button on the dock** opens the Kennel.gg Discord through the plugin's own invite, so joins from the plugin are counted on their own line.
