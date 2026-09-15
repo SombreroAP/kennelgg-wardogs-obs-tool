@@ -116,6 +116,7 @@ void Config::load()
 	DEFS(chatKick);
 	DEFS(chatYouTube);
 	DEFS(highlightsFolder);
+	DEFS(replayLabel);
 	DEFS(sceneV);
 	DEFI(vdoBitrateKbps);
 	DEFB(dualEnabled);
@@ -243,6 +244,7 @@ void Config::load()
 	GETS(chatKick);
 	GETS(chatYouTube);
 	GETS(highlightsFolder);
+	GETS(replayLabel);
 	GETS(sceneV);
 	GETI(vdoBitrateKbps);
 	GETB(dualEnabled);
@@ -514,6 +516,7 @@ void Config::save() const
 	SETS(chatKick);
 	SETS(chatYouTube);
 	SETS(highlightsFolder);
+	SETS(replayLabel);
 	SETS(sceneV);
 	SETI(vdoBitrateKbps);
 	SETB(dualEnabled);

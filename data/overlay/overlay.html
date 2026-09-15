@@ -67,6 +67,16 @@ body.s #name.pos-br { right: 3vw; }
 /* frame: a thin edge round the whole picture, so the small window reads as a window */
 #frame { display: none; position: absolute; inset: 0.8vw; border: 0.4vw solid rgba(255,255,255,.85); box-shadow: 0 0 0 0.2vw rgba(0,0,0,.55), inset 0 0 0 0.2vw rgba(0,0,0,.55); pointer-events: none; }
 body.s #frame { display: block; }
+/* replay: the page is sized to the replay window itself, so vw is the window's width. A thicker
+   edge than the dual window, and a tag in the top-left corner that says what this is. */
+body.r #frame { display: block; inset: 0.6vw; border-width: 0.5vw; border-color: rgba(236,231,219,.92); }
+#rtag { display: none; position: absolute; top: 2.4vw; left: 2.4vw; align-items: center; gap: 0.9vw;
+  background: rgba(11,14,16,.82); border-left: 0.5vw solid #C99A3B; padding: 0.9vw 1.6vw 0.9vw 1.3vw;
+  font-family: "Saira Condensed", "Segoe UI", sans-serif; font-weight: 700; font-size: 3.2vw; letter-spacing: 0.3vw;
+  text-transform: uppercase; color: #ece7db; line-height: 1; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+#rtag i { display: inline-block; width: 1.4vw; height: 1.4vw; border-radius: 50%; background: #e0352b; animation: blink 1s steps(1) infinite; }
+body.r #rtag { display: flex; }
+body.r #mark { display: none !important; }
 /* the Kennel.gg mark: small, bottom-right, faint. Off the camcorder battery when that is on. */
 #mark { display: none; position: absolute; right: 3vw; bottom: 3vw; align-items: center; gap: 0.6vw; opacity: .55; filter: drop-shadow(0 1px 4px rgba(0,0,0,.7)); pointer-events: none; }
 #mark img { height: 2.4vw; width: auto; }
@@ -88,6 +98,7 @@ body.s #mark { display: none !important; }
 </div>
 <div id="name"><small>POV</small><b>FRIEND</b></div>
 <div id="frame"></div>
+<div id="rtag"><i></i><span>Instant replay</span></div>
 <div id="mark"><img src="hound_mark.png" alt=""><span>kennel<b>.gg</b></span></div>
 <script>
 (function () {
@@ -98,7 +109,10 @@ body.s #mark { display: none !important; }
   if (small) document.body.classList.add("s");
   var scale = parseInt(q.get("scale") || "100", 10);
   if (scale > 0 && scale !== 100) document.documentElement.style.setProperty("--s", String(scale / 100));
-  if (q.get("frame") !== "1") document.getElementById("frame").style.display = "none";
+  if (q.get("replay") === "1") {
+    document.body.classList.add("r");
+    var rt = q.get("rlabel"); if (rt) document.querySelector("#rtag span").textContent = rt;
+  } else if (q.get("frame") !== "1") document.getElementById("frame").style.display = "none";
   var grain = Math.max(0, Math.min(100, parseInt(q.get("grain") || "0", 10) || 0));
   var label = q.get("label") || "POV";
   var portrait = q.get("v") === "1";

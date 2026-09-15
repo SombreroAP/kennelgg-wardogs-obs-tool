@@ -2198,7 +2198,7 @@ void Engine::playReplay(const QString &why)
 	}
 	if (replaying())
 		stopReplay("replaced");
-	std::string e = sw.playMedia(cfg, last->path.toStdString(), cfg.replayScale, cfg.replayVolume);
+	std::string e = sw.playMedia(cfg, last->path.toStdString(), cfg.replayScale, cfg.replayVolume, true);
 	if (!e.empty()) {
 		log("Instant replay: " + QString::fromStdString(e));
 		return;

@@ -1514,6 +1514,54 @@ QWidget *SettingsDialog::buildClipsTab()
 	fr->addRow(pastRow);
 	connect(past, &QPushButton::clicked, this, [this]() { pastResult_->setText(e_->clips.numberPastClips()); });
 	v->addWidget(gr);
+
+	auto *gi = new QGroupBox("Instant replay", w);
+	auto *fi = new QFormLayout(gi);
+	auto spin = [gi](int lo, int hi, int val, const QString &suffix) {
+		auto *sb = new QSpinBox(gi);
+		sb->setRange(lo, hi);
+		sb->setValue(val);
+		sb->setSuffix(suffix);
+		return sb;
+	};
+	replayPre_ = spin(0, 30, e_->cfg.replayPreS, " s before the first kill");
+	replayPost_ = spin(0, 30, e_->cfg.replayPostS, " s after the last kill");
+	replayScale_ = spin(25, 100, e_->cfg.replayScale, " % of the screen");
+	replayVol_ = spin(0, 100, e_->cfg.replayVolume, " % volume");
+	replayCool_ = spin(30, 900, e_->cfg.replayCooldownS, " s between chat replays");
+	fi->addRow("Starts", replayPre_);
+	fi->addRow("Ends", replayPost_);
+	fi->addRow("Size", replayScale_);
+	fi->addRow("Sound", replayVol_);
+	replayLabel_ = new QLineEdit(QString::fromStdString(e_->cfg.replayLabel), gi);
+	replayLabel_->setPlaceholderText("Instant replay");
+	fi->addRow("Frame says", replayLabel_);
+	replayChat_ = new QCheckBox("Subscribers and moderators can type !replay in chat to play it", gi);
+	replayChat_->setChecked(e_->cfg.replayChat);
+	fi->addRow(replayChat_);
+	fi->addRow("Cooldown", replayCool_);
+	chatKick_ = new QLineEdit(QString::fromStdString(e_->cfg.chatKick), gi);
+	chatKick_->setPlaceholderText("your Kick channel (optional)");
+	chatYouTube_ = new QLineEdit(QString::fromStdString(e_->cfg.chatYouTube), gi);
+	chatYouTube_->setPlaceholderText("your YouTube channel or @handle (optional)");
+	fi->addRow("Twitch chat", muted("Your Twitch chat is read through the login on the ClipHound tab.", gi));
+	fi->addRow("Kick chat", chatKick_);
+	fi->addRow("YouTube chat", chatYouTube_);
+	highlightsFolder_ = new QLineEdit(QString::fromStdString(e_->cfg.highlightsFolder), gi);
+	highlightsFolder_->setPlaceholderText("<clip folder>\\highlights");
+	fi->addRow("Highlights folder", highlightsFolder_);
+	fi->addRow(muted(
+		"Instant replay plays the last highlight back on the stream, cut down to the action, framed and tagged, sized "
+		"under your camera and alerts (the always-on-top list on the Switch tab). The dock button and a hotkey play "
+		"it; so can chat, once per cooldown. The clip carries whatever the stream carried, your mic included, so its "
+		"sound is low by default. Play highlights plays the newest video in the highlights folder, full screen.",
+		gi));
+	v->addWidget(gi);
+	for (auto *sb : {replayPre_, replayPost_, replayScale_, replayVol_, replayCool_})
+		connect(sb, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
+	connect(replayChat_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	for (auto *le : {chatKick_, chatYouTube_, highlightsFolder_, replayLabel_})
+		connect(le, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
 	connect(hotkeyFilter_, &QLineEdit::textChanged, this, [this](const QString &) { fillHotkeys(); });
 	connect(hotkeyList_, &QListWidget::itemChanged, this, [this](QListWidgetItem *) { saveAndApply(); });
 	connect(useReplay_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
@@ -2613,6 +2661,8 @@ void SettingsDialog::collect()
 		c.chatKick = chatKick_->text().trimmed().toStdString();
 		c.chatYouTube = chatYouTube_->text().trimmed().toStdString();
 		c.highlightsFolder = highlightsFolder_->text().trimmed().toStdString();
+		c.replayLabel = replayLabel_->text().trimmed().isEmpty() ? "Instant replay"
+									 : replayLabel_->text().trimmed().toStdString();
 	}
 }
 

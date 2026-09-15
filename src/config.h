@@ -117,7 +117,9 @@ struct Config {
 	std::string chatKick;         // your Kick channel, for the chat trigger (Twitch comes from the login)
 	std::string chatYouTube;      // your YouTube channel or @handle, for the chat trigger
 	std::string highlightsFolder; // where the highlights compilations live ("" = <clip folder>/highlights)
+	std::string replayLabel = "Instant replay"; // the tag on the replay's frame
 	static const char *replaySourceName() { return "Kennel.gg · Replay"; }
+	static const char *replayFrameName() { return "Kennel.gg · Replay frame"; }
 	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (wired or fibre: 12-20 Mbit/s)
 
 	// dual POV: a squad mate's feed in a small window over your own POV (tank / chopper crews)

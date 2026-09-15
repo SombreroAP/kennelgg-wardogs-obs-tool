@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.12.2
+- **The instant replay has a frame.** A light edge round the picture and an "Instant replay" tag in its top-left corner, with a blinking dot, so viewers know what they are seeing. The words are yours to change on the Clips tab. The highlights compilation plays without it.
+- The Instant replay group on the Clips tab (start, end, size, sound, frame text, cooldown, chat, folder) is actually there now; 0.12.0 and 0.12.1 built without it, so those ran on the defaults.
+
 ## 0.12.1
 - The POV name tag at middle-left now sits higher, above where the game draws the kill feed, so viewers can read the feed while a squad mate is on screen.
 

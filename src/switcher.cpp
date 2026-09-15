@@ -1185,7 +1185,7 @@ void Switcher::applyFriendAudio(const Config &cfg, bool showing)
 		setMute(n, false);
 }
 
-std::string Switcher::playMedia(const Config &cfg, const std::string &path, int scalePct, int volumePct)
+std::string Switcher::playMedia(const Config &cfg, const std::string &path, int scalePct, int volumePct, bool frame)
 {
 	obs_data_t *st = obs_data_create();
 	obs_data_set_string(st, "local_file", path.c_str());
@@ -1225,6 +1225,27 @@ std::string Switcher::playMedia(const Config &cfg, const std::string &path, int 
 	obs_source_media_restart(src);
 	obs_sceneitem_set_visible(item, true);
 	moveToTop(item);
+	// the frame: the look page in replay mode, rendered at the replay's own size and laid exactly
+	// over it, so its edge and "Instant replay" tag sit on the picture
+	if (frame) {
+		char *pp = obs_module_file("overlay/overlay.html");
+		std::string page = pp ? pp : "";
+		bfree(pp);
+		std::replace(page.begin(), page.end(), '\\', '/');
+		std::string url = "file:///" + page + "?replay=1&rlabel=" + urlEncode(cfg.replayLabel);
+		std::string e2 = ensureBrowserSource(scene, Config::replayFrameName(), url, false, (int)w, (int)h);
+		if (e2.empty()) {
+			if (obs_sceneitem_t *fi = obs_scene_find_source(scene, Config::replayFrameName())) {
+				obs_sceneitem_set_bounds_type(fi, OBS_BOUNDS_SCALE_INNER);
+				obs_sceneitem_set_bounds(fi, &bounds);
+				obs_sceneitem_set_pos(fi, &pos);
+				obs_sceneitem_set_visible(fi, true);
+				moveToTop(fi);
+			}
+		} else if (log)
+			log("Replay frame: " + e2);
+	} else
+		hideEverywhere(Config::replayFrameName());
 	raiseOnTop(cfg); // camera and alerts back over it
 	obs_source_release(src);
 	obs_source_release(ss);
@@ -1269,6 +1290,7 @@ void Switcher::stopMedia(const Config &cfg)
 		obs_source_release(src);
 	}
 	hideEverywhere(Config::replaySourceName());
+	hideEverywhere(Config::replayFrameName());
 	(void)cfg;
 }
 
