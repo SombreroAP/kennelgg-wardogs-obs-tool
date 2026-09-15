@@ -1,4 +1,4 @@
-"""OBS on the streaming PC via obs-websocket v5 (TCP 4455 over the LAN).
+"""OBS on the streaming PC via obs-websocket v5 (TCP 4455 on the network).
 Saves the replay buffer (backtrack) or runs a timed recording. Reconnects if the link drops."""
 import json
 import os

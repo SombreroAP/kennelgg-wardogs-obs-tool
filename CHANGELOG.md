@@ -3,7 +3,7 @@
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
 ## 0.10.0
-- **Discord is the way squad feeds come in.** The network-discovery and LAN-share features, their settings group, the link test and the two optional installer downloads are gone, along with that squad-mate kind. Any slot of that kind in an old config is dropped on load. Everything else is untouched: Twitch, Kick, YouTube, VDO.Ninja and OBS-source squad mates still work.
+- **Discord is the way squad feeds come in.** The network-discovery and network-share features, their settings group, the link test and the two optional installer downloads are gone, along with that squad-mate kind. Any slot of that kind in an old config is dropped on load. Everything else is untouched: Twitch, Kick, YouTube, VDO.Ninja and OBS-source squad mates still work.
 
 ## 0.9.3
 - **Your Discord username fills itself in.** The Discord app on the PC is asked who it is logged in as (its local pipe answers that on a plain handshake; nothing more is asked of it) a few seconds after OBS starts, in Setup, and from the dock's Detect link. Typed names still work, and a mismatch between the two is said in the log.
@@ -170,73 +170,32 @@ All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are t
 - **Renamed to Kennel.gg Wardogs OBS Tool, all the way down.** The window, the dock, the hotkey labels, the installer, the repo - and now the plugin itself: the module is `kennelgg`, it installs to `plugins\kennelgg`, ClipHound lives in `ProgramData\Kennel.gg\ClipHound`, and every source the plugin makes is named "Kennel.gg ..." ("Kennel.gg · Pup", "Kennel.gg web", "Kennel.gg look", "Kennel.gg dual"). The Help tab has an **About The Kennel** section with what kennel.gg is and links to the site, Discord, Twitch and X, and the installer's welcome page says who made it.
 - **Nothing is lost in the move.** The installer removes the old `plugins\kennel-wardogs` folder (two copies would both load), carries ClipHound's config over and removes its old folder; the plugin picks up its old settings file the first time it starts under the new id; sources made by earlier builds are renamed in place rather than made again, so scenes do not fill with duplicates; and the hotkey ids are unchanged, so bindings survive. Close OBS, run the installer, start OBS: that is all.
 - **Nothing of yours is muted when the POV changes, and no sound is taken from the squad mate's feed** - for everyone, including setups that had either ticked. Both are still there on the Switch tab to turn on. A Discord squad mate's audio capture follows the same rule now in every mode.
-- **NDI is shelved.** LAN discovery, the NDI share and auto-adding are off and out of sight; the code is kept, and a squad mate already set up as NDI keeps working, but NDI is not offered for new ones. It is parked until it behaves reliably.
 - **Kick and YouTube live streams** as squad-mate kinds, alongside Twitch. Kick takes the channel name; YouTube takes a channel link, @handle, channel ID or a live video link - a handle is looked up once on Save for the channel ID the player needs. With a channel, whatever they are streaming right now is shown.
 - **The swap on a vertical canvas too.** Switch tab -> *Vertical scene*: pick the scene your portrait stream (Aitum Vertical) shows, and the squad mate's feed is shown there as well - full height, sides cropped - with the look overlay in a portrait form: everything sized to the narrow canvas and the POV tag across the top, where the cropped feed has no HUD. Same source in both scenes, so nothing is decoded twice; the *at* box on the Look tab still moves the tag.
 
 ## 0.6.6
-- **A squad mate's NDI feed is no longer streaming the whole time you are alive.** Keeping a feed warm leaves the source running so a swap is instant - which for NDI means their full stream crossing the network and being decoded on both PCs continuously, for something you need only when you go down. At 1440p that is around 240 Mbit running permanently, and it is enough on its own to make everything judder. NDI feeds are now connected only while they are shown; there is a tick box on the Switch tab (Extras) to keep one connected if you would rather have the instant swap and can spare the bandwidth. Browser and Discord feeds are unchanged.
 - If the picture still judders, the size being sent is the next thing: **Share at** on the *sending* PC. A full 1440p canvas is about 240 Mbit of nearly-raw video; 1080p is about a third of that and 720p a tenth.
 
 ## 0.6.5
-- **Why NDI only worked with OBS run as administrator, explained in the plugin.** Windows hands whole ranges of TCP ports to Hyper-V, WSL, Docker and the like, and a program running as a normal user cannot bind anything inside them. NDI's ports (5960-5970) land inside one of those ranges on a lot of machines - so NDI works when OBS is elevated and not otherwise, no firewall rule will fix it, and nothing on screen ever hints at it. **Check NDI** now says whether OBS is elevated, whether NDI's ports are inside a reserved range, and the exact commands that free them; it also says so once in the log at start-up, unprompted.
 - **Deleting a squad mate offers to delete the sources made for them.** *Remove and delete the sources* / *Remove, keep the sources* / *Cancel*, with the sources listed so you can see what will go. Only ever ones the plugin made: a squad mate set up as an OBS source you already had keeps it, and the shared browser source is never touched.
-- **Preloading no longer keeps every NDI feed decoding.** A warm NDI feed is a receiver running a full stream the whole time, and several at 1440p judder for no gain - an NDI receiver is back in well under a second. Browser feeds, which take seconds to load, are still all kept warm; NDI and Discord feeds are kept warm only for the squad mate you would actually show.
-
-## 0.6.4
-- **Neither PC being able to see the other's feed at all was the plugin's fault, and this fixes it.** To list NDI feeds for the squad-mate picker, the plugin loaded its own copy of the NDI runtime into OBS - and if DistroAV had not already loaded one, that was a *second* NDI stack in the same process, initialised separately and holding a finder open for the life of OBS. Two NDI stacks contending for the same discovery sockets stops that PC seeing feeds and stops its own feed being seen. Both ends had the plugin, so both went dark, and it looked like a network fault.
-- The plugin now uses **only the runtime DistroAV has already loaded**, never loads or initialises one itself, and never holds a finder open: it asks once when you press **Check NDI** or add a squad mate, and lets go immediately. Nothing asks NDI anything on a timer any more.
-- **Install this on both PCs and restart both** (a fully restarted OBS on each is enough; a reboot does no harm). Feeds should appear in DistroAV's source list again as they did before.
-
-## 0.6.3
-- **Check NDI reads NDI's own machine settings.** Two settings there switch discovery off completely, and are the usual reason a PC sees no feeds at all - its own included: a discovery server that is set but not answering, and a receive or send group that is not the one everybody else uses. NDI Access Manager writes them, and the report now says when either is set, with the file it read.
-- **Fix discovery**, next to Check NDI. On a network where NDI cannot discover anything, this writes your squad's addresses into NDI's own settings for that PC so it looks at them directly rather than waiting to find them - which is NDI's own documented answer to exactly this. It changes a setting outside OBS, so it asks first, and it says plainly when it cannot write the file.
-
-## 0.6.2
-- **Check NDI**, next to the NDI share line on the Switch tab, and in the log whenever the share starts. It reports what is actually true on that PC rather than guessing: whether your feed is running, whether the NDI runtime could be loaded at all, every feed NDI can see on the network, and whether your own is among them.
-- **When your feed is running but nothing can see it, it names the likely reason.** On a gaming PC that is usually not the firewall but a second network adapter: NDI advertises on one interface, and Hyper-V, WSL, Docker, VirtualBox and VPN clients all add adapters that can win that choice while ordinary traffic still routes perfectly. The report lists every active adapter with its address so you can see which ones are in the way. With only one adapter it points at Windows Firewall instead.
-- 0.6.1 said "your feed is running but discovery cannot see it" even when the NDI runtime had not loaded and it could not actually tell. It now says which of the two it is.
-- The log says **"NDI share has STOPPED"** with the reason when the output dies, instead of only mentioning it while restarting.
 
 ## 0.6.1
-- **A ticked box is no longer taken for a working share.** The plugin told the squad it was sharing over NDI whenever the box was ticked, whether or not the output had actually started - so a share that failed looked exactly like a working one from the other end, and the squad mate's feed was simply blank. Your beacon now only advertises a feed while the output is really running, and the Switch tab has an **NDI share** line that says what it is actually doing, in red when it is not.
-- **It checks that anything can find your feed.** A few seconds after the share starts, the plugin asks the NDI runtime whether it can see your own feed. If it cannot, the log says so and names the usual causes - Windows Firewall blocking OBS on a private network, or the two PCs being on different subnets - because a feed nobody can discover is, to a squad mate, the same as no feed at all.
 - **It restarts a share that has died**, every 15 seconds, and says so in the log.
-- **The link test warns about different subnets.** NDI finds feeds by multicast, which does not cross a subnet: a squad mate whose link measures perfectly can still never appear in your source list. The plugin also now hands NDI the addresses of the squad mates its own beacon already found, so its list still fills in where discovery alone would not.
 
 ## 0.6.0
-- **A squad mate's NDI feed that connects to nothing, fixed.** The plugin composed their feed's name from their beacon as "<their computer> (Kennel POV)", but NDI advertises the machine name in its own form - upper case, the DNS name, whatever the runtime settled on - and DistroAV matches that string exactly. One letter's difference and the source connects to nothing, shows nothing, and reports no error anywhere. The plugin now asks the NDI runtime what is actually being published and matches on the part in brackets, which is the half we control; if a name has drifted it is corrected and the log says so.
-- **And it says so when nobody is publishing.** If no feed on the network matches, adding the squad mate now fails with a real message, and the log lists every NDI name it can actually see - so "their OBS is not sharing" and "we are asking for the wrong name" stop looking identical.
 - **Every settings tab scrolls.** At 125 % Windows scaling, on a laptop screen or with a large font the contents were squeezed into whatever height was left instead of keeping their own. The window can also be made genuinely small now.
 
 ## 0.5.9
-- **A squad mate's NDI feed showing nothing at all, fixed.** 0.5.4 turned DistroAV's frame sync on for every NDI feed to smooth out judder. On some setups the picture then never arrives, which is worse than the judder it was meant to fix. The plugin no longer touches how a feed is timed: **Timing** in Edit... now starts at *leave DistroAV's own setting alone*, and 0.5.9 puts frame sync back off on feeds 0.5.4 to 0.5.8 turned it on for. Frame sync, timestamps, the sender's timecode and none are all still there to try by hand - which is where a setting like that belongs.
 - The forced "normal latency" write is gone with it. The only receive setting the plugin sets by itself is the one you choose in **Receive at**.
 
-## 0.5.8
-- **Test the link to this squad mate**, next to the squad list on the Switch tab. It sends flat out to their OBS for four seconds, and their end reports what actually landed - so you get a real number for the path between the two PCs, not what the adapters claim. It then lists what each NDI size needs at your frame rate and tells you which one to set. "It is gigabit" is not a measurement: one port negotiated at 100 Mbit, a powerline adapter or a single Wi-Fi hop all look the same from the desk, and none of them carry a full-canvas NDI stream.
-- Both PCs need 0.5.8 with **Find squad mates on the LAN** ticked. The listening side uses the LAN port + 1 (47846 by default) and does nothing but count what it is sent and throw it away.
-
 ## 0.5.7
-- **The NDI share no longer blacks out another plugin's extra canvas.** 0.5.4 gave the share's own view its own frame rate as well as its own size, and a video mix running on a clock of its own is what Aitum's vertical canvas went black on - the same symptom 0.4.3 fixed, caused again by a different line. The share now only ever changes the output size: the mix keeps the canvas size and OBS's own frame rate.
 - **Share at is sizes only** - 720p, 900p, 1080p or the full canvas, always at your OBS frame rate. That also removes the frame-rate halving that made a smaller share look choppy: 720p is now 720p at 60 if that is what you run.
-- If a canvas is ever black again, set **Share at** to *the full canvas* (that makes the share an exact copy of what OBS renders) or untick the NDI share, and tell me which of the two it was.
 
 ## 0.5.6
 - **Share at now covers both halves of the trade-off.** 0.5.4 only offered 30 fps, so choosing a size that a network could carry also halved the frame rate - steady, but soft and visibly half the frames. Every size now has a 30 and a 60: 720p, 900p, 1080p and the full canvas. The default moves to **1080p 30**, about three times the picture of 720p 30 for a third of a gigabit link; pick 720p 60 instead if motion matters more to you than sharpness.
 - The downscale uses **Lanczos** rather than bicubic - noticeably sharper at 720p and 1080p, and it costs the network nothing.
 - **Timing**, per squad mate in Edit...: frame sync (the default), network timestamps, the sender's timecode, or none. If a feed still judders, these are worth trying in turn; senders differ.
 - **Test feed** button on the Switch tab. It watches the selected squad mate's feed for two seconds and tells you how many new pictures a second are actually arriving - which is the only way to tell a feed that is not being delivered from one that is arriving fine and being drawn badly.
-
-## 0.5.5
-- **The judder in the first seconds after a swap is gone.** Keeping a squad mate's feed warm hid its scene item, which is right for a browser feed - it goes on playing while hidden - but wrong for NDI: OBS stops a hidden source, DistroAV drops the connection, and the swap was then spent reconnecting and catching up. Non-browser feeds now stay in the scene fully transparent instead, so the receiver is connected and in step before you ever go down. Turn **Keep warm** on (Switch tab, Extras) if you had it off.
-
-## 0.5.4
-- **NDI feeds are much steadier.** Three things, all on by default:
-  - **What you send is now scaled.** NDI's picture is barely compressed, so sharing a full canvas at 60 is around 200 Mbit - more than a shared or half-duplex network carries steadily, which is what makes a squad mate's feed judder and drop. The share now goes out at **720p 30** by default, about a tenth of that and still plenty to revive from. **Share at** on the Switch tab raises it to 900p, 1080p or the full canvas. Your own stream and recording are untouched: the share is rendered from a view of its own.
-  - **Frame sync on what you receive.** Squad mates' NDI feeds are now handed to OBS on OBS's clock instead of whenever the network delivers them, which is the setting that turns a juddering feed into a steady one. It is applied to feeds you already have, once, at start-up.
-  - **Receive at** in Edit... per squad mate: full quality, or low bandwidth for a feed that still will not settle - the same thing as setting it by hand on the source, but it sticks.
-- If it is still rough: NDI wants wired gigabit. Wi-Fi, powerline and a switch shared with a games console will all drop frames at these rates whatever the settings say.
 
 ## 0.5.3
 - **A squad mate's Discord share shows their game, not their Discord window.** Their screen share arrives inside Discord's own window - flat grey down the sides, black letterboxing around the picture. The plugin now renders a frame of their feed, walks in from each edge while the whole row or column is still one flat colour, and crops the scene item to what is left. It runs each time their feed goes up, so it follows the window being resized, and never takes more than a third off any side. Turn it off per squad mate with **Borders** in Edit....
@@ -246,10 +205,6 @@ All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are t
 - **Your camera and your alerts stay on top.** A new **Always on top** box on the Switch tab: tick your face cam and your alert overlays and they are lifted back over the top every time the plugin shows a squad mate, brings up the Dual POV window, adds a source or puts the look overlay on - nothing of ours can cover them. The list is the stacking order, first is the topmost, and you can drag it around. Your camera and anything that looks like alerts are ticked for you the first time you open it.
 - **A squad mate's Discord feed no longer flickers.** Saving settings re-applied the window-capture settings to a source that already had them, and Windows tears the capture down and starts it again each time. The plugin now writes settings only when something has actually changed. Probing for the window list is also cached for a few seconds - it briefly makes a second capture of the same window, which is the other half of the flicker.
 - **Your own placement is left alone.** A squad mate's source was stretched back to the full canvas on every save, so if you had moved or resized it, it snapped back under you. It is only placed when it is first added; after that it is yours.
-
-## 0.5.1
-- **OBS no longer crashes when you scan for a squad mate's NDI feed.** To list what is on the network the plugin used to make a hidden NDI source, ask it for its list and throw it away - but DistroAV's finder holds on to whichever source asked and signals it from its own thread, so it was signalling a source that no longer existed and took OBS down with it. The plugin now asks the NDI runtime for the list itself, keeping one finder for the session, and never makes a source to do it. Nothing to set up.
-- The NDI picker also lists senders already used elsewhere in your OBS, can be **typed into** for a mate whose PC is not on yet, and fills in on its own a second later as the network answers, instead of holding the window still while it looks.
 
 ## 0.5.0
 - **A bright sky no longer reads as alive.** The damage-log panel is see-through, so what is behind it changes how the header looks: aim at the sky, drive through smoke or take a muzzle flash and the wording washes out for a moment. The score dipped, and with a single poll enough to end the swap, your own POV came back while you were still on the floor. The match now runs on the picture with its local brightness taken out - the sky's brightness and its gradient go, the letter strokes stay - so the score barely moves when the background changes. Measured on the frame that was failing: a washed-out header that scored 0.75 before (under the threshold, so "alive") now scores 0.94, and a heavily blown-out one 0.83 where it used to score 0.57.
@@ -284,9 +239,6 @@ All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are t
 
 ## 0.4.2
 - **Dual POV turns itself on in a vehicle** (Dual POV tab, "Turn the window on by itself..."). ClipHound reads the keybind list the game draws bottom-right while you are in a vehicle - CYCLE WEAPON is the tank gunner, DEPLOY SMOKE the tank driver, COLLECTIVE LIFT / DEPLOY FLARES the Havoc pilot, INTERACT and ZOOM alone the Havoc gunner's CAM view - and the window comes up with that seat's placement, then goes when the list goes. A seat is acted on after two readings in a row and "out" after three, so a covered corner does not flap it. One small OCR run a second, only while the option is on. The blue box on the Dual POV picture is where that list is; drag it if your HUD differs.
-
-## 0.4.1
-- **NDI share no longer breaks other plugins' canvases.** It was tapped onto OBS's main video mix, which turned Aitum's vertical canvas black and stopped recordings that used it. The share now renders from a view of its own on the program output, so it only ever carries the main canvas and leaves every other canvas alone. It also starts a few seconds after OBS has finished loading, so other plugins set up first.
 
 ## 0.4.0
 - **Dual POV** (new tab). Two of you in a tank or a Havoc: your own POV stays on screen and your crew mate's feed sits in a small window over it, placed where the game draws nothing. Pick the crew mate, pick the vehicle and the seat you are in - tank driver, tank gunner, Havoc pilot, Havoc gunner in the CAM view - and the window goes where that seat's HUD leaves room (top-left between the team chat and the kill feed; inside the picture frame for the CAM view). Or Custom: drag the box on the live picture, or type left, top and width. Opacity slider. Picture only, no sound. A **Dual POV** button in the dock and a hotkey ("dual POV window on / off") turn it on and off; it comes back on with OBS if it was on. When you go down the window steps aside for the full-screen swap and returns after.
@@ -365,7 +317,6 @@ All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are t
 - Switch-back also reacts to the score falling away from its steady level; 2 polls, 0.5 s floor. Existing configs migrated.
 
 ## 0.2.16
-- Squad-mate dialog shows only the fields for the chosen kind (Twitch channel, VDO.Ninja stream ID + quality + link, OBS source, Discord window, NDI source).
 - Discord always saves: "Any Discord window" matches by executable and follows the pop-out when it appears; errors show in red.
 - VDO.Ninja quality per squad mate: resolution (720/1080/1440), frame rate, bitrate ceiling, codec. Default 1080p60, 12000 kbps, H.264. The friend's link and the plugin's viewer link follow the settings.
 
@@ -374,7 +325,6 @@ All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are t
 - `CHANGELOG.md` added.
 
 ## 0.2.14
-- VDO.Ninja links now ask for 1080p60 H.264 with an adjustable bitrate ceiling (Switch → Extras). It is a ceiling: WebRTC climbs to it on a LAN or fibre and settles lower on a weak link.
 - CI builds Windows only (Actions minutes).
 
 ## 0.2.13
@@ -382,9 +332,6 @@ All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are t
 
 ## 0.2.12
 - Kill feed: a row pushed down a slot by a new kill is followed instead of being counted as a new row, and a row that vanishes is still decided with the reads it had. Every kill in a multi-kill now shows and counts. 5 frames per second, 7 reads to decide.
-
-## 0.2.11
-- Discord Go Live and NDI are back in the "Comes in as" list when adding a squad mate (a bad patch had left the list at three entries). Clearer Discord window picker with a hint when no pop-out is open.
 
 ## 0.2.10
 - ClipHound heals a corrupt `config.yaml` (sets it aside, starts from defaults, the plugin pushes your settings back) and writes its config atomically.
@@ -398,7 +345,6 @@ All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are t
 
 ## 0.2.8
 - ClipHound runs windowless; no console setup anywhere. All of its settings live in OBS.
-- Installer can download and run the official NDI 6 Runtime (Vizrt) and DistroAV installers.
 
 ## 0.2.7
 - Twitch login from inside OBS (device code flow with the Kennel app id).
@@ -413,6 +359,3 @@ All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are t
 
 ## 0.2.1
 - Fixed a crash when opening Settings from the dock.
-
-## 0.2.0
-- First-run setup wizard; DistroAV as an installer option; ClipHound bundled in the installer; quick start.

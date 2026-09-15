@@ -452,7 +452,7 @@ private:
 			break;
 		case FriendKind::VdoNinja:
 			hint_->setText(
-				"Send them the link: they open it in Chrome or Edge, pick their game window or screen and tick \"Share system audio\". No mic is sent. Quality here is a ceiling; WebRTC settles lower by itself on a weak link. 1080p60 at 12000 is right for LAN or fibre, 4000-6000 for a weak upload.");
+				"Send them the link: they open it in Chrome or Edge, pick their game window or screen and tick \"Share system audio\". No mic is sent. Quality here is a ceiling; WebRTC settles lower by itself on a weak link. 1080p60 at 12000 is right for a wired line or fibre, 4000-6000 for a weak upload.");
 			break;
 		case FriendKind::Discord:
 			hint_->setText(

@@ -115,7 +115,7 @@ obs:
   host: "127.0.0.1"
   port: 4455
   password: ""
-  reconnect_s: 10            # retry the LAN connection this often if OBS is down
+  reconnect_s: 10            # retry the connection this often if OBS is down
   # "replay" = SaveReplayBuffer (the backtrack); OBS Replay Buffer must be started.
   # "record" = start a normal recording for record_seconds then stop.
   mode: "bridge"         # "bridge" = let the Kennel.gg Wardogs OBS plugin save + name the replay (see bridge: below)
