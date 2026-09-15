@@ -512,6 +512,7 @@ void Engine::start()
 		    "never fire.");
 #endif
 	applyRosterConfig();
+	sw.stopMedia(cfg); // the replay source forgets last session's file (it was decoding it at load)
 	timer_.start(std::max(100, cfg.pollMs));
 	healthTimer_.start(5000);
 	if (cfg.keepWarm && !applied_ && cfg.active())
@@ -2385,10 +2386,13 @@ void Engine::replayTick()
 	if (!replaying())
 		return;
 	qint64 dur = sw.mediaDurationMs();
+	int st = sw.mediaState();
 	if (!replaySought_) {
-		if (dur <= 0) {
-			if (replayClock_.elapsed() > 4000) {
-				log("Instant replay: the file did not load.");
+		// wait for the file to be open and playing before asking for the seek: a seek sent while
+		// it is still opening is dropped, and the whole clip plays from the start
+		if (dur <= 0 || st != OBS_MEDIA_STATE_PLAYING) {
+			if (replayClock_.elapsed() > 5000) {
+				log("Instant replay: the file did not start playing.");
 				stopReplay("failed");
 			}
 			return;
@@ -2397,14 +2401,27 @@ void Engine::replayTick()
 		if (replayStartMs_ > 0)
 			sw.seekMedia(replayStartMs_);
 		replaySought_ = true;
-		replayLengthMs_ = replayEndMs_ - replayStartMs_;
+		replaySeekChecks_ = 0;
+		replayLengthMs_ = std::max<qint64>(1, replayEndMs_ - replayStartMs_);
 		replayClock_.restart();
 		return;
 	}
-	if (replayEndMs_ == 0 && dur > 0)
-		replayEndMs_ = dur, replayLengthMs_ = dur;
-	bool timeUp = replayEndMs_ > 0 && replayClock_.elapsed() >= replayLengthMs_ + 250;
-	if (timeUp || (replayClock_.elapsed() > 1500 && sw.mediaEnded()))
+	if (replayEndMs_ == 0 && dur > 0) {
+		replayEndMs_ = dur; // the whole file (the compilation)
+		replayLengthMs_ = dur;
+	}
+	qint64 t = sw.mediaTimeMs();
+	// did the seek take? If playback is still well before the start after a moment, ask again
+	if (replayStartMs_ > 0 && replaySeekChecks_ < 3 && replayClock_.elapsed() > 500 && t < replayStartMs_ - 1500) {
+		sw.seekMedia(replayStartMs_);
+		replaySeekChecks_++;
+		replayClock_.restart();
+		return;
+	}
+	bool pastEnd = replayEndMs_ > 0 && t >= replayEndMs_;
+	bool ended = replayClock_.elapsed() > 800 && (st == OBS_MEDIA_STATE_ENDED || st == OBS_MEDIA_STATE_STOPPED);
+	bool safety = replayClock_.elapsed() > replayLengthMs_ + 4000; // the clock never lies, the state might
+	if (pastEnd || ended || safety)
 		stopReplay("finished");
 }
 

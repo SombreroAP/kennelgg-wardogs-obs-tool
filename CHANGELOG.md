@@ -2,6 +2,12 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.13.2
+- **"!replay" in Twitch chat works.** ClipHound reads your Twitch chat through the same login the clips use, and a "!replay" from you, a moderator, a VIP or a subscriber plays the last highlight, once per cooldown. The login needs one more permission for this, so log out and back in to Twitch on the ClipHound tab once after installing.
+- **The replay lands on the kill now.** 0.12.0 asked the media source to seek before the file had started playing, so the seek was dropped and some replays ran the whole clip from the start while others stopped after two seconds. The seek now waits for playback, is checked and retried, and the replay ends by the file's own clock. Hardware decoding is off for the replay: the GPU decoder refused a 1440p60 recording at load. The replay source also forgets its file at start-up instead of decoding last session's clip while OBS loads.
+- **Icon crops are collected.** Every kill-feed row that involves you is saved at the size it was read into ClipHound's icons/harvest folder (up to 600), so the weapon icon templates can be recut at your own resolution rather than scaled from 1080p.
+- **Music next to ClipHound.** The compilation also takes tracks from a music folder next to ClipHound.exe when the highlights folder has none; a set of Creative Commons tracks is delivered there with the attribution note they need.
+
 ## 0.13.1
 - On one PC 0.13.0 froze OBS within a minute of starting, ending in Windows refusing OBS any more window objects. This build moves the only new timer to after start-up, stops the replay source from reopening its last file when a scene collection loads, and logs how many Windows objects OBS holds whenever the count climbs, so the next occurrence names its cause by time.
 

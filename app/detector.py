@@ -125,13 +125,23 @@ class KillDetector:
     VOTES = 7                  # cap: never more OCR reads than this per row
     MIN_VOTES = 3              # floor: never decide on fewer than this (except the "it was me" shortcut)
 
-    def __init__(self, cfg, dump_rows: str | None = None):
+    def __init__(self, cfg, dump_rows: str | None = None, harvest_dir: str | None = None):
         self.cfg = cfg
         self.set_rate(float(cfg.get("fps", 5) or 5))
         self.me = cfg["player_name"]
         self.my_team = cfg.get("my_team", "auto")      # 'red' | 'blue' | 'green' | 'auto' (set by main from the HUD)
         self.rules = cfg.get("rules") or []
         self.dump_rows = dump_rows
+        # every decided row's picture, at the size it was read, kept up to a cap: the icon templates
+        # are cut from these, at the streamer's own resolution
+        self.harvest_dir = harvest_dir
+        self._harvested = 0
+        if harvest_dir:
+            try:
+                os.makedirs(harvest_dir, exist_ok=True)
+                self._harvested = len([f for f in os.listdir(harvest_dir) if f.endswith('.png')])
+            except OSError:
+                self.harvest_dir = None
         self._rows: list[_Row] = []
         self._decided: list[tuple[float, int, int, tuple]] = []   # (ts, y, dist, roles)
         self._my_kills: list[FeedEvent] = []
@@ -247,6 +257,14 @@ class KillDetector:
             os.makedirs(self.dump_rows, exist_ok=True)
             self._n += 1
             cv2.imwrite(os.path.join(self.dump_rows, f"row_{self._n:03d}_{dist}m.png"), row.crop)
+        if self.harvest_dir and row.crop is not None and self._harvested < 600 and (killer_rel == "me" or victim_rel == "me"):
+            try:
+                tag = "-".join(icons) if icons else "none"
+                name = f"{time.strftime('%Y%m%d-%H%M%S')}_{tag}_{dist}m_{row.crop.shape[1]}x{row.crop.shape[0]}.png"
+                cv2.imwrite(os.path.join(self.harvest_dir, name), row.crop)
+                self._harvested += 1
+            except Exception:
+                pass
         return ev
 
     # ---- events -> triggers ----------------------------------------------------------

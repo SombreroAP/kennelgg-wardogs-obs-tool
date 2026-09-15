@@ -107,7 +107,8 @@ def main():
         cap = RoiCapture(cfg["capture"])
     import ocr
     ocr.COLOR_BANDS = {k: tuple(v) for k, v in (cfg["detection"].get("colors") or {}).items()} or None
-    det = KillDetector(cfg["detection"], dump_rows="debug/rows" if cfg["capture"].get("debug_dump") else None)
+    det = KillDetector(cfg["detection"], dump_rows="debug/rows" if cfg["capture"].get("debug_dump") else None,
+                       harvest_dir=os.path.join("icons", "harvest"))
     det.set_rate(cfg["capture"]["fps"])
     print(f"[capture] ROI {cap.box} @ {cfg['capture']['fps']} fps, deciding a row on {det.votes} reads "
           f"({det.min_reads} if it goes away early)   dry-run={DRY}")
@@ -147,6 +148,10 @@ def main():
                 print(f"[twitch] ready as {c['twitch'].get('clipper_login', '?')} for channel {c['twitch'].get('broadcaster_login', '?')}")
             else:
                 state["tw"] = None
+            try:
+                start_chat(c)
+            except Exception as ce:
+                print(f"[chat] could not start: {ce}")
         except Exception as e:
             print(f"[twitch] not ready: {e}")
             if bridge is not None:
@@ -154,6 +159,24 @@ def main():
                              "error": f"{e}  -  no Twitch clips will be made until you log in again "
                                       f"(ClipHound tab -> Log in to Twitch)."})
             state["tw"] = None
+    chat = {"c": None}
+
+    def start_chat(c):
+        if bridge is None:
+            return
+        if chat["c"] is not None:
+            chat["c"].stop()
+            chat["c"] = None
+        if c["twitch"].get("enabled") and c["twitch"].get("access_token"):
+            from twitch_chat import TwitchChat
+            chat["c"] = TwitchChat(c["twitch"], bridge, lambda: bool((c.get("replay") or {}).get("chat", True)))
+            chat["c"].start()
+
+    try:
+        start_chat(cfg)
+    except Exception as ce:
+        print(f"[chat] could not start: {ce}")
+
     if bridge is not None:
         bridge.on_config = apply_live
         try:

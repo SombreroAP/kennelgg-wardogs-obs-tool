@@ -183,6 +183,8 @@ class Bridge:
                 c["detection"]["multikill_window_s"] = float(v["multikill_window"])
             if "series_window" in v:
                 c["detection"]["series_window_s"] = float(v["series_window"])
+            if "replay_chat" in v:
+                c.setdefault("replay", {})["chat"] = bool(v["replay_chat"])
             if self.save_cfg:
                 self.save_cfg(c)
             print(f"[bridge] settings from the plugin: {v}")
@@ -217,6 +219,9 @@ class Bridge:
             if not o.get("ok"):
                 print(f"[bridge] clip refused: {o.get('error')}")
                 self._pending.pop(o.get("id"), None)
+        elif t == "replay_result":
+            if not o.get("ok"):
+                print(f"[chat] replay from {o.get('who')} not played: {o.get('error')}")
         elif t == "highlights_build":
             if self.on_highlights:
                 self.on_highlights(o)

@@ -1194,7 +1194,9 @@ std::string Switcher::playMedia(const Config &cfg, const std::string &path, int 
 	obs_data_set_bool(st, "restart_on_activate", false);
 	obs_data_set_bool(st, "close_when_inactive", true);
 	obs_data_set_bool(st, "clear_on_media_end", true);
-	obs_data_set_bool(st, "hw_decode", true);
+	// software decode: the GPU decoder refused a 1440p60 recording at load ("more than 32 decode
+	// surfaces"), and a ten-second replay is nothing for the CPU
+	obs_data_set_bool(st, "hw_decode", false);
 	obs_data_set_int(st, "speed_percent", 100);
 	std::string e = createInScene(cfg, "ffmpeg_source", Config::replaySourceName(), st, false, false);
 	obs_data_release(st);
@@ -1280,6 +1282,26 @@ bool Switcher::mediaEnded() const
 	obs_source_release(src);
 	return st == OBS_MEDIA_STATE_ENDED || st == OBS_MEDIA_STATE_STOPPED || st == OBS_MEDIA_STATE_ERROR ||
 	       st == OBS_MEDIA_STATE_NONE;
+}
+
+int Switcher::mediaState() const
+{
+	obs_source_t *src = obs_get_source_by_name(Config::replaySourceName());
+	if (!src)
+		return OBS_MEDIA_STATE_NONE;
+	int st = (int)obs_source_media_get_state(src);
+	obs_source_release(src);
+	return st;
+}
+
+int64_t Switcher::mediaTimeMs() const
+{
+	obs_source_t *src = obs_get_source_by_name(Config::replaySourceName());
+	if (!src)
+		return 0;
+	int64_t t = obs_source_media_get_time(src);
+	obs_source_release(src);
+	return t;
 }
 
 void Switcher::stopMedia(const Config &cfg)

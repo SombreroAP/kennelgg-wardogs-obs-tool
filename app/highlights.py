@@ -291,8 +291,13 @@ class Highlights:
         if r.returncode != 0:
             raise RuntimeError("join: " + r.stderr.strip()[-200:])
         final = os.path.join(out_dir, f"Highlights {when.strftime('%Y-%m-%d %H-%M')}.mp4")
-        music = sorted(glob.glob(os.path.join(out_dir, "music", "*.mp3")) + glob.glob(os.path.join(out_dir, "music", "*.m4a"))
-                       + glob.glob(os.path.join(out_dir, "music", "*.wav")) + glob.glob(os.path.join(out_dir, "music", "*.flac")))
+        music = []
+        for folder in (os.path.join(out_dir, "music"), os.path.join(_base_dir(), "music")):
+            for ext in ("*.mp3", "*.m4a", "*.wav", "*.flac"):
+                music += glob.glob(os.path.join(folder, ext))
+            if music:
+                break  # the folder next to the clips wins over the one shipped next to ClipHound
+        music = sorted(music)
         if music:
             track = music[int(time.time()) % len(music)]
             self._say(f"Highlights: music - {os.path.basename(track)}")

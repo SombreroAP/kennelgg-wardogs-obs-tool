@@ -85,6 +85,8 @@ public:
 	int64_t mediaDurationMs() const;
 	void seekMedia(int64_t ms);
 	bool mediaEnded() const;
+	int mediaState() const;      // obs_media_state, OBS_MEDIA_STATE_NONE when there is no source
+	int64_t mediaTimeMs() const; // where playback is in the file
 	void stopMedia(const Config &cfg);
 	/// Choices a source kind offers for one of its list properties (e.g. window_capture "window").
 	static std::vector<std::pair<std::string, std::string>> listProperty(const char *kind,

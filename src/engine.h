@@ -239,6 +239,7 @@ private:
 	qint64 replayStartMs_ = 0, replayEndMs_ = 0, replayLengthMs_ = 0;
 	QElapsedTimer replayClock_;
 	bool replaySought_ = false;
+	int replaySeekChecks_ = 0;
 	QString replayWhat_;
 	Clips::Entry pendingReplay_;
 	QDateTime sessionStart_;
