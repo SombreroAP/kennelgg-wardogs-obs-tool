@@ -23,7 +23,7 @@ SquadPanel::SquadPanel(Engine *engine, QWidget *parent) : QDialog(parent), e_(en
 	how->setWordWrap(true);
 	v->addWidget(how);
 
-	add_ = new QPushButton("Add popped-out Discord streams", this);
+	add_ = new QPushButton("Add popped-out Discord streams - (mute Discord stream before adding)", this);
 	add_->setMinimumHeight(36);
 	add_->setDefault(true);
 	v->addWidget(add_);

@@ -143,7 +143,7 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	// the two things done most often mid-session, right at the top: add whatever is popped out,
 	// and bring the pop-outs back to reach their controls
 	auto *quick = new QHBoxLayout();
-	auto *addPop = new QPushButton("Add pop-outs", this);
+	auto *addPop = new QPushButton("Add pop-outs - (mute Discord stream before adding)", this);
 	addPop->setToolTip(
 		"Every popped-out Discord stream becomes a squad mate, named by its username. Same as the "
 		"Add on the Squad panel. Right-click each stream in Discord and mute it first: its game sound "
