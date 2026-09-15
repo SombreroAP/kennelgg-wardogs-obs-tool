@@ -852,7 +852,7 @@ QWidget *SettingsDialog::buildSwitchTab()
 	nearFollow_->setChecked(e_->cfg.nearFollow);
 	fc->addRow(nearFollow_);
 	nearMax_ = new QSpinBox(gc);
-	nearMax_->setRange(0, 500);
+	nearMax_->setRange(0, 100); // the NEARBY list never shows more than 100 m
 	nearMax_->setSuffix(" m or closer");
 	nearMax_->setSpecialValueText("any distance");
 	nearMax_->setValue(e_->cfg.nearMaxM);

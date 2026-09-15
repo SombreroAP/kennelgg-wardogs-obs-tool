@@ -1,4 +1,5 @@
 #include "config.h"
+#include <algorithm>
 #include <obs-module.h>
 #include <util/platform.h>
 #include <plugin-support.h>
@@ -436,6 +437,7 @@ void Config::load()
 		nearMax99 = true;
 		nearMaxM = 99;
 	}
+	nearMaxM = std::clamp(nearMaxM, 0, 100); // the NEARBY list never shows more than 100 m
 	// Squad automation is driven by the Kennel.gg bot and is for members of that server: the
 	// address is not a setting, and the channel is whichever one you are sitting in.
 	rosterUrl = kennelRosterUrl();
