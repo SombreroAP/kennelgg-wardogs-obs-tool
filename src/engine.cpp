@@ -2279,12 +2279,12 @@ void Engine::setFriendAudio(bool on)
 	QString who = applied_ && a ? QString::fromStdString(a->name) : QString();
 	if (on)
 		log(who.isEmpty()
-			    ? QString("POV sound on: whoever is on screen is the one feed with sound.")
-			    : QString("POV sound on: %1's feed has sound now; every other squad mate stays muted.")
+			    ? QString("Squad mate's sound on: whoever is on screen is the one feed with sound.")
+			    : QString("Squad mate's sound on: %1's feed has sound now; every other squad mate stays muted.")
 				      .arg(who));
 	else
-		log(who.isEmpty() ? QString("POV sound off: squad mates' feeds are silent on your stream.")
-				  : QString("POV sound off: %1's feed is muted on your stream.").arg(who));
+		log(who.isEmpty() ? QString("Squad mate's sound off: their feeds are silent on your stream.")
+				  : QString("Squad mate's sound off: %1's feed is muted on your stream.").arg(who));
 	emit stateChanged();
 }
 

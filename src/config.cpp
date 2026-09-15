@@ -418,7 +418,7 @@ void Config::load()
 		audioAutoPicked = true;
 	}
 	// 0.9.1: the squad mate on screen is the one feed with sound, on by default, and the unmute
-	// moves with the picture. The dock's POV sound button and the Switch tab turn it off.
+	// moves with the picture. The Switch tab turns it off.
 	if (!audioDefaults5) {
 		audioDefaults5 = true;
 		friendAudio = true;

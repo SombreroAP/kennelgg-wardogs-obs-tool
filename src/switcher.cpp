@@ -1448,7 +1448,7 @@ std::vector<std::string> Switcher::apply(const Config &cfg, bool on)
 			obs_source_release(a);
 	}
 
-	// 1c. one feed with sound: theirs while POV sound is on, and every other squad mate muted
+	// 1c. one feed with sound: theirs while their sound is on, and every other squad mate muted
 	applyFriendAudio(cfg, on);
 
 	// 2. the look overlay, above the friend

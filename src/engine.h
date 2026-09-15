@@ -160,7 +160,7 @@ public slots:
 	void setEnabled(bool on);
 	/// The sound of whoever is on screen, on your stream. On: the squad mate being shown is the one
 	/// feed with sound and the unmute moves with the picture; off: every squad mate is silent. The
-	/// dock's POV sound button, the Switch tab's tick box and a hotkey all set the same thing.
+	/// Switch tab's tick box. Not for Discord squad mates: their sound is not handled.
 	void setFriendAudio(bool on);
 	void captureTemplate();
 	void useBuiltInTemplate();
