@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.10.5
+- **The dock's two drop-downs list only who is live with you.** With the Kennel.gg roster open, the squad-mate box and the Dual POV box offer just the people streaming in your voice channel right now; everyone else in the squad is managed from the Squad panel. Without the roster they behave as before.
+
 ## 0.10.4
 - **Mute the stream in Discord.** Everywhere the plugin tells you to pop a stream out (Setup, the Squad panel, the Add pop-outs button and its result) it now also says to right-click the stream and mute it, since an unmuted stream's game sound plays in your headphones and goes out on your stream through Desktop Audio the whole time.
 

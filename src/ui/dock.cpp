@@ -512,13 +512,17 @@ void Dock::refresh()
 						       : "Force " + liveNames_[k] + "'s feed into the main view.");
 		}
 	}
-	// Only squad mates with a picture are offered: a slot the voice roster has in voice but not
-	// streaming is left out. Slots nobody can vouch for (Twitch, an OBS source) stay in.
+	// With the Kennel.gg roster open, the two drop-downs list only the people live in your voice
+	// channel right now; everyone else is managed from the Squad panel. Without the roster, only
+	// slots known to have no picture are left out.
+	bool live = e_->cfg.rosterEnabled && e_->roster.running() && e_->rosterAccess() == Engine::Access::Ok;
 	QStringList names;
 	QList<int> idx;
 	for (size_t i = 0; i < e_->cfg.friends.size(); ++i) {
 		const Friend &f = e_->cfg.friends[i];
 		if (e_->feedState(f) == Engine::Feed::Off)
+			continue;
+		if (live && e_->feedState(f) != Engine::Feed::Live)
 			continue;
 		QString label = QString::fromStdString(f.name);
 		if (e_->feedState(f) == Engine::Feed::Live)
@@ -538,7 +542,9 @@ void Dock::refresh()
 		int row = idx.indexOf(want);
 		box->setCurrentIndex(row); // -1 when the one chosen is not streaming: nothing selected
 		box->setEnabled(!names.isEmpty());
-		box->setPlaceholderText(e_->cfg.friends.empty() ? "no squad mates yet" : "nobody streaming");
+		box->setPlaceholderText(e_->cfg.friends.empty() ? "no squad mates yet"
+					: live                  ? "nobody live in your channel"
+								: "nobody streaming");
 	};
 	filling_ = true;
 	fill(active_, e_->cfg.activeFriend);
