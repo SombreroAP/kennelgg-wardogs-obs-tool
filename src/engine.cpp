@@ -382,10 +382,39 @@ QString Engine::saveFrame()
 
 void Engine::autoPickAudio()
 {
-	// Nothing of yours is muted unless you tick it yourself (Settings -> Switch). This used to tick
-	// your desktop audio when the list was empty, and because the "done that" flag was never saved
-	// it did so again on every start, undoing anyone who had cleared the list.
+	// Once: the sound of YOUR game goes on the mute list, so a squad mate's POV comes with their
+	// sound and not yours on top. The game source when it carries audio (a capture card does),
+	// otherwise every desktop-audio input. Microphones are never touched. Cleared by hand, it stays
+	// cleared: the flag is saved.
+	if (cfg.audioAutoPicked || cfg.gameSource.empty())
+		return;
+	auto listed = [this](const std::string &n) {
+		return std::find(cfg.muteWhileDowned.begin(), cfg.muteWhileDowned.end(), n) !=
+		       cfg.muteWhileDowned.end();
+	};
+	QStringList picked;
+	obs_source_t *game = obs_get_source_by_name(cfg.gameSource.c_str());
+	if (!game)
+		return; // not in this collection yet: try again next time
+	bool gameAudio = (obs_source_get_output_flags(game) & OBS_SOURCE_AUDIO) != 0;
+	obs_source_release(game);
+	if (gameAudio) {
+		if (!listed(cfg.gameSource)) {
+			cfg.muteWhileDowned.push_back(cfg.gameSource);
+			picked << QString::fromStdString(cfg.gameSource);
+		}
+	} else {
+		for (const auto &in : Switcher::inputs())
+			if (in.second == "wasapi_output_capture" && !listed(in.first)) {
+				cfg.muteWhileDowned.push_back(in.first);
+				picked << QString::fromStdString(in.first);
+			}
+	}
 	cfg.audioAutoPicked = true;
+	cfg.save();
+	if (!picked.isEmpty())
+		log("While a squad mate is on screen, " + picked.join(", ") +
+		    " is muted so their sound plays instead of yours (Settings, Switch, to change).");
 }
 
 void Engine::start()
@@ -1266,6 +1295,7 @@ void Engine::watchPopouts()
 
 void Engine::reloadConfig()
 {
+	autoPickAudio(); // the game source may have just been chosen
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
 	clips.seriesWindowS = cfg.clipSeriesS;
 	clips.folder = QString::fromStdString(cfg.clipFolder);

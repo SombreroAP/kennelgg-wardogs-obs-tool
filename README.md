@@ -87,11 +87,11 @@ the Kennel.gg Discord or to detect your username.
 
 ## Sound
 
-Nothing of yours is muted by default. The squad mate on screen is the one feed with sound; the dock's
-**POV sound** button (and a hotkey) turns that off. Discord hands OBS one track for the whole call, so
-for Discord squad mates that track is what turns on and off; one stream's own level is the slider on
-its pop-out. Tick anything of your own on the Switch tab to mute while a squad mate is up if you do not
-want both game sounds at once.
+While a squad mate is on screen, their sound plays and your own game's sound is muted: the game
+source when it carries audio, otherwise Desktop Audio, chosen once and listed on the Switch tab where
+it can be changed. Your microphone is never touched. The dock's **POV sound** button (and a hotkey)
+turns their sound off. Discord hands OBS one track for the whole call, so for Discord squad mates that
+track is what turns on and off; one stream's own level is the slider on its pop-out.
 
 ## Clips and ClipHound
 

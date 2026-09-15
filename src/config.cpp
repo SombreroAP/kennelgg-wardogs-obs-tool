@@ -91,6 +91,7 @@ void Config::load()
 	DEFB(discordShared1);
 	DEFB(audioDefaults4);
 	DEFB(audioDefaults5);
+	DEFB(audioDefaults6);
 	DEFB(audioAutoPicked);
 	DEFB(rosterEnabled);
 	DEFS(rosterUrl);
@@ -207,6 +208,7 @@ void Config::load()
 	GETB(discordShared1);
 	GETB(audioDefaults4);
 	GETB(audioDefaults5);
+	GETB(audioDefaults6);
 	GETB(audioAutoPicked);
 	GETB(rosterEnabled);
 	GETS(rosterUrl);
@@ -421,6 +423,12 @@ void Config::load()
 		audioDefaults5 = true;
 		friendAudio = true;
 	}
+	// 0.10.2: while a squad mate is on screen their sound plays and yours is muted. The pick of
+	// what "yours" is needs OBS's sources, so it runs once in Engine::autoPickAudio.
+	if (!audioDefaults6) {
+		audioDefaults6 = true;
+		audioAutoPicked = false;
+	}
 	// Squad automation is driven by the Kennel.gg bot and is for members of that server: the
 	// address is not a setting, and the channel is whichever one you are sitting in.
 	rosterUrl = kennelRosterUrl();
@@ -450,6 +458,7 @@ void Config::save() const
 	SETB(discordShared1);
 	SETB(audioDefaults4);
 	SETB(audioDefaults5);
+	SETB(audioDefaults6);
 	SETB(audioAutoPicked);
 	SETB(rosterEnabled);
 	SETS(rosterUrl);

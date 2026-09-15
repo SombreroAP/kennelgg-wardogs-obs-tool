@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.10.2
+- **Their sound instead of yours.** While a squad mate is on screen, your own game's sound is muted and theirs plays: the game source when it carries audio (a capture card does), otherwise Desktop Audio, chosen once and listed under Settings, Switch, where it can be changed or cleared. Your microphone is never touched, and everything is put back exactly as it was when you are revived.
+
 ## 0.10.1
 - **A Kennel.gg mark on the POV overlay.** While a squad mate is on screen, a small faint hound and "kennel.gg" sit bottom-right of the picture, out of the way of the name tag and the camcorder frame. On by default; the tick box on the Look tab turns it off. Not drawn in the Dual POV window.
 

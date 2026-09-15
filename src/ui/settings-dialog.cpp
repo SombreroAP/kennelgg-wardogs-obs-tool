@@ -969,13 +969,13 @@ QWidget *SettingsDialog::buildSwitchTab()
 	friendAudio_->setChecked(e_->cfg.friendAudio);
 	v3->addWidget(friendAudio_);
 	v3->addWidget(muted(
-		"On by default: whoever is on screen is the one feed with sound, every other squad mate stays muted, and the unmute moves with the picture. Untick it and every squad mate's feed is silent. Discord hands OBS one track for the whole call (every stream you watch, voices included), so for Discord squad mates that track is what turns on and off. Tick anything of your own below if you do not want both game sounds at once.",
+		"On by default: whoever is on screen is the one feed with sound, every other squad mate stays muted, and the unmute moves with the picture. Untick it and every squad mate's feed is silent. Discord hands OBS one track for the whole call (every stream you watch, voices included), so for Discord squad mates that track is what turns on and off. Your own game sound is ticked below by default, so theirs takes over; untick it to hear both.",
 		g3));
 	auto *h3 = new QHBoxLayout();
 	mute_ = new QListWidget(g3);
 	h3->addWidget(mute_, 1);
 	h3->addWidget(
-		muted("Tick anything of YOURS to mute while a squad mate is on screen - usually Desktop Audio, or the game / capture-card source if that carries the sound. Nothing is ticked by default. Do NOT tick your microphone; it keeps going either way. Ticked inputs are put back exactly as they were when you are revived.",
+		muted("What of YOURS is muted while a squad mate is on screen. Your game's sound is ticked by default (the game source when it carries audio, otherwise Desktop Audio), so their POV comes with their sound and not yours on top. Untick it to hear both. Do NOT tick your microphone; it keeps going either way. Ticked inputs are put back exactly as they were when you are revived.",
 		      g3),
 		1);
 	v3->addLayout(h3, 1);
