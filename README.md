@@ -159,7 +159,7 @@ can also be added to another server you play on; that server then appears in the
 
 | Tab | What is there |
 |---|---|
-| Switch | game source and scene; squad mates and their in-game names; the vertical scene for a portrait canvas; **Show whoever is closest** with Wait between swaps and the 50 m range; the sound of the squad mate on screen and what of yours to mute; Squad from Discord; Extras: keep warm, preload every feed |
+| Switch | game source and scene; squad mates and their in-game names; the vertical scene for a portrait canvas; **Show whoever is closest** with Wait between swaps and the 99 m range; the sound of the squad mate on screen and what of yours to mute; Squad from Discord; Extras: keep warm, preload every feed |
 | Dual POV | on/off, crew mate, vehicle and seat preset or a dragged box, opacity, the frame and name size, auto mode |
 | Look | name tag, plate, camcorder frame, grain, vignette; preview |
 | Detect | live picture with the damage-log match, the header box and the blue **NEARBY box**; **Test read**; thresholds and delays |
@@ -183,7 +183,7 @@ Tick **Closest** in the dock, drag the blue box round the NEARBY list on the Det
 squad mate their in-game name (asked for when a pop-out is added). Only names you have configured are
 ever matched. While you are going down every reading picks the nearest one outright; once a squad mate
 is on screen, a swap to a nearer one waits for **Wait between swaps** (4 s by default) and only happens
-for someone within 50 m while the one on screen is still in the list, so nothing flaps. Someone the
+for someone within 99 m (turn it down on the Switch tab) while the one on screen is still in the list, so nothing flaps. Someone the
 roster says is not streaming is never picked; if nobody close is live, any live squad mate is shown.
 ClipHound must be running: ticking Closest without it asks to start it.
 

@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.10.6
+- **Swap over from further away.** Once a squad mate is on screen, a nearer one now takes over from up to 99 m away by default (it was 50, or whatever you had set); turn it down on the Switch tab if you want fewer swaps.
+
 ## 0.10.5
 - **The dock's two drop-downs list only who is live with you.** With the Kennel.gg roster open, the squad-mate box and the Dual POV box offer just the people streaming in your voice channel right now; everyone else in the squad is managed from the Squad panel. Without the roster they behave as before.
 

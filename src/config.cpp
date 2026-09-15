@@ -90,6 +90,7 @@ void Config::load()
 	DEFB(audioDefaults3);
 	DEFB(discordShared1);
 	DEFB(discordAudio1);
+	DEFB(nearMax99);
 	DEFB(audioDefaults4);
 	DEFB(audioDefaults5);
 	DEFB(audioDefaults6);
@@ -207,6 +208,7 @@ void Config::load()
 	GETB(audioDefaults3);
 	GETB(discordShared1);
 	GETB(discordAudio1);
+	GETB(nearMax99);
 	GETB(audioDefaults4);
 	GETB(audioDefaults5);
 	GETB(audioDefaults6);
@@ -429,6 +431,11 @@ void Config::load()
 		audioDefaults6 = true;
 		audioAutoPicked = false;
 	}
+	// 0.10.6: a nearer squad mate takes over from up to 99 m away by default; turn it down if you like
+	if (!nearMax99) {
+		nearMax99 = true;
+		nearMaxM = 99;
+	}
 	// Squad automation is driven by the Kennel.gg bot and is for members of that server: the
 	// address is not a setting, and the channel is whichever one you are sitting in.
 	rosterUrl = kennelRosterUrl();
@@ -457,6 +464,7 @@ void Config::save() const
 	SETB(audioDefaults3);
 	SETB(discordShared1);
 	SETB(discordAudio1);
+	SETB(nearMax99);
 	SETB(audioDefaults4);
 	SETB(audioDefaults5);
 	SETB(audioDefaults6);

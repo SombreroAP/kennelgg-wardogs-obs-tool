@@ -72,6 +72,7 @@ struct Config {
 	bool audioDefaults3 = false; // ...and once more: nothing muted, and no sound taken from their feed
 	bool discordShared1 = false; // one-time move to one shared capture of the Discord window
 	bool discordAudio1 = false;  // one-time: the Discord audio captures deleted (0.10.3)
+	bool nearMax99 = false;      // one-time: the swap-over range moved to 99 m (0.10.6)
 	bool audioDefaults4 = false; // the mute list cleared once more: the auto-pick had been refilling it
 	bool audioDefaults5 = false; // one-time: the squad mate on screen has sound, on by default (0.9.1)
 	bool audioDefaults6 = false; // one-time: your own game sound muted while they are up (0.10.2)
@@ -161,7 +162,7 @@ struct Config {
 	double nearX = 0.80, nearY = 0.79, nearW = 0.19,
 	       nearH = 0.14;   // where the NEARBY list is (fractions of the game source)
 	int nearMarginM = 15;  // someone must be this many metres closer to take over mid-swap
-	int nearMaxM = 50;     // once on screen, only swap over to someone this close or closer
+	int nearMaxM = 99;     // once on screen, only swap over to someone this close or closer
 	int nearCooldownS = 4; // shortest gap between two swaps of the feed while down, 1-10 s
 	int nearTtlS = 20;     // a reading older than this is stale and ignored
 	bool appConfigDirty =
