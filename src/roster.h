@@ -4,7 +4,6 @@
 #include <QList>
 #include <QSet>
 #include <QTimer>
-#include <QNetworkAccessManager>
 
 /// Who is sitting in the squad's Discord voice channel, and who is sharing their screen.
 ///
@@ -36,6 +35,8 @@ public:
 	QString homeGuild() const { return home_; }
 	QString joinUrl() const { return join_; } // the plugin's own invite into that server
 	bool membersKnown() const { return membersKnown_; }
+	/// The last poll succeeded. False until the first answer, and while the address cannot be read.
+	bool healthy() const { return healthy_; }
 	/// Is this Discord username a member of the home server, by the bot's last poll. The bot
 	/// publishes hashes, not names, so this hashes the same way.
 	bool isMember(const QString &handle) const;
@@ -55,7 +56,6 @@ signals:
 	void polled();
 
 private:
-	QNetworkAccessManager *net_ = nullptr;
 	QTimer timer_;
 	QString url_, onlyChannel_, onlyGuild_, status_ = "off";
 	QStringList guilds_;
@@ -65,4 +65,5 @@ private:
 	bool membersKnown_ = false;
 	QList<Member> members_;
 	bool inFlight_ = false;
+	bool healthy_ = false; // the last poll came back and parsed
 };

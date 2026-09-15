@@ -15,6 +15,9 @@ add_library(${CMAKE_PROJECT_NAME} MODULE)
 
 find_package(libobs REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE OBS::libobs)
+if(WIN32)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE winhttp)
+endif()
 
 if(ENABLE_FRONTEND_API)
   find_package(obs-frontend-api REQUIRED)
@@ -47,6 +50,7 @@ target_sources(
     src/clips.cpp
     src/roster.cpp
     src/discord-ipc.cpp
+    src/http.cpp
     src/ui/dock.cpp
     src/ui/squad.cpp
     src/ui/wizard.cpp

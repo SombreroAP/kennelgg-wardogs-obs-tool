@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.10.10
+- **The roster is fetched through Windows' own HTTP stack.** The Qt that OBS ships has no TLS backend on some PCs, and every read of the roster (and the update check) failed there with "TLS initialization failed", which 0.10.8 then took as "nobody is live with you". Both requests now go through WinHTTP. While the roster cannot be read, the dock says so and the squad shows as it would without a roster, with pop-outs deciding who is live.
+
 ## 0.10.9
 - The Add pop-outs buttons on the dock and the Squad panel carry the reminder in their label: "(mute Discord stream before adding)".
 

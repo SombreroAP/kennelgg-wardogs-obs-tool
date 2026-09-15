@@ -8,7 +8,6 @@
 #include <QImage>
 #include <QTimer>
 #include <QDateTime>
-#include <QNetworkAccessManager>
 #include "bridge.h"
 #include "capture.h"
 #include "clips.h"
@@ -57,6 +56,9 @@ public:
 	enum class Access { Ok, NoUsername, NotMember, Unknown };
 	Access rosterAccess() const;
 	bool rosterOpen() const; // Ok, or nothing to check against yet
+	/// The roster is on, readable, and not locked: what the dock's live-only lists and the liveness
+	/// checks go by. When the address cannot be read the pop-outs alone decide, as without a roster.
+	bool rosterLive() const;
 	QString rosterStatus() const;
 	/// The Kennel.gg Discord, through the plugin's own invite.
 	QString discordUrl() const;
@@ -230,7 +232,6 @@ private:
 	Detector detGame_, detRevive_;
 	bool dualOn_ = false, dualAutoOn_ = false;
 	QString vehicleSeat_;
-	QNetworkAccessManager *net_ = nullptr;
 	QString updateState_, newVersion_, newUrl_, newNotes_;
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
 	int downRun_ = 0, upRun_ = 0, tickN_ = 0;

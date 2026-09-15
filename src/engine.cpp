@@ -21,8 +21,7 @@
 #include <QElapsedTimer>
 #include <QCoreApplication>
 #include <QUrl>
-#include <QNetworkReply>
-#include <QNetworkRequest>
+#include "http.h"
 #include <QDateTime>
 
 #ifdef _WIN32
@@ -602,42 +601,34 @@ void Engine::checkForUpdate(bool manual)
 		emit updateChecked();
 		return;
 	}
-	if (!net_)
-		net_ = new QNetworkAccessManager(this);
 	updateState_ = "checking...";
 	emit updateChecked();
-	QNetworkRequest req{QUrl(url)};
-	req.setHeader(QNetworkRequest::UserAgentHeader, QString("KennelggWardogsOBSTool/%1").arg(PLUGIN_VERSION));
-	req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-	QNetworkReply *r = net_->get(req);
-	QTimer::singleShot(8000, r, [r]() {
-		if (r->isRunning())
-			r->abort();
-	});
-	connect(r, &QNetworkReply::finished, this, [this, r, manual]() {
-		r->deleteLater();
-		if (r->error() != QNetworkReply::NoError) {
-			updateState_ = "could not check (" + r->errorString() + ")";
-			if (manual)
-				log("Update check: " + updateState_);
-			emit updateChecked();
-			return;
-		}
-		QJsonObject o = QJsonDocument::fromJson(r->readAll()).object();
-		newVersion_ = o.value("version").toString();
-		newUrl_ = o.value("url").toString();
-		newNotes_ = o.value("notes").toString();
-		if (newVersion_.isEmpty())
-			updateState_ = "nothing published to check against yet";
-		else if (isNewer(newVersion_, PLUGIN_VERSION)) {
-			updateState_ = newVersion_ + " is out (you have " + QString(PLUGIN_VERSION) + ")";
-			log("A newer build is out: " + newVersion_ + (newNotes_.isEmpty() ? "" : " - " + newNotes_) +
-			    (newUrl_.isEmpty() ? "" : "  " + newUrl_));
-		} else
-			updateState_ = "up to date (" + QString(PLUGIN_VERSION) + ")";
-		emit updateChecked();
-		emit stateChanged();
-	});
+	Http::getAsync(this, url, 8000, QString("KennelggWardogsOBSTool/%1").arg(PLUGIN_VERSION),
+		       [this, manual](Http::Result r) {
+			       if (!r.ok) {
+				       updateState_ = "could not check (" + r.error + ")";
+				       if (manual)
+					       log("Update check: " + updateState_);
+				       emit updateChecked();
+				       return;
+			       }
+			       QJsonObject o = QJsonDocument::fromJson(r.body).object();
+			       newVersion_ = o.value("version").toString();
+			       newUrl_ = o.value("url").toString();
+			       newNotes_ = o.value("notes").toString();
+			       if (newVersion_.isEmpty())
+				       updateState_ = "nothing published to check against yet";
+			       else if (isNewer(newVersion_, PLUGIN_VERSION)) {
+				       updateState_ =
+					       newVersion_ + " is out (you have " + QString(PLUGIN_VERSION) + ")";
+				       log("A newer build is out: " + newVersion_ +
+					   (newNotes_.isEmpty() ? "" : " - " + newNotes_) +
+					   (newUrl_.isEmpty() ? "" : "  " + newUrl_));
+			       } else
+				       updateState_ = "up to date (" + QString(PLUGIN_VERSION) + ")";
+			       emit updateChecked();
+			       emit stateChanged();
+		       });
 }
 
 void Engine::twitchLogin()
@@ -773,13 +764,21 @@ void Engine::applyRosterConfig()
 
 Engine::Access Engine::rosterAccess() const
 {
-	if (!roster.running() || !roster.membersKnown())
-		return Access::Unknown; // nothing polled yet
+	if (!roster.running() || !roster.healthy() || !roster.membersKnown())
+		return Access::Unknown; // nothing polled yet, or the address cannot be read
 	if (roster.homeGuild().compare(Config::kennelHomeGuild(), Qt::CaseInsensitive) != 0)
 		return Access::NotMember; // not the Kennel.gg bot
 	if (cfg.myDiscord.empty())
 		return Access::NoUsername;
 	return roster.isMember(QString::fromStdString(cfg.myDiscord)) ? Access::Ok : Access::NotMember;
+}
+
+bool Engine::rosterLive() const
+{
+	if (!cfg.rosterEnabled || !roster.running() || !roster.healthy())
+		return false;
+	Access a = rosterAccess();
+	return a != Access::NotMember && a != Access::NoUsername;
 }
 
 bool Engine::rosterOpen() const
@@ -878,7 +877,7 @@ void Engine::checkAccess()
 
 void Engine::syncRoster()
 {
-	if (!cfg.rosterEnabled || !rosterOpen())
+	if (!rosterLive())
 		return;
 	// Only the people actually sharing get a slot. Everyone in the call would mean a window
 	// capture each for feeds that do not exist, and Discord puts every share inside the one
@@ -1597,7 +1596,7 @@ Engine::Feed Engine::feedState(const Friend &f) const
 	// The voice roster is the authority when it knows my channel: a squad mate it does not list
 	// there is not streaming to me, whatever windows are still open on this PC - Discord leaves a
 	// pop-out up after a stream ends, and a bound window is not proof of a picture.
-	if (cfg.rosterEnabled && roster.running() && rosterOpen()) {
+	if (rosterLive()) {
 		QString h = QString::fromStdString(f.handle).toLower(), n = QString::fromStdString(f.name).toLower();
 		QString me = QString::fromStdString(cfg.myDiscord).toLower(), myChan;
 		if (!me.isEmpty())

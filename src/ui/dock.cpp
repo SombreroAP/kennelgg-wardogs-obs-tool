@@ -515,9 +515,7 @@ void Dock::refresh()
 	// With the Kennel.gg roster open, the two drop-downs list only the people live in your voice
 	// channel right now; everyone else is managed from the Squad panel. Without the roster, only
 	// slots known to have no picture are left out.
-	Engine::Access acc = e_->rosterAccess();
-	bool live = e_->cfg.rosterEnabled && e_->roster.running() && acc != Engine::Access::NotMember &&
-		    acc != Engine::Access::NoUsername;
+	bool live = e_->rosterLive();
 	QStringList names;
 	QList<int> idx;
 	for (size_t i = 0; i < e_->cfg.friends.size(); ++i) {
@@ -650,8 +648,12 @@ void Dock::refresh()
 		Engine::Access a = e_->rosterAccess();
 		QString url = e_->discordUrl().toHtmlEscaped();
 		bool show = !e_->cfg.rosterEnabled || a == Engine::Access::NotMember || a == Engine::Access::NoUsername;
-		locked_->setVisible(show);
-		if (!e_->cfg.rosterEnabled || a == Engine::Access::NoUsername)
+		bool unreadable = e_->cfg.rosterEnabled && e_->roster.running() && !e_->roster.healthy();
+		locked_->setVisible(show || unreadable);
+		if (unreadable && !show) {
+			locked_->setText("Discord voice: " + e_->roster.status().toHtmlEscaped() +
+					 ". Until it can be read, the squad shows as it would without the roster.");
+		} else if (!e_->cfg.rosterEnabled || a == Engine::Access::NoUsername)
 			locked_->setText(
 				"<a style=\"color:#c99a3b\" href=\"" + url +
 				"\">Join Kennel.gg Discord for more automation</a>: live squad mates appear "
