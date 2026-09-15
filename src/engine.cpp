@@ -854,6 +854,12 @@ void Engine::detectDiscordUser(bool byHand)
 
 void Engine::checkAccess()
 {
+	// the roster's own state, said once per change, so the log shows what the dock is working from
+	QString rs = roster.status();
+	if (cfg.rosterEnabled && rs != lastRosterStatus_) {
+		lastRosterStatus_ = rs;
+		log("Discord voice: " + rs + ".");
+	}
 	Access a = rosterAccess();
 	if (a == lastAccess_)
 		return;
@@ -1616,6 +1622,8 @@ Engine::Feed Engine::feedState(const Friend &f) const
 			}
 		if (!myChan.isEmpty())
 			return Feed::Off; // the roster knows my channel and they are not in it
+		if (!me.isEmpty())
+			return Feed::Off; // I am not in voice at all: nobody is live with me
 	}
 	if (f.onPopout())
 		return Feed::Live; // no roster to ask: a bound window is the best sign there is

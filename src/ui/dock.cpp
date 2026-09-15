@@ -515,7 +515,9 @@ void Dock::refresh()
 	// With the Kennel.gg roster open, the two drop-downs list only the people live in your voice
 	// channel right now; everyone else is managed from the Squad panel. Without the roster, only
 	// slots known to have no picture are left out.
-	bool live = e_->cfg.rosterEnabled && e_->roster.running() && e_->rosterAccess() == Engine::Access::Ok;
+	Engine::Access acc = e_->rosterAccess();
+	bool live = e_->cfg.rosterEnabled && e_->roster.running() && acc != Engine::Access::NotMember &&
+		    acc != Engine::Access::NoUsername;
 	QStringList names;
 	QList<int> idx;
 	for (size_t i = 0; i < e_->cfg.friends.size(); ++i) {
@@ -525,8 +527,8 @@ void Dock::refresh()
 		if (live && e_->feedState(f) != Engine::Feed::Live)
 			continue;
 		QString label = QString::fromStdString(f.name);
-		if (e_->feedState(f) == Engine::Feed::Live)
-			label += "  \u25cf"; // a dot for the ones known to be streaming
+		if (!live && e_->feedState(f) == Engine::Feed::Live)
+			label += "  \u25cf"; // a dot for the ones known to be streaming (all of them, when live-only)
 		names << label;
 		idx << (int)i;
 	}

@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.10.8
+- **Only who is live with you, properly.** The dock's drop-downs now hide everyone who is not streaming in your voice channel whenever the roster is on and you are a member, even before the first poll has answered; the dot next to names is gone from that list since everyone in it is live. When you are not in voice at all, nobody counts as live with you.
+- The log now says what the roster reports ("Discord voice: 3 in voice, 1 sharing", or the error) each time that changes.
+
 ## 0.10.7
 - **Swap over from further away.** Once a squad mate is on screen, a nearer one now takes over from up to 99 m away by default (it was 50, or whatever you had set); turn it down on the Switch tab if you want fewer swaps. The setting stops at 100 m, which is as far as the game's NEARBY list ever shows.
 

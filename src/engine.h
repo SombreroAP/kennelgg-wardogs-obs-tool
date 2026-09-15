@@ -218,6 +218,7 @@ private:
 	bool popoutsShown_ = false;
 	QString popoutNote_; // the unnamed pop-out we last mentioned, so the log says it once
 	Access lastAccess_ = Access::Unknown;
+	QString lastRosterStatus_;
 	void checkAccess(); // say it once when the roster locks or unlocks
 	std::atomic<bool> busy_{false}, stopping_{false}, frameBusy_{false};
 	Capture capGame_, capFriend_, capRoi_;
