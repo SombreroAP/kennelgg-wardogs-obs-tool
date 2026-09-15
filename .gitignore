@@ -2,3 +2,4 @@
 build_*/
 release/
 .DS_Store
+app/work/
