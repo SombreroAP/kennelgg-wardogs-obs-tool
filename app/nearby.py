@@ -28,7 +28,7 @@ CONFUSE = str.maketrans({"i": "1", "l": "1", "I": "1", "|": "1", "!": "1", "O": 
                          "S": "5", "B": "8", "G": "6"})
 MAX_M = 999
 GAP = 24                      # white space between stacked rows so tesseract keeps them apart
-JUNK = ("nearby", "squad")    # the panel's own header (matched on letters only)
+JUNK = ("nearby", "squad", "cerca", "proximite", "aproximite", "proximit", "aproximit")    # the panel's own header in English, Spanish, French (letters only)
 
 
 def _mask_tophat(gray_up: np.ndarray) -> np.ndarray:

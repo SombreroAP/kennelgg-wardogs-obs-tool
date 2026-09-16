@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.15.0
+- **The game in Spanish or French.** The downed detector looks for the damage-log header on your screen, and until now it only knew the English "VIEW DAMAGE LOG". A game in Spanish ("VER REGISTRO DE DAÑOS") or French ("AFFICHER LE JOURNAL DES DÉGÂTS") scored just under the line, so the swap fired once in a while and dropped after a few seconds. All three wordings ship now. Game language on the Detect tab is Auto: every wording is searched until one matches, the plugin logs which, keeps that one and remembers it for next time. Pick a language by hand if you would rather. The French wording was cut from a 1080p stream frame, the Spanish from a 1440p screenshot, so the Spanish one is the better tested of the two; if yours is not found, save a frame while downed (Detect tab) and open a ticket in the Kennel.gg Discord.
+- **More languages by ticket.** English, Spanish and French are the ones on board. For another language, open a ticket in the Kennel.gg Discord with a frame saved while downed and it goes in the next build.
+- The NEARBY reader skips the panel's own header in Spanish and French too (CERCA, À PROXIMITÉ), so it cannot be taken for a squad mate's name. Still English-only: the vehicle-seat reading (it reads the keybind list) and the "REVIVING" word that ends the swap a moment early; in other languages the swap ends when the damage log goes, as before.
+
 ## 0.14.4
 - **No player name meant every kill was yours.** With the in-game name left blank on the ClipHound tab, every kill-feed row matched "me" on both sides, so ClipHound fired "Killed myself" on other people's kills every twenty seconds and asked for a clip each time. A blank name now matches nobody, and ClipHound's log says the name is missing.
 - **The downed search reports near misses.** Once a minute, if the damage-log header scored close to the threshold without reaching it, the log says so and points to the Detect tab, where you can cut the header from your own screen. That is the case for a game running in another language: the built-in header is the English "VIEW DAMAGE LOG", and the Spanish "VER REGISTRO DE DAÑOS" only crosses the line now and then, which looks like a swap that fires once an hour and drops after a few seconds.

@@ -271,15 +271,36 @@ void Engine::loadTemplates()
 			}
 		}
 	}
+	altDets_ = std::make_shared<AltSet>();
+	altLangs_.clear();
 	if (!loaded) {
-		char *p = obs_module_file("templates/damagelog.png");
-		if (p)
-			// the wording only: the gap between the "B" key hint and the words is a different
-			// fraction of the screen at every resolution, so a template spanning both can only
-			// ever be a near miss on somebody else's setup
-			detGame_.loadTemplatePng(p, 198.0f / 1704.0f);
-		bfree(p);
+		// the wording only: the gap between the "B" key hint and the words is a different
+		// fraction of the screen at every resolution, so a template spanning both can only
+		// ever be a near miss on somebody else's setup. The wording is the game's language:
+		// a fixed choice loads that one; auto loads what it found last time, or English,
+		// and keeps the other languages searching alongside until one of them matches
+		static const char *kLangs[] = {"en", "es", "fr"};
+		std::string want = cfg.gameLang;
+		bool fixed = want != "auto" && !want.empty();
+		if (!fixed)
+			want = cfg.gameLangFound.empty() ? "en" : cfg.gameLangFound;
+		if (!loadLangTemplate(detGame_, want)) {
+			loadLangTemplate(detGame_, "en");
+			want = "en";
+		}
+		if (!fixed && cfg.gameLangFound.empty())
+			for (const char *l : kLangs) {
+				if (want == l)
+					continue;
+				auto d = std::make_unique<Detector>();
+				d->threshold = cfg.threshold;
+				if (loadLangTemplate(*d, l)) {
+					altDets_->push_back(std::move(d));
+					altLangs_.push_back(l);
+				}
+			}
 		cfg.customTemplateWidthFrac = 0;
+		applySearchWidth();
 	}
 	if (cfg.memScale > 0)
 		detGame_.remember((float)cfg.memScale, (float)cfg.memX, (float)cfg.memY);
@@ -289,25 +310,67 @@ void Engine::loadTemplates()
 	bfree(r);
 }
 
+/// The damage-log wording in one language: the file and how wide it is on the screen it was cut from.
+bool Engine::loadLangTemplate(Detector &d, const std::string &lang)
+{
+	struct L {
+		const char *code, *file;
+		float widthFrac;
+	};
+	// widthFrac = template width / width of the screenshot it was cut from
+	static const L kTable[] = {
+		{"en", "templates/damagelog.png", 198.0f / 1704.0f},    // VIEW DAMAGE LOG
+		{"es", "templates/damagelog_es.png", 270.0f / 2559.0f}, // VER REGISTRO DE DAÑOS
+		// cut from a 1080p stream frame with the game 1920 wide; the wording is set smaller than
+		// the other languages by the game to fit
+		{"fr", "templates/damagelog_fr.png", 212.0f / 1920.0f}, // AFFICHER LE JOURNAL DES DÉGÂTS
+	};
+	for (const L &l : kTable) {
+		if (lang != l.code)
+			continue;
+		char *p = obs_module_file(l.file);
+		bool ok = p && d.loadTemplatePng(p, l.widthFrac);
+		bfree(p);
+		return ok;
+	}
+	return false;
+}
+
+QString Engine::langName(const std::string &lang)
+{
+	if (lang == "es")
+		return "Spanish";
+	if (lang == "fr")
+		return "French";
+	if (lang == "en")
+		return "English";
+	return QString::fromStdString(lang);
+}
+
 /// How much of the frame, and how many sizes, the damage-log search covers.
 void Engine::applySearchWidth()
 {
-	if (cfg.wideSearch) {
-		detGame_.fromX = 0.0f;
-		detGame_.toX = 1.0f;
-		detGame_.fromY = 0.0f;
-		detGame_.toY = 1.0f;
-		detGame_.minScale = 0.35f;
-		detGame_.maxScale = 2.2f;
-	} else {
-		detGame_.fromX = 0.45f;
-		detGame_.toX = 1.0f;
-		detGame_.fromY = 0.15f;
-		detGame_.toY = 0.95f;
-		detGame_.minScale = 0.5f;
-		detGame_.maxScale = 1.6f;
-	}
-	detGame_.unlock();
+	auto set = [&](Detector &d) {
+		if (cfg.wideSearch) {
+			d.fromX = 0.0f;
+			d.toX = 1.0f;
+			d.fromY = 0.0f;
+			d.toY = 1.0f;
+			d.minScale = 0.35f;
+			d.maxScale = 2.2f;
+		} else {
+			d.fromX = 0.45f;
+			d.toX = 1.0f;
+			d.fromY = 0.15f;
+			d.toY = 0.95f;
+			d.minScale = 0.5f;
+			d.maxScale = 1.6f;
+		}
+		d.unlock();
+	};
+	set(detGame_);
+	for (auto &d : *altDets_)
+		set(*d);
 }
 
 QImage Engine::grabNative()
@@ -1381,6 +1444,10 @@ void Engine::reloadConfig()
 	detGame_.threshold = cfg.threshold;
 	detRevive_.threshold = cfg.reviveThreshold;
 	detGame_.unlock();
+	for (auto &d : *altDets_) {
+		d->threshold = cfg.threshold;
+		d->unlock();
+	}
 	timer_.setInterval(std::max(100, cfg.pollMs));
 	if (cfg.keepWarm && !applied_ && cfg.active())
 		sw.armWarm(cfg);
@@ -1993,7 +2060,8 @@ void Engine::tick()
 	std::string gameName = cfg.gameSource, friendName = wantRevive ? cfg.sourceFor(*cfg.active()) : "";
 	bool preview = previewWanted_;
 
-	std::thread([this, gameName, friendName, wantRevive, preview, quick, reviveFull]() {
+	std::shared_ptr<AltSet> alts = altDets_;
+	std::thread([this, gameName, friendName, wantRevive, preview, quick, reviveFull, alts]() {
 		Result r;
 		obs_source_t *src = obs_get_source_by_name(gameName.c_str());
 		if (src) {
@@ -2002,6 +2070,16 @@ void Engine::tick()
 			if (capGame_.grab(src, Detector::FrameWidth, bgra, w, h, ls)) {
 				Frame f = Detector::fromBGRA(bgra.data(), w, h, ls);
 				r.game = detGame_.compare(f, quick);
+				// game language on auto: the other wordings get the same look, and the best
+				// score is the one reported, so whichever language the game is in is found
+				for (size_t i = 0; i < alts->size(); i++) {
+					Match a = (*alts)[i]->compare(f, quick);
+					if (a.score > r.game.score) {
+						r.game = a;
+						r.altLang = (int)i;
+						r.alts = alts;
+					}
+				}
 				r.ok = true;
 				if (preview) {
 					r.bgra = std::move(bgra);
@@ -2065,6 +2143,19 @@ void Engine::onResult(Result r)
 		return;
 	}
 	lastWatchError_.clear();
+	if (r.altLang >= 0 && r.alts == altDets_ && r.altLang < (int)altDets_->size() &&
+	    r.game.score >= cfg.threshold) {
+		// another language's wording is the one on screen: it becomes the wording we search,
+		// remembered for next time, and the rest are dropped
+		std::string lang = altLangs_[(size_t)r.altLang];
+		detGame_ = std::move(*(*altDets_)[(size_t)r.altLang]);
+		altDets_ = std::make_shared<AltSet>();
+		altLangs_.clear();
+		cfg.gameLangFound = lang;
+		cfg.save();
+		log(QString("Game language: %1 (the damage log matched the %1 wording).").arg(langName(lang)));
+		emit stateChanged();
+	}
 	if (r.game.locked && !lastGame_.locked && detGame_.remembers()) {
 		cfg.memScale = detGame_.memScale();
 		cfg.memX = detGame_.memX();

@@ -212,6 +212,8 @@ void Config::load()
 	DEFS(backtrackFolder);
 	DEFS(playerName);
 	DEFD(reviveThreshold);
+	DEFS(gameLang);
+	DEFS(gameLangFound);
 	DEFB(wideSearch);
 	DEFD(customTemplateWidthFrac);
 	DEFD(boxX);
@@ -351,6 +353,8 @@ void Config::load()
 	GETS(backtrackFolder);
 	GETS(playerName);
 	GETD(reviveThreshold);
+	GETS(gameLang);
+	GETS(gameLangFound);
 	GETB(wideSearch);
 	GETD(customTemplateWidthFrac);
 	GETD(boxX);
@@ -634,6 +638,8 @@ void Config::save() const
 	SETS(backtrackFolder);
 	SETS(playerName);
 	SETD(reviveThreshold);
+	SETS(gameLang);
+	SETS(gameLangFound);
 	SETB(wideSearch);
 	SETD(customTemplateWidthFrac);
 	SETD(boxX);

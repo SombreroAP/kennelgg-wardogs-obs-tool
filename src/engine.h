@@ -4,6 +4,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <memory>
 #include <QObject>
 #include <QImage>
 #include <QTimer>
@@ -158,6 +159,7 @@ public:
 	void reloadConfig(); // after the settings dialog saved
 	void loadTemplates();
 	void applySearchWidth();
+	static QString langName(const std::string &lang); // "es" -> "Spanish"
 	/// PNG of the game source as the plugin sees it. Returns the path, or a message starting with a capital.
 	QString saveFrame();
 	/// The game source at its own resolution, for saving or for learning the HUD.
@@ -198,10 +200,13 @@ signals:
 	void frameUpdated();
 
 private:
+	using AltSet = std::vector<std::unique_ptr<Detector>>;
 	struct Result {
 		bool ok = false;
 		Match game;
 		Match revive;
+		int altLang = -1;             // index into altLangs_ when another language's wording scored best
+		std::shared_ptr<AltSet> alts; // the set that index belongs to
 		double progress = -1;
 		std::vector<uint8_t> bgra;
 		int w = 0, h = 0, ls = 0;
@@ -265,6 +270,11 @@ private:
 	QDateTime appStartedAt_;
 	bool appCrashReported_ = false;
 	Detector detGame_, detRevive_;
+	// game language on auto: the other wordings, searched alongside until one of them matches
+	// a shared set, so a worker in flight keeps the set it started with when settings replace it
+	std::shared_ptr<AltSet> altDets_ = std::make_shared<AltSet>();
+	std::vector<std::string> altLangs_;
+	static bool loadLangTemplate(Detector &d, const std::string &lang);
 	bool dualOn_ = false, dualAutoOn_ = false;
 	QString vehicleSeat_;
 	QString updateState_, newVersion_, newUrl_, newNotes_;

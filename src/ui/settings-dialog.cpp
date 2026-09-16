@@ -19,6 +19,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QTabWidget>
+#include <QComboBox>
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QPixmap>
@@ -1203,6 +1204,41 @@ QWidget *SettingsDialog::buildDetectTab()
 	row->addWidget(tplLbl_);
 	row->addStretch(1);
 	v->addLayout(row);
+	{
+		// the damage-log wording is the game's language; auto tries every wording until one matches
+		auto *lrow = new QHBoxLayout();
+		auto *ll = new QLabel("Game language", w);
+		auto *lang = new QComboBox(w);
+		lang->addItem("Auto (found from the damage log)", "auto");
+		lang->addItem("English", "en");
+		lang->addItem("Español", "es");
+		lang->addItem("Français", "fr");
+		lang->setToolTip(
+			"The words of the damage-log header the plugin looks for when you are downed. Auto "
+			"tries every language it knows until one matches, then keeps that one. English, Spanish "
+			"and French so far: for another language open a ticket in the Kennel.gg Discord with a "
+			"frame saved while downed (the button below).");
+		int li = lang->findData(QString::fromStdString(e_->cfg.gameLang));
+		lang->setCurrentIndex(li < 0 ? 0 : li);
+		lrow->addWidget(ll);
+		lrow->addWidget(lang);
+		if (!e_->cfg.gameLangFound.empty() && e_->cfg.gameLang == "auto")
+			lrow->addWidget(
+				new QLabel(QString("found: %1").arg(Engine::langName(e_->cfg.gameLangFound)), w));
+		lrow->addStretch(1);
+		v->addLayout(lrow);
+		connect(lang, &QComboBox::currentIndexChanged, this, [this, lang](int) {
+			if (building_)
+				return;
+			e_->cfg.gameLang = lang->currentData().toString().toStdString();
+			e_->cfg.gameLangFound.clear(); // a fresh start for auto
+			e_->cfg.save();
+			e_->loadTemplates();
+			e_->log(e_->cfg.gameLang == "auto"
+					? "Game language: auto, every wording searched until one matches."
+					: "Game language: " + Engine::langName(e_->cfg.gameLang) + ".");
+		});
+	}
 	wide_ = new QCheckBox("Look over the whole frame, at more sizes (slower; for a HUD the normal search misses)",
 			      w);
 	wide_->setChecked(e_->cfg.wideSearch);
