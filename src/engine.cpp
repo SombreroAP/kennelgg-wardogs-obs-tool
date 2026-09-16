@@ -2083,7 +2083,7 @@ void Engine::webLiveTick()
 						   settle(o["livestream"].isObject() ? Feed::Live : Feed::Off, "");
 					   });
 		} else {
-			// a channel id gets its /live page, a video id its watch page; both say isLiveNow
+			// a channel id gets its /live page, a video id its watch page; a live one carries videoDetails with isLive
 			QString url = (ch.startsWith("UC") && ch.size() >= 20)
 					      ? "https://www.youtube.com/channel/" + ch + "/live"
 					      : "https://www.youtube.com/watch?v=" + ch;
@@ -2094,11 +2094,16 @@ void Engine::webLiveTick()
 						settle(Feed::Unknown, r.error);
 						return;
 					}
-					if (!r.body.contains("\"videoDetails\"") && !r.body.contains("\"isLiveNow\"")) {
+					// a real YouTube page carries ytInitialData; the consent page does not. A channel
+					// that is live serves its stream's watch page here, whose videoDetails say
+					// isLive; one that is not serves its home page, with no videoDetails at all
+					if (!r.body.contains("ytInitialData")) {
 						settle(Feed::Unknown, "page not readable");
 						return;
 					}
-					settle(r.body.contains("\"isLiveNow\":true") ? Feed::Live : Feed::Off, "");
+					bool live = r.body.contains("\"videoDetails\"") &&
+						    r.body.contains("\"isLive\":true");
+					settle(live ? Feed::Live : Feed::Off, "");
 				});
 		}
 	}
