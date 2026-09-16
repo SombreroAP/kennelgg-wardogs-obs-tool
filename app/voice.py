@@ -95,6 +95,10 @@ class Voice:
         self._loader = None
         self._last_cmd = 0.0
         self._last_clip_cmd = 0.0   # when "kennel clip" was last heard: the name comes after it
+        self._got = 0               # samples received since the last level report
+        self._sq = 0.0              # their energy
+        self._first = True
+        self._report_at = time.time() + 30
         self._status = ""
 
     # ----- from the plugin -----
@@ -118,6 +122,19 @@ class Voice:
         if not self.enabled or not pcm:
             return
         a = np.frombuffer(pcm, np.int16)
+        if self._first:
+            self._first = False
+            print(f"[voice] microphone audio is arriving from the plugin ({len(a)} samples in the first piece)")
+        self._got += len(a)
+        self._sq += float(np.dot(a.astype(np.float64), a.astype(np.float64)))
+        now = time.time()
+        if now >= self._report_at:
+            secs = self._got / RATE
+            rms = (self._sq / max(1, self._got)) ** 0.5
+            db = 20 * np.log10(max(rms, 1e-9) / 32768.0)
+            print(f"[voice] mic: {secs:.0f} s received in the last {int(now - self._report_at + 30)} s, level {db:.0f} dBFS"
+                  + ("  (silence - is the right source picked, and is it unmuted in Windows?)" if db < -60 else ""))
+            self._got, self._sq, self._report_at = 0, 0.0, now + 120
         with self._lock:
             n = len(a)
             end = self._ring_pos + n
@@ -211,11 +228,12 @@ class Voice:
                 if rec.AcceptWaveform(chunk):
                     text = json.loads(rec.Result()).get("text", "")
                     if text:
+                        print(f"[voice] heard: {text[:120]}")   # every sentence, so a log shows what the model makes of you
                         self._heard(text)
                 else:
                     # a command should not wait for a pause in the talking: look at the partial too
                     part = json.loads(rec.PartialResult()).get("partial", "")
-                    if part and self.wake in part and self._heard(part, partial=True):
+                    if part and self._heard(part, partial=True):
                         rec.Reset()
             except Exception as e:
                 print(f"[voice] recogniser: {e}")
@@ -224,10 +242,15 @@ class Voice:
     def _heard(self, text: str, partial: bool = False) -> bool:
         t = " " + re.sub(r"[^a-z0-9' ]", " ", text.lower()) + " "
         t = re.sub(r"\s+", " ", t)
-        i = t.rfind(" " + self.wake + " ")
-        if i < 0:
+        # the wake word as the model heard it: "kennel", but also "kennels", "kenel", "kennel's"
+        ws = t.split()
+        wi = -1
+        for k, w in enumerate(ws):
+            if w == self.wake or (len(w) >= 4 and difflib.SequenceMatcher(None, w, self.wake).ratio() >= 0.8):
+                wi = k
+        if wi < 0:
             return False
-        after = t[i + len(self.wake) + 2:].strip()
+        after = " ".join(ws[wi + 1:]).strip()
         if not after:
             return False
         cmd, name, score = self.intent(after)

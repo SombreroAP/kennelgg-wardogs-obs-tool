@@ -91,6 +91,10 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	connect(&voice, &VoiceTap::pcm, this, [this](const QByteArray &pcm) {
 		if (bridge.clients() > 0)
 			bridge.sendAudio(pcm);
+		if (!voiceFlowing_) {
+			voiceFlowing_ = true;
+			log("Voice: microphone audio is flowing to ClipHound.");
+		}
 	});
 	connect(&bridge, &Bridge::clientDisconnected, this, [this]() {
 		appStatus_.clear();
@@ -1735,6 +1739,7 @@ void Engine::applyVoice()
 	}
 	if (voice.attached() && voice.sourceName() == mic)
 		return;
+	voiceFlowing_ = false;
 	QString err = voice.attach(mic);
 	if (!err.isEmpty()) {
 		log("Voice: " + err);

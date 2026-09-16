@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.16.3
+- Voice (beta): the logs now show what is going on. The plugin says when microphone audio starts flowing to ClipHound; ClipHound says when the first audio arrives, reports the microphone level every two minutes (and calls out silence), and writes every sentence the listener makes of you, so a log shows why a command did or did not fire. The wake word is taken as heard, so "kennels" and "kenel" count as "kennel".
+
 ## 0.16.2
 - **Voice control is a beta, off by default, English only.** The tab says so, and it stays off until you switch it on.
 - **Each command on its own switch:** Kennel - instant replay; Kennel - clip that (with its own switch for "the sentence after becomes the file name"); Kennel - force dual point of view; Kennel - force squad mate point of view; Kennel - change squad mate point of view; Kennel - show closest squad mate point of view. Any of them can be turned off on the tab.
