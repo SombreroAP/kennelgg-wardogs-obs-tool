@@ -2396,11 +2396,12 @@ QWidget *SettingsDialog::buildVoiceTab()
 	voiceMic_->setCurrentIndex(mi < 0 ? 0 : mi);
 	f->addRow("Microphone source", voiceMic_);
 	voiceWake_ = new QLineEdit(QString::fromStdString(e_->cfg.voiceWake), g);
-	voiceWake_->setPlaceholderText("kennel");
-	voiceWake_->setMaximumWidth(160);
-	voiceWake_->setToolTip("Say this word first, then the command. One word, lower case, something you do not "
-			       "say by accident.");
-	f->addRow("Wake word", voiceWake_);
+	voiceWake_->setPlaceholderText("hey kennel");
+	voiceWake_->setMaximumWidth(200);
+	voiceWake_->setToolTip(
+		"Say this first, then the command: \"hey kennel, replay\". Two words are clearer than one; "
+		"the last word on its own (\"kennel replay\") counts too.");
+	f->addRow("Wake phrase", voiceWake_);
 	voiceStatus_ = new QLabel(e_->voiceStatus().isEmpty() ? "not listening" : e_->voiceStatus(), g);
 	voiceStatus_->setWordWrap(true);
 	f->addRow("Status", voiceStatus_);
@@ -2411,8 +2412,8 @@ QWidget *SettingsDialog::buildVoiceTab()
 	voiceCommands_ = new QCheckBox("Voice commands on", gc);
 	voiceCommands_->setChecked(e_->cfg.voiceCommands);
 	fc->addRow(voiceCommands_);
-	fc->addRow(muted("The words do not have to be exact: \"kennel replay\", \"kennel play that back\" and "
-			 "\"kennel run it back\" all play the replay. \"kennel\" is the wake word set above.",
+	fc->addRow(muted("Say \"hey kennel\", then the ask. The words do not have to be exact: \"hey kennel replay\", "
+			 "\"hey kennel play that back\" and \"hey kennel run it back\" all play the replay.",
 			 gc));
 	auto mk = [&](QCheckBox *&box, const char *label, bool on, const char *hint) {
 		box = new QCheckBox(label, gc);
@@ -2426,10 +2427,11 @@ QWidget *SettingsDialog::buildVoiceTab()
 	   "\"clip that\", \"clip it\", \"save that\": saves a clip of the last 45 seconds.");
 	voiceNames_ = new QCheckBox("    ... and the sentence after \"clip that\" becomes the file name", gc);
 	voiceNames_->setChecked(e_->cfg.voiceNames);
-	fc->addRow(voiceNames_,
-		   muted("\"kennel clip that, he fell off the roof\" saves \"He Fell Off The Roof - date time.mp4\". "
-			 "Clips from the dock or the hotkey are named from what was being said around the moment.",
-			 gc));
+	fc->addRow(
+		voiceNames_,
+		muted("\"hey kennel, clip that, he fell off the roof\" saves \"He Fell Off The Roof - date time.mp4\". "
+		      "Clips from the dock or the hotkey are named from what was being said around the moment.",
+		      gc));
 	mk(voiceCmdDual_, "Kennel - force dual point of view", e_->cfg.voiceCmdDual,
 	   "\"dual\", \"dual pov\", \"split screen\": Dual POV on; \"dual off\" turns it off.");
 	mk(voiceCmdForce_, "Kennel - force squad mate point of view", e_->cfg.voiceCmdForce,

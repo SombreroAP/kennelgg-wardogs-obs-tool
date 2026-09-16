@@ -438,6 +438,8 @@ void Config::load()
 		minDownMs = 0;
 	// the built-in template is the wording only now, which scores lower but stands much further
 	// clear of everything else: 0.85 was tuned for the old one and is too strict for this
+	if (voiceWake == "kennel")
+		voiceWake = "hey kennel"; // 0.16.5: what people actually say, and a clearer start
 	if (!thresholdV2) {
 		thresholdV2 = true;
 		if (threshold >= 0.83 || threshold < 0.75)

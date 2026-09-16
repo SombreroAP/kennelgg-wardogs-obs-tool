@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.16.5
+- **"Hey kennel" is the wake phrase.** Two words are much clearer to the listener than one, and it is what people say anyway: "hey kennel, replay", "hey kennel, clip that, he fell off the roof". "Kennel" on its own still counts. An install that had the old "kennel" is moved to "hey kennel"; the field on the Voice tab takes any phrase.
+
 ## 0.16.4
 - **Voice (beta) hears the commands now.** The first real session showed what went wrong: the small listener, left to guess any English, made "kendall replay" of "kennel replay" and "kennel club that" of "kennel clip that", and neither fired. It is now told exactly what can be said after the wake word (about ninety phrasings), so those come out as "kennel replay" and "kennel clip that", and ordinary talk comes out as nothing at all. Tested on synthesised speech: every command fired, and "what a nice shot bro" was ignored.
 - **Names go through Whisper.** A squad mate's name is not a word the listener knows, so "kennel show bouga three four" is heard as "kennel show ..." and Whisper reads the name from the last few seconds: bouga34. Spoken numbers become digits.

@@ -226,10 +226,10 @@ struct Config {
 	// voice: the microphone goes to ClipHound, which names manual clips from what was said and
 	// listens for commands after a wake word. Off until switched on.
 	bool voiceEnabled = false;
-	std::string voiceMic;             // OBS source name; "" = the first microphone found
-	std::string voiceWake = "kennel"; // the word that starts a command
-	bool voiceNames = true;           // manual clips take their title from what was said around them
-	bool voiceCommands = true;        // "<wake> replay", "<wake> show <name>", ...
+	std::string voiceMic;                 // OBS source name; "" = the first microphone found
+	std::string voiceWake = "hey kennel"; // what starts a command ("hey kennel replay")
+	bool voiceNames = true;               // manual clips take their title from what was said around them
+	bool voiceCommands = true;            // "<wake> replay", "<wake> show <name>", ...
 	// each command on its own switch (all on when commands are on)
 	bool voiceCmdReplay = true, voiceCmdClip = true, voiceCmdDual = true, voiceCmdForce = true,
 	     voiceCmdChange = true, voiceCmdClosest = true;

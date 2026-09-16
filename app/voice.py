@@ -76,7 +76,7 @@ class Voice:
         self.b = bridge
         self.cfg = cfg
         self.enabled = False
-        self.wake = "kennel"
+        self.wake = "hey kennel"
         self.commands = True
         self.names = True
         self.squad: list[str] = []
@@ -105,7 +105,7 @@ class Voice:
     # ----- from the plugin -----
     def configure(self, o: dict):
         self.enabled = bool(o.get("enabled", True))
-        self.wake = str(o.get("wake") or "kennel").strip().lower()
+        self.wake = re.sub(r"\s+", " ", str(o.get("wake") or "hey kennel").strip().lower())
         self.commands = bool(o.get("commands", True))
         self.names = bool(o.get("names", True))
         self.squad = [str(n) for n in (o.get("squad") or [])]
@@ -246,11 +246,13 @@ class Voice:
         turns ordinary talk into [unk]. A name after "show" is [unk] too; Whisper reads it."""
         from vosk import KaldiRecognizer
         self._grammar_wake = self.wake
-        phrases = {"[unk]", f"{self.wake} show [unk]", f"{self.wake} switch to [unk]", f"{self.wake} change to [unk]",
-                   f"{self.wake} clip that [unk]", f"{self.wake} clip [unk]"}
-        for ps in INTENTS.values():
-            for p in ps:
-                phrases.add(f"{self.wake} {p}")
+        phrases = {"[unk]"}
+        for wk in self.wakes():
+            phrases |= {f"{wk} show [unk]", f"{wk} switch to [unk]", f"{wk} change to [unk]", f"{wk} clip that [unk]",
+                        f"{wk} clip [unk]"}
+            for ps in INTENTS.values():
+                for p in ps:
+                    phrases.add(f"{wk} {p}")
         try:
             rec = KaldiRecognizer(self._vosk, RATE, json.dumps(sorted(phrases)))
             print(f"[voice] listening for {len(phrases)} phrases after '{self.wake}'")
@@ -275,8 +277,8 @@ class Voice:
             t = re.sub(r"[^a-z0-9' ]", " ", text)
             # the last ask in the window is the one that just fired
             found = re.findall(r"\b(?:show|switch to|change to|swap to|go to|put)\s+((?:(?!\b(?:show|switch|change|swap|go|put|" +
-                               re.escape(self.wake) + r")\b)[a-z0-9' ])+?)(?:\s+(?:on|pov|point of view))?\s*(?=$|\b" +
-                               re.escape(self.wake) + r"\b)", t)
+                               re.escape(self.wake.split()[-1]) + r")\b)[a-z0-9' ])+?)(?:\s+(?:on|pov|point of view))?\s*(?=$|\b" +
+                               re.escape(self.wake.split()[-1]) + r"\b)", t)
             name = self.digits(found[-1].strip()) if found else ""
             print(f"[voice] name after '{cmd}': {name!r}  <- {text!r}")
             if name:
@@ -287,11 +289,12 @@ class Voice:
     def _heard(self, text: str, partial: bool = False) -> bool:
         t = " " + re.sub(r"[^a-z0-9' ]", " ", text.lower()) + " "
         t = re.sub(r"\s+", " ", t)
-        # the wake word as the model heard it: "kennel", but also "kennels", "kenel", "kennel's"
+        # the wake phrase as the model heard it: "hey kennel", or just "kennel", or "kennels" / "kenel"
         ws = t.split()
         wi = -1
+        last = self.wake.split()[-1]
         for k, w in enumerate(ws):
-            if w == self.wake or (len(w) >= 4 and difflib.SequenceMatcher(None, w, self.wake).ratio() >= 0.8):
+            if w == last or (len(w) >= 4 and difflib.SequenceMatcher(None, w, last).ratio() >= 0.8):
                 wi = k
         if wi < 0:
             return False
@@ -403,9 +406,17 @@ class Voice:
                 text = json.loads(rec.FinalResult()).get("text", "")
         except Exception as e:
             print(f"[voice] naming: {e}")
-        title = self.title_from(text, self.wake)
+        title = self.title_from(text, self.wake.split()[-1])
         print(f"[voice] clip name: {title!r}  <- {text!r}")
         self.b.send({"type": "clip_name", "path": path, "title": title, "text": text})
+
+    def wakes(self) -> list[str]:
+        """The wake phrase and, when it has more than one word, its last word alone: "hey kennel"
+        is what people say, "kennel" on its own still counts."""
+        out = [self.wake]
+        if " " in self.wake:
+            out.append(self.wake.split()[-1])
+        return out
 
     @staticmethod
     def digits(name: str) -> str:
@@ -427,6 +438,7 @@ class Voice:
 
     @staticmethod
     def title_from(text: str, wake: str = "kennel") -> str:
+        wake = wake.split()[-1] if wake else "kennel"   # "hey kennel" -> "kennel": "hey" may be misheard
         """A few words fit for a file name: the command words and filler dropped, Title Case."""
         t = text.lower()
         t = re.sub(r"[^a-z0-9' ]", " ", t)
