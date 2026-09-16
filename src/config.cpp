@@ -215,6 +215,11 @@ void Config::load()
 	DEFS(gameLang);
 	DEFS(gameLangFound);
 	DEFB(langAskShown);
+	DEFB(voiceEnabled);
+	DEFS(voiceMic);
+	DEFS(voiceWake);
+	DEFB(voiceNames);
+	DEFB(voiceCommands);
 	DEFB(wideSearch);
 	DEFD(customTemplateWidthFrac);
 	DEFD(boxX);
@@ -357,6 +362,11 @@ void Config::load()
 	GETS(gameLang);
 	GETS(gameLangFound);
 	GETB(langAskShown);
+	GETB(voiceEnabled);
+	GETS(voiceMic);
+	GETS(voiceWake);
+	GETB(voiceNames);
+	GETB(voiceCommands);
 	GETB(wideSearch);
 	GETD(customTemplateWidthFrac);
 	GETD(boxX);
@@ -643,6 +653,11 @@ void Config::save() const
 	SETS(gameLang);
 	SETS(gameLangFound);
 	SETB(langAskShown);
+	SETB(voiceEnabled);
+	SETS(voiceMic);
+	SETS(voiceWake);
+	SETB(voiceNames);
+	SETB(voiceCommands);
 	SETB(wideSearch);
 	SETD(customTemplateWidthFrac);
 	SETD(boxX);

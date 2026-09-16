@@ -100,6 +100,7 @@ private:
 	QWidget *buildAppTab();
 	QWidget *buildLogsTab();
 	QWidget *buildDualTab();
+	QWidget *buildVoiceTab();
 	QComboBox *dualFriend_ = nullptr, *dualPreset_ = nullptr;
 	QCheckBox *dualOn_ = nullptr, *dualAuto_ = nullptr, *dualKeep_ = nullptr;
 	QCheckBox *dualLook_ = nullptr;
@@ -113,6 +114,10 @@ private:
 	QLineEdit *chatKick_ = nullptr, *chatYouTube_ = nullptr, *highlightsFolder_ = nullptr, *replayLabel_ = nullptr,
 		  *replayWord_ = nullptr;
 	QLabel *pastResult_ = nullptr;
+	QCheckBox *voiceOn_ = nullptr, *voiceNames_ = nullptr, *voiceCommands_ = nullptr;
+	QComboBox *voiceMic_ = nullptr;
+	QLineEdit *voiceWake_ = nullptr;
+	QLabel *voiceStatus_ = nullptr;
 	QRadioButton *dragWin_ = nullptr, *dragKeys_ = nullptr;
 	QDoubleSpinBox *dualX_ = nullptr, *dualY_ = nullptr, *dualW_ = nullptr;
 	QSlider *dualOpacity_ = nullptr;

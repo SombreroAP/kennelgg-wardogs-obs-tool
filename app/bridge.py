@@ -57,6 +57,9 @@ class Bridge:
         self.on_clip_saved = None    # callable(path, msg): every clip the plugin named
         self.on_highlights = None    # callable(msg): build the compilation
         self.on_obs_health = None    # callable(msg): OBS's dropped-frame counters
+        self.on_audio = None          # 16 kHz mono int16 microphone PCM (voice.py)
+        self.on_voice_config = None
+        self.on_voice_name = None
         # the game's NEARBY panel: the plugin says whether to read it, where it is and whose names
         # to look for; nearby_burst is a deadline until which we read it every quarter second
         self.nearby_cfg = {"enabled": False, "roi": [0.80, 0.79, 0.19, 0.14], "names": [], "interval": 0.4}
@@ -126,6 +129,10 @@ class Bridge:
 
     def _on_message(self, ws, msg):
         if isinstance(msg, (bytes, bytearray)):
+            if len(msg) >= 4 and msg[:4] == b"KWA1":
+                if self.on_audio:
+                    self.on_audio(bytes(msg[4:]))
+                return
             if len(msg) < 16 or msg[:4] != b"KWF1":
                 return
             w, h, ts = struct.unpack_from("<HHQ", msg, 4)
@@ -237,6 +244,12 @@ class Bridge:
         elif t == "obs_health":
             if self.on_obs_health:
                 self.on_obs_health(o)
+        elif t == "voice_config":
+            if self.on_voice_config:
+                self.on_voice_config(o)
+        elif t == "voice_name":
+            if self.on_voice_name:
+                self.on_voice_name(o.get("path", ""), float(o.get("epoch") or time.time()))
         elif t == "clip_saved":
             print(f"[bridge] clip saved: {o.get('path')}")
             if self.on_clip_saved:

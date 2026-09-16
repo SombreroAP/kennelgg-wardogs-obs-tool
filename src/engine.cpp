@@ -81,10 +81,21 @@ Engine::Engine(QObject *parent) : QObject(parent)
 		o["gameSource"] = QString::fromStdString(cfg.gameSource);
 		o["povState"] = applied_ ? "downed" : "up";
 		bridge.sendJson(o);
+		// the microphone a moment later, once the app has its footing
+		QTimer::singleShot(1500, this, [this]() {
+			if (!stopping_)
+				applyVoice();
+		});
 		emit stateChanged();
+	});
+	connect(&voice, &VoiceTap::pcm, this, [this](const QByteArray &pcm) {
+		if (bridge.clients() > 0)
+			bridge.sendAudio(pcm);
 	});
 	connect(&bridge, &Bridge::clientDisconnected, this, [this]() {
 		appStatus_.clear();
+		voiceStatus_.clear();
+		voice.detach();
 		frameTimer_.stop();
 		log("Companion app disconnected.");
 		emit stateChanged();
@@ -97,6 +108,15 @@ Engine::Engine(QObject *parent) : QObject(parent)
 		o["title"] = e.title;
 		o["tags"] = QJsonArray::fromStringList(e.tags);
 		bridge.sendJson(o);
+		// a clip you asked for yourself is named by what you said around the moment you asked
+		if (cfg.voiceEnabled && cfg.voiceNames && voice.attached() && e.tags.contains("manual") &&
+		    bridge.clients() > 0) {
+			QJsonObject v;
+			v["type"] = "voice_name";
+			v["path"] = e.path;
+			v["epoch"] = (double)e.when.toMSecsSinceEpoch() / 1000.0;
+			bridge.sendJson(v);
+		}
 		emit stateChanged();
 	});
 }
@@ -828,6 +848,7 @@ void Engine::closeApp()
 void Engine::stop()
 {
 	stopping_ = true;
+	voice.detach();
 	closeApp();
 	timer_.stop();
 	frameTimer_.stop();
@@ -1434,6 +1455,7 @@ void Engine::watchPopouts()
 
 void Engine::reloadConfig()
 {
+	applyVoice();
 	autoPickAudio(); // the game source may have just been chosen
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
 	clips.seriesWindowS = cfg.clipSeriesS;
@@ -1641,6 +1663,124 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 			applyNow(true, "companion app");
 		else if (force == "up")
 			applyNow(false, "companion app");
+	} else if (type == "voice") {
+		onVoiceCommand(o.value("cmd").toString(), o.value("name").toString(), o.value("heard").toString());
+	} else if (type == "voice_status") {
+		QString s = o.value("text").toString();
+		if (s != voiceStatus_) {
+			voiceStatus_ = s;
+			log("Voice: " + s);
+			emit stateChanged();
+		}
+	} else if (type == "clip_name") {
+		QString path = o.value("path").toString(), title = o.value("title").toString();
+		if (title.trimmed().isEmpty())
+			log("Voice: nothing usable was said around the clip, name kept.");
+		else {
+			QString to = clips.retitle(path, title, o.value("text").toString());
+			if (to.isEmpty())
+				log("Voice: could not rename the clip to \"" + title + "\".");
+			else
+				addEvent("Named: " + title);
+		}
+		emit stateChanged();
+	}
+}
+
+void Engine::applyVoice()
+{
+	if (!cfg.voiceEnabled || bridge.clients() == 0) {
+		if (voice.attached()) {
+			voice.detach();
+			log("Voice: microphone released.");
+		}
+		return;
+	}
+	QString mic = QString::fromStdString(cfg.voiceMic);
+	if (mic.isEmpty())
+		mic = VoiceTap::pickMic();
+	if (mic.isEmpty()) {
+		if (voiceStatus_ != "no microphone source in OBS") {
+			voiceStatus_ = "no microphone source in OBS";
+			log("Voice: no microphone source found in OBS; add a Mic/Aux input or pick one in Settings.");
+		}
+		return;
+	}
+	if (voice.attached() && voice.sourceName() == mic)
+		return;
+	QString err = voice.attach(mic);
+	if (!err.isEmpty()) {
+		log("Voice: " + err);
+		return;
+	}
+	log("Voice: listening to '" + mic + "' (16 kHz mono goes to ClipHound, nothing is recorded).");
+	QJsonObject o;
+	o["type"] = "voice_config";
+	o["enabled"] = true;
+	o["wake"] = QString::fromStdString(cfg.voiceWake);
+	o["commands"] = cfg.voiceCommands;
+	o["names"] = cfg.voiceNames;
+	QJsonArray names;
+	for (const Friend &f : cfg.friends)
+		names.append(QString::fromStdString(f.name));
+	o["squad"] = names;
+	bridge.sendJson(o);
+}
+
+void Engine::onVoiceCommand(const QString &cmd, const QString &name, const QString &heard)
+{
+	if (!cfg.voiceEnabled || !cfg.voiceCommands)
+		return;
+	log("Voice command: " + cmd + (name.isEmpty() ? "" : " " + name) + "  (\"" + heard + "\")");
+	if (cmd == "replay") {
+		playReplay("voice");
+	} else if (cmd == "dual") {
+		toggleDual();
+	} else if (cmd == "dual_on") {
+		setDual(true, "voice");
+	} else if (cmd == "dual_off") {
+		setDual(false, "voice");
+	} else if (cmd == "clip") {
+		clipNow("clip", {"manual", "voice"}, "voice");
+	} else if (cmd == "highlights") {
+		requestHighlights("voice", true);
+	} else if (cmd == "me") {
+		if (applied_)
+			applyNow(false, "voice");
+	} else if (cmd == "show") {
+		// the squad mate as heard, matched loosely against the slots
+		QString want = name.toLower().simplified();
+		QString first = want.section(' ', 0, 0); // "bouga34 please" -> "bouga34"
+		int best = -1;
+		double bestScore = 0;
+		for (int i = 0; i < (int)cfg.friends.size(); i++) {
+			QString n = QString::fromStdString(cfg.friends[i].name).toLower();
+			QString plain = n;
+			plain.remove(QRegularExpression("[^a-z0-9 ]"));
+			double score = 0;
+			if (n == want || plain == want)
+				score = 1.0;
+			else if (!want.isEmpty() && (plain.startsWith(want) || plain.contains(" " + want)))
+				score = 0.8;
+			else if (!want.isEmpty() && want.size() >= 3 && plain.contains(want))
+				score = 0.6;
+			else if (first.size() >= 3 && (plain == first || plain.startsWith(first)))
+				score = 0.5;
+			else if (first.size() >= 4 && plain.contains(first))
+				score = 0.4;
+			if (score > bestScore) {
+				bestScore = score;
+				best = i;
+			}
+		}
+		if (best < 0) {
+			log("Voice: no squad mate sounds like \"" + name + "\".");
+			return;
+		}
+		cfg.activeFriend = best;
+		cfg.save();
+		applyNow(true, "voice: show " + QString::fromStdString(cfg.friends[best].name));
+		emit stateChanged();
 	}
 }
 

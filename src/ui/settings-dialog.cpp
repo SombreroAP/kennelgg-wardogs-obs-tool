@@ -662,6 +662,7 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	scrolled(buildDetectTab(), "Detect");
 	scrolled(buildDualTab(), "Dual POV");
 	scrolled(buildClipsTab(), "Clips");
+	scrolled(buildVoiceTab(), "Voice");
 	scrolled(buildAppTab(), "ClipHound");
 	tabs->addTab(buildLogsTab(), "Logs"); // already a scrolling text view
 	scrolled(buildAboutTab(), "Help");
@@ -2360,6 +2361,89 @@ void SettingsDialog::refreshLogs()
 		logView_->verticalScrollBar()->setValue(logView_->verticalScrollBar()->maximum());
 }
 
+QWidget *SettingsDialog::buildVoiceTab()
+{
+	auto *w = new QWidget(this);
+	auto *v = new QVBoxLayout(w);
+	auto *g = new QGroupBox("Your voice", w);
+	auto *f = new QFormLayout(g);
+	voiceOn_ = new QCheckBox("Listen to my microphone (through ClipHound)", g);
+	voiceOn_->setChecked(e_->cfg.voiceEnabled);
+	f->addRow(voiceOn_);
+	f->addRow(muted("Your microphone's sound goes from OBS to ClipHound on this PC, where it is turned into "
+			"words. It is never recorded and never leaves the PC: the speech models run locally. The "
+			"first time you switch this on ClipHound downloads them (about 120 MB), which takes a minute.",
+			g));
+	voiceMic_ = new QComboBox(g);
+	voiceMic_->addItem("Auto (the first microphone in OBS)", "");
+	{
+		struct Acc {
+			QComboBox *box;
+		} acc{voiceMic_};
+		obs_enum_sources(
+			[](void *p, obs_source_t *s) -> bool {
+				auto *a = (Acc *)p;
+				uint32_t flags = obs_source_get_output_flags(s);
+				if ((flags & OBS_SOURCE_AUDIO) && !(flags & OBS_SOURCE_VIDEO)) {
+					QString n = obs_source_get_name(s);
+					a->box->addItem(n, n);
+				}
+				return true;
+			},
+			&acc);
+	}
+	int mi = voiceMic_->findData(QString::fromStdString(e_->cfg.voiceMic));
+	voiceMic_->setCurrentIndex(mi < 0 ? 0 : mi);
+	f->addRow("Microphone source", voiceMic_);
+	voiceWake_ = new QLineEdit(QString::fromStdString(e_->cfg.voiceWake), g);
+	voiceWake_->setPlaceholderText("kennel");
+	voiceWake_->setMaximumWidth(160);
+	voiceWake_->setToolTip("Say this word first, then the command. One word, lower case, something you do not "
+			       "say by accident.");
+	f->addRow("Wake word", voiceWake_);
+	voiceNames_ = new QCheckBox("Name manual clips from what I said around the moment", g);
+	voiceNames_->setChecked(e_->cfg.voiceNames);
+	f->addRow(voiceNames_);
+	f->addRow(muted("Save a clip from the dock, the hotkey or by voice, and the words from about eight seconds "
+			"before to four seconds after become its title: \"Insane Triple Through Smoke - 2026-09-16 "
+			"21-14-03.mp4\". The whole sentence is kept in the clip's .json file. Kill-feed clips keep "
+			"their own names.",
+			g));
+	voiceCommands_ = new QCheckBox("Voice commands", g);
+	voiceCommands_->setChecked(e_->cfg.voiceCommands);
+	f->addRow(voiceCommands_);
+	auto *cmds = new QLabel(
+		"<b>kennel replay</b> - play the last highlight (the instant replay)<br>"
+		"<b>kennel clip</b> / <b>kennel clip that</b> - save a clip, named by what you said<br>"
+		"<b>kennel show &lt;name&gt;</b> - put that squad mate's POV on stream<br>"
+		"<b>kennel back</b> / <b>kennel me</b> - back to your own POV<br>"
+		"<b>kennel dual</b> / <b>dual on</b> / <b>dual off</b> - Dual POV<br>"
+		"<b>kennel highlights</b> - play the compilation of this stream's highlights<br>"
+		"<span style=\"color:#7c8076\">(\"kennel\" is whatever wake word is set above; names are matched "
+		"loosely, \"show bouga\" finds bouga34)</span>",
+		g);
+	cmds->setTextFormat(Qt::RichText);
+	cmds->setWordWrap(true);
+	f->addRow(cmds);
+	voiceStatus_ = new QLabel(e_->voiceStatus().isEmpty() ? "not listening" : e_->voiceStatus(), g);
+	voiceStatus_->setWordWrap(true);
+	f->addRow("Status", voiceStatus_);
+	v->addWidget(g);
+	v->addStretch(1);
+	for (auto *c : {voiceOn_, voiceNames_, voiceCommands_})
+		connect(c, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	connect(voiceMic_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
+	connect(voiceWake_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
+	connect(e_, &Engine::stateChanged, this, [this]() {
+		if (voiceStatus_)
+			voiceStatus_->setText(
+				e_->voiceStatus().isEmpty()
+					? (e_->cfg.voiceEnabled ? "waiting for ClipHound" : "not listening")
+					: e_->voiceStatus());
+	});
+	return w;
+}
+
 QWidget *SettingsDialog::buildAboutTab()
 {
 	auto *w = new QWidget(this);
@@ -2778,6 +2862,15 @@ void SettingsDialog::collect()
 		c.highlightsFolder = highlightsFolder_->text().trimmed().toStdString();
 		c.replayLabel = replayLabel_->text().trimmed().isEmpty() ? "Instant replay"
 									 : replayLabel_->text().trimmed().toStdString();
+	}
+	if (voiceOn_) {
+		c.voiceEnabled = voiceOn_->isChecked();
+		c.voiceMic = voiceMic_->currentData().toString().toStdString();
+		c.voiceWake = voiceWake_->text().trimmed().toLower().isEmpty()
+				      ? "kennel"
+				      : voiceWake_->text().trimmed().toLower().toStdString();
+		c.voiceNames = voiceNames_->isChecked();
+		c.voiceCommands = voiceCommands_->isChecked();
 	}
 }
 

@@ -215,6 +215,17 @@ void Bridge::sendJson(const QJsonObject &o)
 			sendRaw(c, 1, payload);
 }
 
+void Bridge::sendAudio(const QByteArray &pcm)
+{
+	QByteArray payload;
+	payload.reserve(4 + pcm.size());
+	payload.append("KWA1", 4);
+	payload.append(pcm);
+	for (auto *c : clients_)
+		if (c->upgraded)
+			sendRaw(c, 2, payload);
+}
+
 void Bridge::sendFrame(const QByteArray &jpeg, int w, int h, qint64 tsMs)
 {
 	// 16-byte header: "KWF1", uint16 w, uint16 h, uint64 timestamp ms (little endian), then JPEG

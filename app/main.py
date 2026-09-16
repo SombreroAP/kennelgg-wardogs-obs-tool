@@ -201,6 +201,14 @@ def main():
             bridge.on_clip_saved = _on_clip
         except Exception as e:
             print(f"[highlights] not available: {e}")
+        try:
+            from voice import Voice
+            vo = Voice(bridge, cfg)
+            bridge.on_audio = vo.feed
+            bridge.on_voice_config = vo.configure
+            bridge.on_voice_name = vo.name_clip
+        except Exception as e:
+            print(f"[voice] not available: {e}")
 
     run = {"last": 0.0, "n": 0}
 

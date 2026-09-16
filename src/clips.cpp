@@ -182,6 +182,41 @@ bool Clips::renameClip(const QString &from, const QString &to)
 	return true;
 }
 
+QString Clips::retitle(const QString &path, const QString &title, const QString &spoken)
+{
+	QString t = safe(title).trimmed();
+	if (path.isEmpty() || t.isEmpty())
+		return QString();
+	for (auto &e : history_) {
+		if (e.path != path)
+			continue;
+		QFileInfo fi(path);
+		// keep the run mark ("[2 of 3]") and the moment mark ("@-12s") the name may carry
+		QString base = fi.completeBaseName();
+		QString oldTitle = safe(e.title);
+		QString newBase = base;
+		if (!oldTitle.isEmpty() && base.contains(oldTitle))
+			newBase.replace(base.indexOf(oldTitle), oldTitle.size(), t);
+		else
+			newBase = t + " - " + base;
+		QString to = fi.dir().filePath(newBase + "." + fi.suffix());
+		if (to != path && QFile::exists(to))
+			to = fi.dir().filePath(newBase + " " + e.when.toString("HH-mm-ss") + "." + fi.suffix());
+		if (to != path && !renameClip(path, to))
+			return QString();
+		e.path = to;
+		e.title = title.trimmed();
+		if (!spoken.isEmpty())
+			e.info["spoken"] = spoken;
+		if (!e.tags.contains("voice"))
+			e.tags << "voice";
+		writeSidecar(e);
+		emit logged("Clip named by voice: " + QFileInfo(to).fileName());
+		return to;
+	}
+	return QString();
+}
+
 void Clips::logEntry(const Entry &e)
 {
 	QFile f(logFile());

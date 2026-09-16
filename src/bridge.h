@@ -27,6 +27,8 @@ public:
 
 	void sendJson(const QJsonObject &o);
 	void sendFrame(const QByteArray &jpeg, int w, int h, qint64 tsMs);
+	/// Microphone audio for ClipHound: "KWA1" then 16 kHz mono int16 PCM.
+	void sendAudio(const QByteArray &pcm);
 
 signals:
 	void clientConnected();

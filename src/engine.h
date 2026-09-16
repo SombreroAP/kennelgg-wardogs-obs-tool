@@ -15,6 +15,7 @@
 #include "bridge.h"
 #include "capture.h"
 #include "clips.h"
+#include "voice.h"
 #include "roster.h"
 #include "config.h"
 #include "detector.h"
@@ -31,6 +32,10 @@ public:
 	Switcher sw;
 	Bridge bridge;
 	Clips clips;
+	VoiceTap voice; // the microphone, on its way to ClipHound
+	/// Start or stop the microphone tap to match the settings and whether ClipHound is connected.
+	void applyVoice();
+	QString voiceStatus() const { return voiceStatus_; }
 	QString playerName() const;
 	Roster roster; // who is in Discord voice and who is sharing (published by the Kennel.gg bot)
 	void applyRosterConfig();
@@ -178,6 +183,9 @@ public:
 	bool wantsSupportNote() const { return !cfg.supportAsked && cfg.startCount >= 3; }
 	void supportNoteShown();
 	void languageNoteShown();
+	/// A command ClipHound heard after the wake word. cmd: replay | dual | dual_on | dual_off | clip |
+	/// show | me | highlights. `name`: for show, the squad mate as heard. `heard`: the words.
+	void onVoiceCommand(const QString &cmd, const QString &name, const QString &heard);
 	/// Tick every desktop-audio input once, when nothing was chosen yet.
 	void autoPickAudio();
 
@@ -294,8 +302,10 @@ private:
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
 	int downRun_ = 0, upRun_ = 0, tickN_ = 0;
 	double peakScore_ = 0;
-	double nearBest_ = 0; // best below-threshold score since nearSince_
-	int nearMinutes_ = 0; // minutes in which the best score came close without a match
+	double nearBest_ = 0;  // best below-threshold score since nearSince_
+	int nearMinutes_ = 0;  // minutes in which the best score came close without a match
+	QString voiceStatus_;  // what ClipHound says the listener is doing
+	QString voicePending_; // the manual clip waiting for its spoken name
 	std::chrono::steady_clock::time_point nearSince_ = std::chrono::steady_clock::now();
 	float downX_ = 0, downY_ = 0; // where the log was found when we went down (it does not move)
 	std::chrono::steady_clock::time_point fullSince_; // last poll the log scored a clean match in that spot

@@ -51,6 +51,7 @@ target_sources(
     src/roster.cpp
     src/discord-ipc.cpp
     src/http.cpp
+    src/voice.cpp
     src/ui/dock.cpp
     src/ui/squad.cpp
     src/ui/wizard.cpp

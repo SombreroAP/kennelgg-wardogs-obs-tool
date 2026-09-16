@@ -2,6 +2,12 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.16.0
+- **Your voice, first build.** A new Voice tab. Switch it on and your microphone's sound goes from OBS to ClipHound on this PC, where two small speech models run locally (downloaded once, about 120 MB; nothing is recorded and nothing leaves the PC).
+- **Manual clips named by what you said.** Save a clip from the dock, the hotkey or by voice, and the words from about eight seconds before to four seconds after become its title: "Insane Triple Through Smoke - 2026-09-16 21-14-03.mp4". The whole sentence is kept in the clip's .json. Kill-feed clips keep their own names.
+- **Voice commands**, after a wake word ("kennel" unless you change it): *kennel replay* plays the instant replay, *kennel clip* saves a clip, *kennel show bouga* puts that squad mate's POV on stream (names are matched loosely, spoken numbers work: "bouga three four"), *kennel back* returns to your own POV, *kennel dual* / *dual on* / *dual off* drive Dual POV, *kennel highlights* plays the compilation. The log shows every command as it was heard.
+- The microphone is the first Mic/Aux input in OBS unless you pick one; it is read whether it is muted in OBS or not, so push-to-talk streamers can still command it.
+
 ## 0.15.2
 - The plugin's web requests can carry a method, a body and headers of their own; nothing changes for the update check or the roster.
 

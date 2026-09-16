@@ -86,6 +86,9 @@ private:
 	void pollWatches();
 	/// "name" -> "name @-7.4s" when the moment is known: the marker Kennel Cut reads off the name.
 	static QString withMoment(const QString &name, double momentS);
+	/// Give a saved clip a new title: the file and sidecar are renamed, the sidecar gains the
+	/// words that were said. Returns the new path, or "" when the clip is not known / cannot move.
+	QString retitle(const QString &path, const QString &title, const QString &spoken);
 	/// Rename a clip and its .json sidecar together.
 	static bool renameClip(const QString &from, const QString &to);
 	/// The row in clips.csv and the JSON sidecar next to the file, for every clip however it was saved.
