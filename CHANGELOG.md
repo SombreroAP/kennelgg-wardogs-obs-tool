@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.16.2
+- **Voice control is a beta, off by default, English only.** The tab says so, and it stays off until you switch it on.
+- **Each command on its own switch:** Kennel - instant replay; Kennel - clip that (with its own switch for "the sentence after becomes the file name"); Kennel - force dual point of view; Kennel - force squad mate point of view; Kennel - change squad mate point of view; Kennel - show closest squad mate point of view. Any of them can be turned off on the tab.
+- **The words do not have to be exact.** What you say after the wake word is scored against many ways of asking for each thing: "play that back", "run it back" and "instant replay" all play the replay; "show my squad mate", "squad mate pov" and "show his pov" all force the squad mate's POV; "next squad mate" or "show bouga" changes it; "closest" or "who's closest" picks the nearest. Something that sounds like none of them is ignored; the log shows what was heard and how sure the match was.
+
 ## 0.16.1
 - **One scene, chosen in setup.** The plugin's POV sources, label and overlay go into one scene and nowhere else, and Setup now asks which on the game page (the live scene is offered first). "The scene that is live" is gone from Settings: sources added to whichever scene happened to be up were the usual reason nothing showed on stream. An existing install keeps the scene that was live when it started, and the log says so. When the scene live in OBS is not the plugin's scene, the dock says so in red and names both.
 - **"kennel clip that ... "** and then say what it was: the sentence after the ask becomes the clip's title, however much was said before it. A clip from the dock or the hotkey is still named from what was being said around the moment.

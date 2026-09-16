@@ -12,6 +12,7 @@ Two jobs:
 Nothing is written to disk and nothing leaves the PC: both models run locally. They are
 downloaded once into ProgramData\\Kennel.gg\\ClipHound\\models the first time voice is on.
 """
+import difflib
 import json
 import os
 import re
@@ -32,17 +33,35 @@ VOSK_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
 VOSK_DIR = "vosk-model-small-en-us-0.15"
 WHISPER_MODEL = "base"            # ~75 MB int8; "small" is better and 3x slower
 
-COMMANDS = [
-    # (regex after the wake word, cmd, has-name)
-    (r"^(?:instant )?replay\b", "replay", False),
-    (r"^clip(?: that| this| it)?\b", "clip", False),
-    (r"^(?:show|switch to|swap to|go to|watch)\s+(.+)$", "show", True),
-    (r"^(?:back|me|my pov|my p o v|mine)\b", "me", False),
-    (r"^dual (?:on|up)\b", "dual_on", False),
-    (r"^dual off\b", "dual_off", False),
-    (r"^dual\b", "dual", False),
-    (r"^(?:play )?(?:highlights?|compilation|montage)\b", "highlights", False),
-]
+# What a command can sound like. Matching is loose: the words after the wake word are scored
+# against every phrase (word overlap and a fuzzy ratio), and the best intent wins if it is clear
+# enough. "kennel play that back" is a replay; "kennel put bouga on" changes the squad mate.
+INTENTS = {
+    "replay":   ["replay", "instant replay", "play that back", "play it back", "run it back", "play it again",
+                 "rewind", "show the replay", "replay that"],
+    "clip":     ["clip", "clip that", "clip it", "clip this", "save that", "save clip", "save the clip",
+                 "record that", "clip him", "clip the last bit"],
+    "dual_off": ["dual off", "dual pov off", "stop dual", "single pov", "end dual", "turn off dual"],
+    "dual":     ["dual", "dual pov", "dual point of view", "force dual", "split screen", "both povs",
+                 "two povs", "dual on", "go dual"],
+    "force":    ["force squad mate", "force squad mate pov", "squad mate pov", "show squad mate", "show my squad mate",
+                 "show his pov", "show her pov", "show their pov", "teammate pov", "switch to squad mate",
+                 "squad mate point of view", "show squad mate point of view", "go to squad mate"],
+    "closest":  ["closest", "nearest", "show closest", "closest squad mate", "nearest squad mate", "who is closest",
+                 "whos closest", "show the closest pov", "closest pov", "nearest pov",
+                 "show closest squad mate point of view"],
+    "change":   ["change squad mate", "next squad mate", "switch squad mate", "other squad mate", "next pov",
+                 "change pov", "change point of view", "swap squad mate", "next one", "someone else",
+                 "change squad mate point of view"],
+    "me":       ["back", "my pov", "me", "back to me", "my point of view", "show me", "stop", "my screen",
+                 "go back", "back to my pov"],
+    "highlights": ["highlights", "play highlights", "compilation", "montage", "play the compilation"],
+}
+# "kennel show bouga", "kennel switch to bouga three four", "kennel put bouga on": a name
+NAME_RE = re.compile(r"^(?:show|switch to|swap to|change to|go to|put|watch|pov of|point of view of)\s+(.+?)(?:\s+(?:on|pov|point of view))?$")
+NAME_STOP = {"squad", "mate", "squadmate", "teammate", "my", "the", "closest", "nearest", "him", "her", "them", "his",
+             "their", "replay", "clip", "dual", "back", "me", "next", "other"}
+
 
 
 def models_dir() -> str:
@@ -61,6 +80,7 @@ class Voice:
         self.commands = True
         self.names = True
         self.squad: list[str] = []
+        self.allow: list[str] = []      # commands the plugin has on; empty = all
         self._ring = np.zeros(RATE * RING_S, np.int16)
         self._ring_pos = 0
         self._ring_epoch = 0.0          # wall clock of the newest sample in the ring
@@ -84,6 +104,7 @@ class Voice:
         self.commands = bool(o.get("commands", True))
         self.names = bool(o.get("names", True))
         self.squad = [str(n) for n in (o.get("squad") or [])]
+        self.allow = [str(c) for c in (o.get("allow") or [])]
         if self.enabled and self._loader is None:
             self._loader = threading.Thread(target=self._load_models, daemon=True)
             self._loader.start()
@@ -209,23 +230,60 @@ class Voice:
         after = t[i + len(self.wake) + 2:].strip()
         if not after:
             return False
-        for pat, cmd, has_name in COMMANDS:
-            m = re.match(pat, after)
-            if not m:
-                continue
-            name = self.digits(m.group(1).strip()) if has_name else ""
-            if has_name and partial and len(name) < 3:
-                return False           # the name is still being said
-            now = time.time()
-            if now - self._last_cmd < 2.0:
-                return True            # the same command, heard twice (partial then final)
-            self._last_cmd = now
-            if cmd == "clip":
-                self._last_clip_cmd = now
-            print(f"[voice] command: {cmd} {name!r}  <- {text!r}")
-            self.b.send({"type": "voice", "cmd": cmd, "name": name, "heard": text})
-            return True
-        return False
+        cmd, name, score = self.intent(after)
+        if not cmd:
+            return False
+        if partial and cmd in ("change",) and name and len(name) < 3:
+            return False               # the name is still being said
+        if partial and score < 0.9 and len(after.split()) < 2:
+            return False               # one word so far: wait for the rest
+        if self.allow and cmd not in self.allow and cmd not in ("me", "highlights"):
+            return True                # switched off in the plugin: swallow it, say nothing
+        now = time.time()
+        if now - self._last_cmd < 2.0:
+            return True                # the same command, heard twice (partial then final)
+        self._last_cmd = now
+        if cmd == "clip":
+            self._last_clip_cmd = now
+        print(f"[voice] command: {cmd} {name!r} ({score:.2f})  <- {text!r}")
+        self.b.send({"type": "voice", "cmd": cmd, "name": name, "heard": text})
+        return True
+
+    @classmethod
+    def intent(cls, after: str) -> tuple[str, str, float]:
+        """(cmd, name, score) for the words after the wake word; ("", "", 0) when nothing fits."""
+        after = after.strip()
+        words = after.split()
+        # a squad mate by name first: "show bouga three four", "switch to carranco"
+        m = NAME_RE.match(after)
+        if m:
+            cand = m.group(1).strip()
+            if cand and not all(w in NAME_STOP for w in cand.split()):
+                # but "show my squad mate" / "show closest" are intents, not names
+                if not any(w in ("squad", "mate", "squadmate", "teammate", "closest", "nearest", "replay", "me")
+                           for w in cand.split()):
+                    return "change", cls.digits(cand), 1.0
+        best, best_cmd = 0.0, ""
+        head = " ".join(words[:6])
+        for cmd, phrases in INTENTS.items():
+            for ph in phrases:
+                pw = ph.split()
+                # every word of the phrase present, in order, near the start
+                if all(w in words for w in pw):
+                    idx = [words.index(w) for w in pw]
+                    if idx == sorted(idx) and idx[0] <= 1:
+                        # the phrase that explains the most words wins ("change squad mate point of
+                        # view" over "squad mate point of view")
+                        sc = 0.85 + 0.02 * len(pw)
+                        if sc > best:
+                            best, best_cmd = sc, cmd
+                        continue
+                sc = difflib.SequenceMatcher(None, head[:len(ph) + 4], ph).ratio()
+                if sc > best:
+                    best, best_cmd = sc, cmd
+        if best >= 0.8:
+            return best_cmd, "", min(best, 1.0)
+        return "", "", best
 
     def _window(self, t0: float, t1: float) -> np.ndarray:
         """Microphone samples between two wall-clock times, from the ring."""

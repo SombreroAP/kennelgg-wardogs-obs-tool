@@ -115,6 +115,8 @@ private:
 		  *replayWord_ = nullptr;
 	QLabel *pastResult_ = nullptr;
 	QCheckBox *voiceOn_ = nullptr, *voiceNames_ = nullptr, *voiceCommands_ = nullptr;
+	QCheckBox *voiceCmdReplay_ = nullptr, *voiceCmdClip_ = nullptr, *voiceCmdDual_ = nullptr,
+		  *voiceCmdForce_ = nullptr, *voiceCmdChange_ = nullptr, *voiceCmdClosest_ = nullptr;
 	QComboBox *voiceMic_ = nullptr;
 	QLineEdit *voiceWake_ = nullptr;
 	QLabel *voiceStatus_ = nullptr;

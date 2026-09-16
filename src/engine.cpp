@@ -1747,6 +1747,21 @@ void Engine::applyVoice()
 	o["wake"] = QString::fromStdString(cfg.voiceWake);
 	o["commands"] = cfg.voiceCommands;
 	o["names"] = cfg.voiceNames;
+	QJsonArray allow;
+	if (cfg.voiceCmdReplay)
+		allow.append("replay");
+	if (cfg.voiceCmdClip)
+		allow.append("clip");
+	if (cfg.voiceCmdDual)
+		allow.append("dual");
+	if (cfg.voiceCmdForce)
+		allow.append("force");
+	if (cfg.voiceCmdChange)
+		allow.append("change");
+	if (cfg.voiceCmdClosest)
+		allow.append("closest");
+	allow.append("me");
+	o["allow"] = allow;
 	QJsonArray names;
 	for (const Friend &f : cfg.friends)
 		names.append(QString::fromStdString(f.name));
@@ -1759,22 +1774,56 @@ void Engine::onVoiceCommand(const QString &cmd, const QString &name, const QStri
 	if (!cfg.voiceEnabled || !cfg.voiceCommands)
 		return;
 	log("Voice command: " + cmd + (name.isEmpty() ? "" : " " + name) + "  (\"" + heard + "\")");
-	if (cmd == "replay") {
+	if (cmd == "replay" && cfg.voiceCmdReplay) {
 		playReplay("voice");
-	} else if (cmd == "dual") {
+	} else if (cmd == "dual" && cfg.voiceCmdDual) {
 		toggleDual();
-	} else if (cmd == "dual_on") {
+	} else if (cmd == "dual_on" && cfg.voiceCmdDual) {
 		setDual(true, "voice");
-	} else if (cmd == "dual_off") {
+	} else if (cmd == "dual_off" && cfg.voiceCmdDual) {
 		setDual(false, "voice");
-	} else if (cmd == "clip") {
+	} else if (cmd == "clip" && cfg.voiceCmdClip) {
 		clipNow("clip", {"manual", "voice"}, "voice");
 	} else if (cmd == "highlights") {
 		requestHighlights("voice", true);
 	} else if (cmd == "me") {
 		if (applied_)
 			applyNow(false, "voice");
-	} else if (cmd == "show") {
+	} else if (cmd == "force" && cfg.voiceCmdForce) {
+		// the squad mate's POV now, downed or not
+		if (!cfg.active()) {
+			log("Voice: no squad mate to show.");
+			return;
+		}
+		if (feedState(*cfg.active()) == Feed::Off) {
+			int alt = anyLiveFriend();
+			if (alt >= 0)
+				setActive(alt);
+		}
+		applyNow(true, "voice: squad mate POV");
+	} else if (cmd == "closest" && cfg.voiceCmdClosest) {
+		askNearbyNow();
+		pickClosest("voice", true);
+		if (cfg.active())
+			applyNow(true, "voice: closest squad mate");
+	} else if (cmd == "change" && cfg.voiceCmdChange && name.isEmpty()) {
+		// no name said: the next squad mate with a picture
+		int n = (int)cfg.friends.size();
+		if (n < 2) {
+			log("Voice: only one squad mate to choose from.");
+			return;
+		}
+		int next = cfg.activeFriend;
+		for (int k = 1; k <= n; k++) {
+			int i = (cfg.activeFriend + k) % n;
+			if (feedState(cfg.friends[i]) != Feed::Off) {
+				next = i;
+				break;
+			}
+		}
+		setActive(next);
+		applyNow(true, "voice: change to " + QString::fromStdString(cfg.friends[next].name));
+	} else if ((cmd == "show" || cmd == "change") && cfg.voiceCmdChange) {
 		// the squad mate as heard, matched loosely against the slots
 		QString want = name.toLower().simplified();
 		QString first = want.section(' ', 0, 0); // "bouga34 please" -> "bouga34"

@@ -660,7 +660,7 @@ SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent
 	scrolled(buildDetectTab(), "Detect");
 	scrolled(buildDualTab(), "Dual POV");
 	scrolled(buildClipsTab(), "Clips");
-	scrolled(buildVoiceTab(), "Voice");
+	scrolled(buildVoiceTab(), "Voice (beta)");
 	scrolled(buildAppTab(), "ClipHound");
 	tabs->addTab(buildLogsTab(), "Logs"); // already a scrolling text view
 	scrolled(buildAboutTab(), "Help");
@@ -2363,14 +2363,16 @@ QWidget *SettingsDialog::buildVoiceTab()
 {
 	auto *w = new QWidget(this);
 	auto *v = new QVBoxLayout(w);
-	auto *g = new QGroupBox("Your voice", w);
+	auto *g = new QGroupBox("Voice control (beta) - English only", w);
 	auto *f = new QFormLayout(g);
-	voiceOn_ = new QCheckBox("Listen to my microphone (through ClipHound)", g);
+	voiceOn_ = new QCheckBox("Listen to my microphone (through ClipHound) - beta, off by default", g);
 	voiceOn_->setChecked(e_->cfg.voiceEnabled);
 	f->addRow(voiceOn_);
 	f->addRow(muted("Your microphone's sound goes from OBS to ClipHound on this PC, where it is turned into "
 			"words. It is never recorded and never leaves the PC: the speech models run locally. The "
-			"first time you switch this on ClipHound downloads them (about 120 MB), which takes a minute.",
+			"first time you switch this on ClipHound downloads them (about 120 MB), which takes a minute. "
+			"English only for now. This is a beta: the log shows every command as it was heard, and a "
+			"session's log is what tells us what to tune.",
 			g));
 	voiceMic_ = new QComboBox(g);
 	voiceMic_->addItem("Auto (the first microphone in OBS)", "");
@@ -2399,36 +2401,50 @@ QWidget *SettingsDialog::buildVoiceTab()
 	voiceWake_->setToolTip("Say this word first, then the command. One word, lower case, something you do not "
 			       "say by accident.");
 	f->addRow("Wake word", voiceWake_);
-	voiceNames_ = new QCheckBox("Name manual clips from what I said around the moment", g);
-	voiceNames_->setChecked(e_->cfg.voiceNames);
-	f->addRow(voiceNames_);
-	f->addRow(muted("Save a clip from the dock, the hotkey or by voice, and the words from about eight seconds "
-			"before to four seconds after become its title: \"Insane Triple Through Smoke - 2026-09-16 "
-			"21-14-03.mp4\". The whole sentence is kept in the clip's .json file. Kill-feed clips keep "
-			"their own names.",
-			g));
-	voiceCommands_ = new QCheckBox("Voice commands", g);
-	voiceCommands_->setChecked(e_->cfg.voiceCommands);
-	f->addRow(voiceCommands_);
-	auto *cmds = new QLabel(
-		"<b>kennel replay</b> - play the last highlight (the instant replay)<br>"
-		"<b>kennel clip</b> / <b>kennel clip that</b> - save a clip, named by what you said<br>"
-		"<b>kennel show &lt;name&gt;</b> - put that squad mate's POV on stream<br>"
-		"<b>kennel back</b> / <b>kennel me</b> - back to your own POV<br>"
-		"<b>kennel dual</b> / <b>dual on</b> / <b>dual off</b> - Dual POV<br>"
-		"<b>kennel highlights</b> - play the compilation of this stream's highlights<br>"
-		"<span style=\"color:#7c8076\">(\"kennel\" is whatever wake word is set above; names are matched "
-		"loosely, \"show bouga\" finds bouga34)</span>",
-		g);
-	cmds->setTextFormat(Qt::RichText);
-	cmds->setWordWrap(true);
-	f->addRow(cmds);
 	voiceStatus_ = new QLabel(e_->voiceStatus().isEmpty() ? "not listening" : e_->voiceStatus(), g);
 	voiceStatus_->setWordWrap(true);
 	f->addRow("Status", voiceStatus_);
 	v->addWidget(g);
+
+	auto *gc = new QGroupBox("Commands - each can be switched off", w);
+	auto *fc = new QFormLayout(gc);
+	voiceCommands_ = new QCheckBox("Voice commands on", gc);
+	voiceCommands_->setChecked(e_->cfg.voiceCommands);
+	fc->addRow(voiceCommands_);
+	fc->addRow(muted("The words do not have to be exact: \"kennel replay\", \"kennel play that back\" and "
+			 "\"kennel run it back\" all play the replay. \"kennel\" is the wake word set above.",
+			 gc));
+	auto mk = [&](QCheckBox *&box, const char *label, bool on, const char *hint) {
+		box = new QCheckBox(label, gc);
+		box->setChecked(on);
+		box->setToolTip(hint);
+		fc->addRow(box, muted(hint, gc));
+	};
+	mk(voiceCmdReplay_, "Kennel - instant replay", e_->cfg.voiceCmdReplay,
+	   "\"replay\", \"instant replay\", \"play that back\", \"run it back\": plays the last highlight.");
+	mk(voiceCmdClip_, "Kennel - clip that", e_->cfg.voiceCmdClip,
+	   "\"clip that\", \"clip it\", \"save that\": saves a clip of the last 45 seconds.");
+	voiceNames_ = new QCheckBox("    ... and the sentence after \"clip that\" becomes the file name", gc);
+	voiceNames_->setChecked(e_->cfg.voiceNames);
+	fc->addRow(voiceNames_,
+		   muted("\"kennel clip that, he fell off the roof\" saves \"He Fell Off The Roof - date time.mp4\". "
+			 "Clips from the dock or the hotkey are named from what was being said around the moment.",
+			 gc));
+	mk(voiceCmdDual_, "Kennel - force dual point of view", e_->cfg.voiceCmdDual,
+	   "\"dual\", \"dual pov\", \"split screen\": Dual POV on; \"dual off\" turns it off.");
+	mk(voiceCmdForce_, "Kennel - force squad mate point of view", e_->cfg.voiceCmdForce,
+	   "\"squad mate pov\", \"show my squad mate\", \"show his pov\": the chosen squad mate on stream now, "
+	   "downed or not. \"kennel back\" / \"kennel my pov\" returns to you.");
+	mk(voiceCmdChange_, "Kennel - change squad mate point of view", e_->cfg.voiceCmdChange,
+	   "\"change squad mate\", \"next squad mate\": the next one with a picture; \"show bouga\" / \"switch to "
+	   "bouga\" picks by name, loosely matched, spoken numbers work (\"bouga three four\").");
+	mk(voiceCmdClosest_, "Kennel - show closest squad mate point of view", e_->cfg.voiceCmdClosest,
+	   "\"closest\", \"nearest squad mate\", \"who's closest\": the nearest squad mate from the NEARBY list "
+	   "(needs ClipHound's NEARBY reading).");
+	v->addWidget(gc);
 	v->addStretch(1);
-	for (auto *c : {voiceOn_, voiceNames_, voiceCommands_})
+	for (auto *c : {voiceOn_, voiceNames_, voiceCommands_, voiceCmdReplay_, voiceCmdClip_, voiceCmdDual_,
+			voiceCmdForce_, voiceCmdChange_, voiceCmdClosest_})
 		connect(c, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(voiceMic_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
 	connect(voiceWake_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
@@ -2877,6 +2893,12 @@ void SettingsDialog::collect()
 				      : voiceWake_->text().trimmed().toLower().toStdString();
 		c.voiceNames = voiceNames_->isChecked();
 		c.voiceCommands = voiceCommands_->isChecked();
+		c.voiceCmdReplay = voiceCmdReplay_->isChecked();
+		c.voiceCmdClip = voiceCmdClip_->isChecked();
+		c.voiceCmdDual = voiceCmdDual_->isChecked();
+		c.voiceCmdForce = voiceCmdForce_->isChecked();
+		c.voiceCmdChange = voiceCmdChange_->isChecked();
+		c.voiceCmdClosest = voiceCmdClosest_->isChecked();
 	}
 }
 

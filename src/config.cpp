@@ -220,6 +220,12 @@ void Config::load()
 	DEFS(voiceWake);
 	DEFB(voiceNames);
 	DEFB(voiceCommands);
+	DEFB(voiceCmdReplay);
+	DEFB(voiceCmdClip);
+	DEFB(voiceCmdDual);
+	DEFB(voiceCmdForce);
+	DEFB(voiceCmdChange);
+	DEFB(voiceCmdClosest);
 	DEFB(wideSearch);
 	DEFD(customTemplateWidthFrac);
 	DEFD(boxX);
@@ -367,6 +373,12 @@ void Config::load()
 	GETS(voiceWake);
 	GETB(voiceNames);
 	GETB(voiceCommands);
+	GETB(voiceCmdReplay);
+	GETB(voiceCmdClip);
+	GETB(voiceCmdDual);
+	GETB(voiceCmdForce);
+	GETB(voiceCmdChange);
+	GETB(voiceCmdClosest);
 	GETB(wideSearch);
 	GETD(customTemplateWidthFrac);
 	GETD(boxX);
@@ -658,6 +670,12 @@ void Config::save() const
 	SETS(voiceWake);
 	SETB(voiceNames);
 	SETB(voiceCommands);
+	SETB(voiceCmdReplay);
+	SETB(voiceCmdClip);
+	SETB(voiceCmdDual);
+	SETB(voiceCmdForce);
+	SETB(voiceCmdChange);
+	SETB(voiceCmdClosest);
 	SETB(wideSearch);
 	SETD(customTemplateWidthFrac);
 	SETD(boxX);
