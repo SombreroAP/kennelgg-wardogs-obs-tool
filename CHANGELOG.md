@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.14.3
+- **Pop-outs in any language.** Discord titles a popped-out stream in the client's own language, and only the English "x's Stream" was recognised: a French client's "Stream de bouga34" was reported as "no popped-out stream found" and the slot fell back to Discord's main window, which is why a squad mate's POV showed the Discord app instead of their game. French, German, Italian, Dutch, Spanish, Portuguese, Russian, Japanese, Korean and Chinese titles are read now, and a slot named by hand after the whole title matches its owner.
+- **Playing on a server the bot is not in no longer counts as "nobody streaming".** If the Kennel.gg roster cannot see you in a voice channel, it stays out of the decision: pop-outs decide who is live, the swap fires, and the dock lists the whole squad, as it does without a roster. Only when the roster sees your channel does it rule someone out.
+
 ## 0.14.2
 - **Renamed: Kennel.gg Wardogs Streaming Tool.** The OBS Project asks that plugins do not carry the letters OBS in their name, so that nothing looks official; "for OBS Studio" as a description is fine. Everything that showed the name changes: the dock, the Tools menu entry, the setup and settings windows, the installer and the uninstall entry, the website and the GitHub repository (the old address redirects). Nothing else moves: settings, sources, hotkeys and the update check carry on as they are.
 

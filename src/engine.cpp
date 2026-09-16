@@ -802,7 +802,15 @@ bool Engine::rosterLive() const
 	if (!cfg.rosterEnabled || !roster.running() || !roster.healthy())
 		return false;
 	Access a = rosterAccess();
-	return a != Access::NotMember && a != Access::NoUsername;
+	if (a == Access::NotMember || a == Access::NoUsername)
+		return false;
+	// and it has to see me in a voice channel: on another server, or out of voice, it knows nothing
+	// about my squad, and the dock must not hide everyone
+	QString me = QString::fromStdString(cfg.myDiscord).toLower();
+	for (const auto &m : roster.members())
+		if (m.handle.toLower() == me)
+			return true;
+	return false;
 }
 
 bool Engine::rosterOpen() const
@@ -1007,28 +1015,53 @@ void Engine::syncRoster()
 /// Stream", and "Discord Popout" for the second before it has drawn. The whole call popped out is
 /// titled with the channel name ("General VC"), a camera tile with the bare username: neither is
 /// a stream, and neither is ever captured.
+/// Discord titles a popped-out stream with its owner, in the client's own language: "sombrero's
+/// Stream" in English, "Stream de bouga34" in French (seen on a real PC), "Stream von x" in German,
+/// "Stream di x" in Italian, "Stream van x" in Dutch, "Transmissão de x" in Portuguese, "Stream de
+/// x" in Spanish, "Стрим x" in Russian, "xのストリーム" in Japanese. Each pattern captures the owner.
+/// "Discord Popout" is the title for the second before the window has drawn.
+static const QList<QRegularExpression> &popoutPatterns()
+{
+	static const QList<QRegularExpression> pats = {
+		QRegularExpression(QStringLiteral("^(.+?)\\s*(?:['’‘]s?)\\s*stream\\s*$"),
+				   QRegularExpression::CaseInsensitiveOption),
+		QRegularExpression(
+			QStringLiteral(
+				"^(?:stream|transmiss[aã]o|transmisi[oó]n|diffusion)\\s+(?:de|von|di|van|af|av|du|d')\\s*(.+?)\\s*$"),
+			QRegularExpression::CaseInsensitiveOption),
+		QRegularExpression(QStringLiteral("^(?:стрим|трансляция)\\s+(.+?)\\s*$"),
+				   QRegularExpression::CaseInsensitiveOption),
+		QRegularExpression(QStringLiteral("^(.+?)\\s*(?:のストリーム|의 스트림|的直播)\\s*$"),
+				   QRegularExpression::CaseInsensitiveOption),
+		QRegularExpression(QStringLiteral("^(.+?)\\s+stream\\s*$"),
+				   QRegularExpression::CaseInsensitiveOption), // "<name> Stream", a name ending in s
+	};
+	return pats;
+}
+
 static bool isStreamPopout(const std::string &title)
 {
 	QString t = QString::fromStdString(title).trimmed();
 	if (t.compare("Discord Popout", Qt::CaseInsensitive) == 0)
 		return true;
-	static const QRegularExpression suffix(QStringLiteral("(?:['\u2019\u2018]s?)\\s*stream\\s*$"),
-					       QRegularExpression::CaseInsensitiveOption);
-	return suffix.match(t).hasMatch();
+	for (const auto &re : popoutPatterns())
+		if (re.match(t).hasMatch())
+			return true;
+	return false;
 }
 
-/// Whose window a Discord pop-out is. A Go Live pop-out is titled "<username>'s Stream" (seen
-/// on a real PC: "sombrero's Stream"). Lower case.
+/// Whose window a Discord pop-out is, lower case: the owner captured from the title in whichever
+/// language the client runs. A title that fits no pattern comes back whole, so a slot named by
+/// hand after the full title still matches.
 static QString popoutOwner(const std::string &title)
 {
-	QString t = QString::fromStdString(title).toLower().trimmed();
-	// "<username>'s Stream", with whichever apostrophe Discord's font hands out, and "<name>' Stream"
-	// for a name ending in s; whatever is left in front of that is the owner
-	static const QRegularExpression suffix(QStringLiteral("\\s*(?:['\u2019\u2018]s?)?\\s*stream\\s*$"));
-	QRegularExpressionMatch m = suffix.match(t);
-	if (m.hasMatch() && m.capturedStart() > 0)
-		t = t.left(m.capturedStart());
-	return t.trimmed();
+	QString t = QString::fromStdString(title).trimmed();
+	for (const auto &re : popoutPatterns()) {
+		QRegularExpressionMatch m = re.match(t);
+		if (m.hasMatch() && !m.captured(1).trimmed().isEmpty())
+			return m.captured(1).trimmed().toLower();
+	}
+	return t.toLower();
 }
 
 bool Engine::isMe(const QString &discordUser) const
@@ -1207,6 +1240,8 @@ void Engine::watchPopouts()
 		if (f.kind != FriendKind::Discord)
 			continue;
 		QString name = lower(f.name), handle = lower(f.handle);
+		// a slot named after the whole window title ("stream de bouga34") means the owner inside it
+		QString nameOwner = popoutOwner(f.name);
 		int hit = -1;
 		// exact owner first, so "bryan" can never take "bryanx's Stream"
 		for (size_t i = 0; i < wins.size() && hit < 0; ++i) {
@@ -1215,7 +1250,7 @@ void Engine::watchPopouts()
 			QString owner = popoutOwner(wins[i].title);
 			if (owner == "discord popout") // not drawn yet, so not named yet
 				continue;
-			if ((!handle.isEmpty() && owner == handle) || owner == name)
+			if ((!handle.isEmpty() && owner == handle) || owner == name || owner == nameOwner)
 				hit = (int)i;
 		}
 		// then a looser look for slots named by hand: the slot name inside the owner's username
@@ -1680,8 +1715,8 @@ Engine::Feed Engine::feedState(const Friend &f) const
 			}
 		if (!myChan.isEmpty())
 			return Feed::Off; // the roster knows my channel and they are not in it
-		if (!me.isEmpty())
-			return Feed::Off; // I am not in voice at all: nobody is live with me
+		// the roster does not see me at all: I am playing on a server the bot is not in, or not in
+		// voice. It cannot vouch for anyone, so the windows on this PC decide, as without a roster
 	}
 	if (f.onPopout())
 		return Feed::Live; // no roster to ask: a bound window is the best sign there is
