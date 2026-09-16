@@ -115,6 +115,11 @@ void Config::load()
 	DEFB(replayChat);
 	DEFB(replaySound);
 	DEFB(highlightsAuto);
+	DEFB(clipTrim);
+	DEFI(clipTrimLeadS);
+	DEFB(runMerge);
+	DEFB(runCutGaps);
+	DEFI(runGapS);
 	DEFI(highlightsMax);
 	DEFS(replayWord);
 	DEFS(chatKick);
@@ -247,6 +252,11 @@ void Config::load()
 	GETB(replayChat);
 	GETB(replaySound);
 	GETB(highlightsAuto);
+	GETB(clipTrim);
+	GETI(clipTrimLeadS);
+	GETB(runMerge);
+	GETB(runCutGaps);
+	GETI(runGapS);
 	GETI(highlightsMax);
 	GETS(replayWord);
 	GETS(chatKick);
@@ -523,6 +533,11 @@ void Config::save() const
 	SETB(replayChat);
 	SETB(replaySound);
 	SETB(highlightsAuto);
+	SETB(clipTrim);
+	SETI(clipTrimLeadS);
+	SETB(runMerge);
+	SETB(runCutGaps);
+	SETI(runGapS);
 	SETI(highlightsMax);
 	SETS(replayWord);
 	SETS(chatKick);

@@ -1513,6 +1513,41 @@ QWidget *SettingsDialog::buildClipsTab()
 	pastRow->addWidget(pastResult_, 1);
 	fr->addRow(pastRow);
 	connect(past, &QPushButton::clicked, this, [this]() { pastResult_->setText(e_->clips.numberPastClips()); });
+	// what ClipHound does to the file afterwards, now that it knows where the kills are
+	auto *trimRow = new QHBoxLayout();
+	clipTrim_ = new QCheckBox("Trim each clip so it starts", gr);
+	clipTrim_->setChecked(e_->cfg.clipTrim);
+	clipTrimLead_ = new QSpinBox(gr);
+	clipTrimLead_->setRange(3, 30);
+	clipTrimLead_->setValue(e_->cfg.clipTrimLeadS);
+	clipTrimLead_->setSuffix(" s before the first kill");
+	clipTrimLead_->setEnabled(e_->cfg.clipTrim);
+	connect(clipTrim_, &QCheckBox::toggled, clipTrimLead_, &QSpinBox::setEnabled);
+	trimRow->addWidget(clipTrim_);
+	trimRow->addWidget(clipTrimLead_, 1);
+	fr->addRow(trimRow);
+	runMerge_ = new QCheckBox("Merge a run into one clip of continuous action (the overlap between clips cut once)",
+				  gr);
+	runMerge_->setChecked(e_->cfg.runMerge);
+	fr->addRow(runMerge_);
+	auto *gapRow = new QHBoxLayout();
+	runCutGaps_ = new QCheckBox("...and cut the dead space out of it: a gap longer than", gr);
+	runCutGaps_->setChecked(e_->cfg.runCutGaps);
+	runGap_ = new QSpinBox(gr);
+	runGap_->setRange(5, 60);
+	runGap_->setValue(e_->cfg.runGapS);
+	runGap_->setSuffix(" s between kills is dropped");
+	runGap_->setEnabled(e_->cfg.runCutGaps);
+	connect(runCutGaps_, &QCheckBox::toggled, runGap_, &QSpinBox::setEnabled);
+	gapRow->addWidget(runCutGaps_);
+	gapRow->addWidget(runGap_, 1);
+	fr->addRow(gapRow);
+	fr->addRow(muted(
+		"Trimming is a straight cut of the file with no re-encode, done by ClipHound seconds after the clip lands; "
+		"the end of the file is left alone. A merged run is written next to its clips as \"... [run of 3].mp4\", "
+		"re-encoded on the GPU, with the seams placed by matching the clips' sound so nothing repeats. The "
+		"original clips are kept. Cutting the dead space is off by default: it turns a run into the kills alone.",
+		gr));
 	v->addWidget(gr);
 
 	auto *gi = new QGroupBox("Instant replay", w);
@@ -1589,6 +1624,10 @@ QWidget *SettingsDialog::buildClipsTab()
 	connect(replayChat_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(replaySound_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(highlightsAuto_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	for (auto *c : {clipTrim_, runMerge_, runCutGaps_})
+		connect(c, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
+	for (auto *sb : {clipTrimLead_, runGap_})
+		connect(sb, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
 	connect(highlightsMax_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
 	for (auto *le : {chatKick_, chatYouTube_, highlightsFolder_, replayLabel_, replayWord_})
 		connect(le, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
@@ -2693,6 +2732,11 @@ void SettingsDialog::collect()
 		c.replaySound = replaySound_->isChecked();
 		c.highlightsAuto = highlightsAuto_->isChecked();
 		c.highlightsMax = highlightsMax_->value();
+		c.clipTrim = clipTrim_->isChecked();
+		c.clipTrimLeadS = clipTrimLead_->value();
+		c.runMerge = runMerge_->isChecked();
+		c.runCutGaps = runCutGaps_->isChecked();
+		c.runGapS = runGap_->value();
 		c.chatKick = chatKick_->text().trimmed().toStdString();
 		c.chatYouTube = chatYouTube_->text().trimmed().toStdString();
 		c.highlightsFolder = highlightsFolder_->text().trimmed().toStdString();

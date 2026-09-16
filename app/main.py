@@ -184,9 +184,15 @@ def main():
             print("[highlights] starting")
             from highlights import Highlights
             hl = Highlights(bridge, cfg)
-            bridge.on_clip_saved = hl.on_clip_saved
             bridge.on_highlights = hl.on_build
             bridge.on_obs_health = hl.on_obs_health
+            from runs import Runs
+            runs = Runs(bridge, cfg, hl.ff, hl.encoder_args)
+
+            def _on_clip(path, o):
+                hl.on_clip_saved(path, o)
+                runs.on_clip_saved(path, o)
+            bridge.on_clip_saved = _on_clip
         except Exception as e:
             print(f"[highlights] not available: {e}")
 

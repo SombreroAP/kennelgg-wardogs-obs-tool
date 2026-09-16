@@ -545,7 +545,12 @@ void Engine::pushAppConfig()
 	set["roi"] = QJsonArray{cfg.feedX, cfg.feedY, cfg.feedW, cfg.feedH};
 	set["multikill_window"] = cfg.appMultikillWindow;
 	set["series_window"] = cfg.clipSeriesS; // Twitch titles get "part 2", "part 3" inside this
-	set["replay_chat"] = cfg.replayChat;    // "!replay" in chat plays the last highlight
+	set["clip_trim"] = cfg.clipTrim;
+	set["clip_trim_lead_s"] = cfg.clipTrimLeadS;
+	set["run_merge"] = cfg.runMerge;
+	set["run_cut_gaps"] = cfg.runCutGaps;
+	set["run_gap_s"] = cfg.runGapS;
+	set["replay_chat"] = cfg.replayChat; // "!replay" in chat plays the last highlight
 	set["replay_cooldown_s"] = cfg.replayCooldownS;
 	set["replay_word"] = QString::fromStdString(cfg.replayWord.empty() ? "!replay" : cfg.replayWord);
 	set["chat_kick"] = QString::fromStdString(cfg.chatKick);

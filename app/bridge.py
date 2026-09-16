@@ -185,6 +185,13 @@ class Bridge:
                 c["detection"]["series_window_s"] = float(v["series_window"])
             if "replay_chat" in v:
                 c.setdefault("replay", {})["chat"] = bool(v["replay_chat"])
+            for k in ("clip_trim", "clip_trim_lead_s", "run_merge", "run_cut_gaps", "run_gap_s"):
+                if k in v:
+                    key = {"clip_trim": "trim", "clip_trim_lead_s": "trim_lead_s", "run_merge": "merge",
+                           "run_cut_gaps": "cut_gaps", "run_gap_s": "gap_s"}[k]
+                    c.setdefault("runs", {})[key] = v[k]
+            if "series_window" in v:
+                c.setdefault("runs", {})["window_s"] = float(v["series_window"])
             if "replay_word" in v:
                 c.setdefault("replay", {})["word"] = str(v["replay_word"]).strip() or "!replay"
             if self.save_cfg:

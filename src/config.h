@@ -122,6 +122,12 @@ struct Config {
 	std::string replayLabel = "Instant replay"; // the tag on the replay's frame
 	bool highlightsAuto = true;                 // build the session's highlights compilation when the stream stops
 	int highlightsMax = 12;                     // at most this many clips in it
+	// What ClipHound does to a clip file once it is named (Settings, Clips)
+	bool clipTrim = true; // cut the file so it starts clipTrimLeadS before the first kill (stream copy)
+	int clipTrimLeadS = 10;
+	bool runMerge = true;    // clips within the run window become one file of continuous action
+	bool runCutGaps = false; // ...with the dead space between kills cut out
+	int runGapS = 12;        // a gap longer than this is dead space
 	static const char *replaySourceName() { return "Kennel.gg · Replay"; }
 	static const char *replayFrameName() { return "Kennel.gg · Replay frame"; }
 	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (wired or fibre: 12-20 Mbit/s)

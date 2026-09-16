@@ -149,6 +149,9 @@ class Highlights:
             end = min(dur, start + 8.0)
         return start, end - start
 
+    def encoder_args(self) -> list[str]:
+        return self._pick_encoder()
+
     def _pick_encoder(self) -> list[str]:
         if self.encoder is None:
             r = subprocess.run([self.ff, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
