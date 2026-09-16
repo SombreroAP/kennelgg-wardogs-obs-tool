@@ -507,6 +507,19 @@ void Engine::autoPickAudio()
 void Engine::start()
 {
 	cfg.startCount++;
+	// one scene, always: the plugin's sources go into it and nowhere else. An install from before
+	// this took "whatever is live", which put sources into the wrong scene when people switched
+	if (cfg.sceneName.empty()) {
+		obs_source_t *s = obs_frontend_get_current_scene();
+		if (s) {
+			cfg.sceneName = obs_source_get_name(s) ? obs_source_get_name(s) : "";
+			obs_source_release(s);
+			if (!cfg.sceneName.empty())
+				log("Scene: '" + QString::fromStdString(cfg.sceneName) +
+				    "' is the scene the plugin works in (it was the one live). Change it under Settings, Switch, "
+				    "if you stream WARDOGS from another.");
+		}
+	}
 	cfg.save();
 	autoPickAudio();
 	// the Discord app knows who you are; a moment after start, so OBS is up first
@@ -1685,6 +1698,20 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		}
 		emit stateChanged();
 	}
+}
+
+QString Engine::sceneMismatch() const
+{
+	if (cfg.sceneName.empty())
+		return QString();
+	obs_source_t *s = obs_frontend_get_current_scene();
+	if (!s)
+		return QString();
+	QString live = obs_source_get_name(s) ? obs_source_get_name(s) : "";
+	obs_source_release(s);
+	if (live.isEmpty() || live == QString::fromStdString(cfg.sceneName))
+		return QString();
+	return live;
 }
 
 void Engine::applyVoice()

@@ -36,6 +36,8 @@ public:
 	/// Start or stop the microphone tap to match the settings and whether ClipHound is connected.
 	void applyVoice();
 	QString voiceStatus() const { return voiceStatus_; }
+	/// The scene live in OBS right now, when it is not the scene the plugin works in (else "").
+	QString sceneMismatch() const;
 	QString playerName() const;
 	Roster roster; // who is in Discord voice and who is sharing (published by the Kennel.gg bot)
 	void applyRosterConfig();

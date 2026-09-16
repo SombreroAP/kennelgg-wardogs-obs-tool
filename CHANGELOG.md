@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.16.1
+- **One scene, chosen in setup.** The plugin's POV sources, label and overlay go into one scene and nowhere else, and Setup now asks which on the game page (the live scene is offered first). "The scene that is live" is gone from Settings: sources added to whichever scene happened to be up were the usual reason nothing showed on stream. An existing install keeps the scene that was live when it started, and the log says so. When the scene live in OBS is not the plugin's scene, the dock says so in red and names both.
+- **"kennel clip that ... "** and then say what it was: the sentence after the ask becomes the clip's title, however much was said before it. A clip from the dock or the hotkey is still named from what was being said around the moment.
+
 ## 0.16.0
 - **Your voice, first build.** A new Voice tab. Switch it on and your microphone's sound goes from OBS to ClipHound on this PC, where two small speech models run locally (downloaded once, about 120 MB; nothing is recorded and nothing leaves the PC).
 - **Manual clips named by what you said.** Save a clip from the dock, the hotkey or by voice, and the words from about eight seconds before to four seconds after become its title: "Insane Triple Through Smoke - 2026-09-16 21-14-03.mp4". The whole sentence is kept in the clip's .json. Kill-feed clips keep their own names.

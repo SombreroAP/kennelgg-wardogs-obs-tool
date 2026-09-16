@@ -171,6 +171,12 @@ static void onFrontendEvent(enum obs_frontend_event event, void *)
 	} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED) {
 		if (g_engine)
 			g_engine->reloadConfig();
+	} else if (event == OBS_FRONTEND_EVENT_SCENE_CHANGED) {
+		if (g_dock)
+			QTimer::singleShot(0, g_dock, [] {
+				if (g_dock)
+					g_dock->refresh(); // the "live scene is not the plugin's scene" note
+			});
 	} else if (event == OBS_FRONTEND_EVENT_STREAMING_STARTED) {
 		if (g_engine)
 			g_engine->onStreaming(true);

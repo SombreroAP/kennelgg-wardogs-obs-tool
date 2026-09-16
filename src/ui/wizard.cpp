@@ -1,4 +1,5 @@
 #include "ui/wizard.h"
+#include <obs-frontend-api.h>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -91,6 +92,18 @@ QWizardPage *SetupWizard::pageGame()
 	v->addLayout(row);
 	gameHint_ = note("", p);
 	v->addWidget(gameHint_);
+	// the one scene the plugin works in: its POV sources, overlay and label go into this scene
+	// and nowhere else. Sources added to some other scene are the usual reason "nothing shows"
+	auto *sl = new QLabel("<b>Scene the plugin works in</b> - the scene you stream WARDOGS from. The squad "
+			      "mate's POV, the label and the overlay are added to this scene only.",
+			      p);
+	sl->setWordWrap(true);
+	v->addWidget(sl);
+	scene_ = new QComboBox(p);
+	v->addWidget(scene_);
+	v->addWidget(note("Pick the scene that is live while you play. If you use several, pick the main gameplay "
+			  "one; it can be changed later under Settings, Switch.",
+			  p));
 	v->addStretch(1);
 	connect(mk, &QPushButton::clicked, this, [this]() {
 		std::string e = e_->sw.createGameCapture(e_->cfg);
@@ -123,6 +136,20 @@ void SetupWizard::fillGame()
 	}
 	if (pick >= 0)
 		game_->setCurrentIndex(pick);
+	// scenes: the saved one, else the one that is live now
+	scene_->clear();
+	QString cur = QString::fromStdString(e_->cfg.sceneName);
+	if (cur.isEmpty()) {
+		obs_source_t *s = obs_frontend_get_current_scene();
+		if (s) {
+			cur = obs_source_get_name(s);
+			obs_source_release(s);
+		}
+	}
+	for (auto &s : Switcher::sceneNames())
+		scene_->addItem(QString::fromStdString(s));
+	int si = scene_->findText(cur);
+	scene_->setCurrentIndex(si < 0 ? 0 : si);
 	if (game_->count() == 0)
 		gameHint_->setText("No video source in OBS yet. Press the button and one is added for you.");
 	else if (gameHint_->text().isEmpty())
@@ -286,6 +313,8 @@ void SetupWizard::accept()
 	c.lookName = lookName_->isChecked();
 	if (game_->currentIndex() >= 0)
 		c.gameSource = game_->currentText().toStdString();
+	if (scene_ && scene_->currentIndex() >= 0)
+		c.sceneName = scene_->currentText().toStdString();
 	c.myDiscord = me_->text().trimmed().toLower().remove('@').toStdString();
 	c.rosterEnabled = rosterOn_->isChecked();
 	c.setupDone = true;

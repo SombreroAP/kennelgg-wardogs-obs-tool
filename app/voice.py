@@ -25,6 +25,7 @@ import numpy as np
 RATE = 16000
 RING_S = 30                       # seconds of microphone kept for naming
 BEFORE_S, AFTER_S = 8.0, 4.0      # the window around a manual clip that names it
+VOICE_AFTER_S = 7.0               # "kennel clip that" ... then the sentence that names it
 MAX_TITLE_WORDS = 7
 
 VOSK_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
@@ -73,6 +74,7 @@ class Voice:
         self._worker = None
         self._loader = None
         self._last_cmd = 0.0
+        self._last_clip_cmd = 0.0   # when "kennel clip" was last heard: the name comes after it
         self._status = ""
 
     # ----- from the plugin -----
@@ -218,6 +220,8 @@ class Voice:
             if now - self._last_cmd < 2.0:
                 return True            # the same command, heard twice (partial then final)
             self._last_cmd = now
+            if cmd == "clip":
+                self._last_clip_cmd = now
             print(f"[voice] command: {cmd} {name!r}  <- {text!r}")
             self.b.send({"type": "voice", "cmd": cmd, "name": name, "heard": text})
             return True
@@ -238,11 +242,16 @@ class Voice:
         return lin[a:z] if z > a else lin[:0]
 
     def _name(self, path: str, epoch: float):
-        # let the "after" part of the window happen
-        wait = epoch + AFTER_S - time.time() + 0.3
+        # asked by voice ("kennel clip that ..."): the sentence that follows names it, so the
+        # window runs from the command onwards and waits for it. Asked from the dock or a
+        # hotkey: what was being said around the moment
+        by_voice = abs(epoch - self._last_clip_cmd) < 4.0
+        t0, t1 = (self._last_clip_cmd - 1.0, self._last_clip_cmd + VOICE_AFTER_S) if by_voice \
+            else (epoch - BEFORE_S, epoch + AFTER_S)
+        wait = t1 - time.time() + 0.3
         if wait > 0:
-            time.sleep(min(wait, AFTER_S + 1))
-        audio = self._window(epoch - BEFORE_S, epoch + AFTER_S)
+            time.sleep(min(wait, VOICE_AFTER_S + 1))
+        audio = self._window(t0, t1)
         if len(audio) < RATE:
             self.b.send({"type": "clip_name", "path": path, "title": "", "text": ""})
             return
@@ -287,14 +296,24 @@ class Voice:
         """A few words fit for a file name: the command words and filler dropped, Title Case."""
         t = text.lower()
         t = re.sub(r"[^a-z0-9' ]", " ", t)
-        # the ask itself is not the title: "kennel clip that", "clip it", "save that"
-        t = re.sub(r"\b" + re.escape(wake) + r"\b\s*(clip|replay|show|back|dual|highlights)?(\s+(that|this|it))?", " ", t)
+        # "kennel clip that <what it was>": what follows the ask is the title, whatever came before
+        ask = re.compile(r"\b" + re.escape(wake) + r"\b\s*(clip|replay|show|back|dual|highlights)?(\s+(that|this|it))?\s*")
+        m = None
+        for m in ask.finditer(t):
+            pass
+        if m and t[m.end():].strip():
+            t = t[m.end():]
+        else:
+            t = ask.sub(" ", t)
         t = re.sub(r"\b(clip|save|record)\s+(that|this|it)\b", " ", t)
-        filler = {"uh", "um", "like", "yeah", "okay", "ok", "oh", "so", "just", "the", "a", "an", "and", "i", "that",
-                  "this", "it", "was", "is", "to", "of", "in", "on", "bro", "dude", "man", "guys", "chat", "my",
-                  "god", "holy", "wow", "what", "no", "way", "lets", "let's", "go", "please", "there", "we"}
+        filler = {"uh", "um", "like", "yeah", "okay", "ok", "oh", "so", "just", "bro", "dude", "man", "guys", "chat",
+                  "holy", "wow", "lets", "let's", "please"}
         words = [w for w in t.split() if w not in filler]
+        # leading noise ("that was", "oh my god") goes; the little words inside a phrase stay
+        lead = {"that", "this", "it", "was", "is", "my", "god", "what", "no", "way", "there", "we", "and", "the", "a"}
+        while words and words[0] in lead:
+            words.pop(0)
         if not words:
             return ""
-        words = words[-MAX_TITLE_WORDS:] if len(words) > MAX_TITLE_WORDS else words
+        words = words[:MAX_TITLE_WORDS] if len(words) > MAX_TITLE_WORDS else words
         return " ".join(w.capitalize() for w in words)[:48].strip()

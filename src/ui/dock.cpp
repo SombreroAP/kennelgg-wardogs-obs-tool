@@ -191,6 +191,11 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	locked_->setOpenExternalLinks(false);
 	locked_->hide();
 	v->addWidget(locked_);
+	sceneWarn_ = new QLabel(this);
+	sceneWarn_->setObjectName("lockedChip");
+	sceneWarn_->setWordWrap(true);
+	sceneWarn_->hide();
+	v->addWidget(sceneWarn_);
 	std::function<void()> askUser = [this]() {
 		bool ok = false;
 		QString v = QInputDialog::getText(
@@ -689,6 +694,16 @@ void Dock::refresh()
 		replay_->setText(on ? "Stop replay" : "Instant replay");
 		highlights_->setText(on ? "Stop" : e_->highlightsBuilding() ? "Building..." : "Play highlights");
 		replay_->setStyleSheet(on ? "QPushButton { border-left: 4px solid #ce6050; }" : "");
+	}
+	if (sceneWarn_) {
+		QString live = e_->sceneMismatch();
+		sceneWarn_->setVisible(!live.isEmpty());
+		if (!live.isEmpty())
+			sceneWarn_->setText(
+				"Live scene is '" + live.toHtmlEscaped() + "', but the plugin works in '" +
+				QString::fromStdString(e_->cfg.sceneName).toHtmlEscaped() +
+				"': nothing it shows is on stream. Switch to that scene, or change it under "
+				"Settings, Switch.");
 	}
 	if (locked_) {
 		Engine::Access a = e_->rosterAccess();

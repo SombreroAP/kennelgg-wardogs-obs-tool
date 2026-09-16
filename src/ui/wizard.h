@@ -19,6 +19,7 @@ private:
 	Engine *e_;
 	QLineEdit *name_;
 	QComboBox *game_;
+	QComboBox *scene_ = nullptr;
 	QLabel *gameHint_;
 	QListWidget *squad_;
 	QLineEdit *twitch_;

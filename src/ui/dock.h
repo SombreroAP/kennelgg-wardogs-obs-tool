@@ -36,6 +36,7 @@ private:
 	QLabel *near_ = nullptr;
 	QLabel *update_ = nullptr;
 	QLabel *locked_ = nullptr;
+	QLabel *sceneWarn_ = nullptr;
 	QCheckBox *closest_ = nullptr;
 	QPushButton *dual_ = nullptr;
 	QComboBox *active_;

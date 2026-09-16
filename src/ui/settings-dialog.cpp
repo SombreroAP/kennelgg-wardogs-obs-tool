@@ -584,8 +584,6 @@ private:
 
 // ============================================================ SettingsDialog
 
-static const char *kLiveScene = "(the scene that is live)";
-
 namespace {
 /// A mouse wheel over the settings window used to change whatever spin box or drop-down happened to
 /// be under the pointer - which is how a bridge port quietly became 47821 mid-session and ClipHound
@@ -2605,10 +2603,18 @@ void SettingsDialog::fillSources()
 		gameDetect_->blockSignals(false);
 	}
 	scene_->clear();
-	scene_->addItem(kLiveScene);
 	for (auto &s : scenes)
 		scene_->addItem(QString::fromStdString(s));
-	scene_->setCurrentText(e_->cfg.sceneName.empty() ? kLiveScene : QString::fromStdString(e_->cfg.sceneName));
+	QString want = QString::fromStdString(e_->cfg.sceneName);
+	if (want.isEmpty()) {
+		obs_source_t *cs = obs_frontend_get_current_scene();
+		if (cs) {
+			want = obs_source_get_name(cs);
+			obs_source_release(cs);
+		}
+	}
+	int si = scene_->findText(want);
+	scene_->setCurrentIndex(si < 0 ? 0 : si);
 	if (sceneV_) {
 		sceneV_->blockSignals(true);
 		sceneV_->clear();
@@ -2765,7 +2771,7 @@ void SettingsDialog::collect()
 		return;
 	Config &c = e_->cfg;
 	c.gameSource = game_->currentText().toStdString();
-	c.sceneName = scene_->currentText() == kLiveScene ? "" : scene_->currentText().toStdString();
+	c.sceneName = scene_->currentText().toStdString();
 	if (onTop_) {
 		c.onTop.clear();
 		for (int i = 0; i < onTop_->count(); i++)
