@@ -2,6 +2,12 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.16.4
+- **Voice (beta) hears the commands now.** The first real session showed what went wrong: the small listener, left to guess any English, made "kendall replay" of "kennel replay" and "kennel club that" of "kennel clip that", and neither fired. It is now told exactly what can be said after the wake word (about ninety phrasings), so those come out as "kennel replay" and "kennel clip that", and ordinary talk comes out as nothing at all. Tested on synthesised speech: every command fired, and "what a nice shot bro" was ignored.
+- **Names go through Whisper.** A squad mate's name is not a word the listener knows, so "kennel show bouga three four" is heard as "kennel show ..." and Whisper reads the name from the last few seconds: bouga34. Spoken numbers become digits.
+- Half a sentence no longer fires: "kennel show my" used to be taken for "show me" before "squad mate" arrived. Only a whole phrase fires early; anything with a name waits for the end of the sentence.
+- Clip titles anchor on "clip that" even when Whisper mishears the wake word ("then I'll clip that he fell off the roof" still gives "He Fell Off The Roof"), and Whisper is nudged to spell the wake word right.
+
 ## 0.16.3
 - Voice (beta): the logs now show what is going on. The plugin says when microphone audio starts flowing to ClipHound; ClipHound says when the first audio arrives, reports the microphone level every two minutes (and calls out silence), and writes every sentence the listener makes of you, so a log shows why a command did or did not fire. The wake word is taken as heard, so "kennels" and "kenel" count as "kennel".
 

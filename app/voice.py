@@ -98,6 +98,7 @@ class Voice:
         self._got = 0               # samples received since the last level report
         self._sq = 0.0              # their energy
         self._first = True
+        self._grammar_wake = None
         self._report_at = time.time() + 30
         self._status = ""
 
@@ -220,24 +221,68 @@ class Voice:
                 self._q.clear()
             if not self.commands or self._vosk is None:
                 continue
-            if rec is None:
-                from vosk import KaldiRecognizer
-                rec = KaldiRecognizer(self._vosk, RATE)
-                rec.SetWords(False)
+            if rec is None or self._grammar_wake != self.wake:
+                rec = self._recogniser()
             try:
                 if rec.AcceptWaveform(chunk):
                     text = json.loads(rec.Result()).get("text", "")
-                    if text:
-                        print(f"[voice] heard: {text[:120]}")   # every sentence, so a log shows what the model makes of you
-                        self._heard(text)
+                    clean = text.replace("[unk]", " ").strip()
+                    if clean:
+                        print(f"[voice] heard: {text[:120]}")   # what the model makes of you, [unk] = not a command
+                        self._heard(clean)
                 else:
                     # a command should not wait for a pause in the talking: look at the partial too
-                    part = json.loads(rec.PartialResult()).get("partial", "")
+                    part = json.loads(rec.PartialResult()).get("partial", "").replace("[unk]", " ").strip()
                     if part and self._heard(part, partial=True):
                         rec.Reset()
             except Exception as e:
                 print(f"[voice] recogniser: {e}")
                 rec = None
+
+    def _recogniser(self):
+        """Vosk with a grammar: the wake word and every way of asking, everything else [unk].
+        Free-form, the small model made "kendall replay" and "kennel club that" of a clear
+        "kennel replay" and "kennel clip that"; told what can be said, it gets them right and
+        turns ordinary talk into [unk]. A name after "show" is [unk] too; Whisper reads it."""
+        from vosk import KaldiRecognizer
+        self._grammar_wake = self.wake
+        phrases = {"[unk]", f"{self.wake} show [unk]", f"{self.wake} switch to [unk]", f"{self.wake} change to [unk]",
+                   f"{self.wake} clip that [unk]", f"{self.wake} clip [unk]"}
+        for ps in INTENTS.values():
+            for p in ps:
+                phrases.add(f"{self.wake} {p}")
+        try:
+            rec = KaldiRecognizer(self._vosk, RATE, json.dumps(sorted(phrases)))
+            print(f"[voice] listening for {len(phrases)} phrases after '{self.wake}'")
+        except Exception as e:
+            print(f"[voice] grammar not accepted ({e}); listening free-form")
+            rec = KaldiRecognizer(self._vosk, RATE)
+        rec.SetWords(False)
+        return rec
+
+    def _name_after(self, cmd: str):
+        """'kennel show [unk]': the name was not in the small model's world. Whisper hears the
+        last few seconds and the words after show / switch to are the name."""
+        try:
+            audio = self._window(time.time() - 4.0, time.time())
+            if self._whisper is None or len(audio) < RATE // 2:
+                return
+            f = audio.astype(np.float32) / 32768.0
+            segs, _ = self._whisper.transcribe(f, language="en", beam_size=2, vad_filter=False,
+                                               condition_on_previous_text=False,
+                                               initial_prompt=f"{self.wake}, show " + ", ".join(self.squad[:6]))
+            text = " ".join(s.text.strip() for s in segs).lower()
+            t = re.sub(r"[^a-z0-9' ]", " ", text)
+            # the last ask in the window is the one that just fired
+            found = re.findall(r"\b(?:show|switch to|change to|swap to|go to|put)\s+((?:(?!\b(?:show|switch|change|swap|go|put|" +
+                               re.escape(self.wake) + r")\b)[a-z0-9' ])+?)(?:\s+(?:on|pov|point of view))?\s*(?=$|\b" +
+                               re.escape(self.wake) + r"\b)", t)
+            name = self.digits(found[-1].strip()) if found else ""
+            print(f"[voice] name after '{cmd}': {name!r}  <- {text!r}")
+            if name:
+                self.b.send({"type": "voice", "cmd": "change", "name": name, "heard": text})
+        except Exception as e:
+            print(f"[voice] name: {e}")
 
     def _heard(self, text: str, partial: bool = False) -> bool:
         t = " " + re.sub(r"[^a-z0-9' ]", " ", text.lower()) + " "
@@ -254,12 +299,19 @@ class Voice:
         if not after:
             return False
         cmd, name, score = self.intent(after)
+        if not cmd and not partial and after in ("show", "switch to", "change to", "clip that", "clip"):
+            cmd, name, score = ("clip", "", 1.0) if after.startswith("clip") else ("change", "", 1.0)
+            if cmd == "change":
+                threading.Thread(target=self._name_after, args=(after,), daemon=True).start()
+                self._last_cmd = time.time()
+                return True
         if not cmd:
             return False
-        if partial and cmd in ("change",) and name and len(name) < 3:
-            return False               # the name is still being said
-        if partial and score < 0.9 and len(after.split()) < 2:
-            return False               # one word so far: wait for the rest
+        if partial:
+            # half a sentence is not a command: "show my" is not "show me". Only a whole phrase,
+            # word for word, fires early; anything with a name or a fuzzy fit waits for the end
+            if score < 0.87 or name or after.split()[0] in ("show", "switch", "change", "swap", "go", "put", "watch"):
+                return False
         if self.allow and cmd not in self.allow and cmd not in ("me", "highlights"):
             return True                # switched off in the plugin: swallow it, say nothing
         now = time.time()
@@ -341,7 +393,8 @@ class Voice:
             if self._whisper is not None:
                 f = audio.astype(np.float32) / 32768.0
                 segs, _ = self._whisper.transcribe(f, language="en", beam_size=2, vad_filter=True,
-                                                   condition_on_previous_text=False)
+                                                   condition_on_previous_text=False,
+                                                   initial_prompt=f"{self.wake}, clip that.")
                 text = " ".join(s.text.strip() for s in segs).strip()
             elif self._vosk is not None:
                 from vosk import KaldiRecognizer
@@ -378,7 +431,9 @@ class Voice:
         t = text.lower()
         t = re.sub(r"[^a-z0-9' ]", " ", t)
         # "kennel clip that <what it was>": what follows the ask is the title, whatever came before
-        ask = re.compile(r"\b" + re.escape(wake) + r"\b\s*(clip|replay|show|back|dual|highlights)?(\s+(that|this|it))?\s*")
+        # the ask can arrive as "kennel clip that", or with the wake word misheard ("then I'll
+        # clip that", "can I clip that"): the clip words are the anchor, the wake word optional
+        ask = re.compile(r"(?:\b" + re.escape(wake) + r"\b\s*)?\b(clip|clipped|save|record)\s+(that|this|it|him|her|them)\b\s*")
         m = None
         for m in ask.finditer(t):
             pass
@@ -386,7 +441,7 @@ class Voice:
             t = t[m.end():]
         else:
             t = ask.sub(" ", t)
-        t = re.sub(r"\b(clip|save|record)\s+(that|this|it)\b", " ", t)
+            t = re.sub(r"\b" + re.escape(wake) + r"\b\s*(clip|replay|show|back|dual|highlights)?\s*", " ", t)
         filler = {"uh", "um", "like", "yeah", "okay", "ok", "oh", "so", "just", "bro", "dude", "man", "guys", "chat",
                   "holy", "wow", "lets", "let's", "please"}
         words = [w for w in t.split() if w not in filler]
