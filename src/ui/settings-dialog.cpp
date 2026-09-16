@@ -342,7 +342,7 @@ private:
 	{
 		QNetworkAccessManager nam;
 		QNetworkRequest req(QUrl("https://www.youtube.com/" + handle));
-		req.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Kennel.gg Wardogs OBS Tools)");
+		req.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Kennel.gg Wardogs Streaming Tool)");
 		req.setRawHeader("Accept-Language", "en");
 		QNetworkReply *rep = nam.get(req);
 		QEventLoop loop;
@@ -608,7 +608,7 @@ public:
 
 SettingsDialog::SettingsDialog(Engine *engine, QWidget *parent) : QDialog(parent), e_(engine)
 {
-	setWindowTitle("Kennel.gg Wardogs OBS Tool");
+	setWindowTitle("Kennel.gg Wardogs Streaming Tool");
 	setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowMinMaxButtonsHint);
 	setSizeGripEnabled(true);
 	setMinimumSize(560, 400); // it scrolls now, so it can be made genuinely small
@@ -2399,7 +2399,7 @@ QWidget *SettingsDialog::buildAboutTab()
 	l->setWordWrap(true);
 	l->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	l->setText(
-		"<h3>Kennel.gg Wardogs OBS Tool</h3>"
+		"<h3>Kennel.gg Wardogs Streaming Tool</h3>"
 		"<p>Downed in WARDOGS? Your stream shows a squad mate's POV (video and game audio) until you are back up. Your mic is never touched.</p>"
 		"<ol>"
 		"<li><b>Switch tab:</b> pick your game source, add squad mates, tick the game-audio inputs to mute.</li>"

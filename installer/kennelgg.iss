@@ -1,4 +1,4 @@
-; Kennel.gg Wardogs OBS Tool - Windows installer (Inno Setup 6)
+; Kennel.gg Wardogs Streaming Tool - Windows installer (Inno Setup 6)
 ; Installs the portable-plugin layout into OBS's shared plugin folder, which OBS 30+ scans on start:
 ;   C:\ProgramData\obs-studio\plugins\kennelgg\bin\64bit\kennelgg.dll  +  data\
 
@@ -17,9 +17,9 @@
 
 [Setup]
 AppId={{7C1E6B0A-4F5D-4C7B-9C0E-KENNELWD0001}
-AppName=Kennel.gg Wardogs OBS Tool
+AppName=Kennel.gg Wardogs Streaming Tool
 AppVersion={#VERSION}
-AppVerName=Kennel.gg Wardogs OBS Tool {#VERSION}
+AppVerName=Kennel.gg Wardogs Streaming Tool {#VERSION}
 AppPublisher=Sombrero / The Kennel
 AppPublisherURL=https://kennel.gg
 DefaultDirName={commonappdata}\obs-studio\plugins\kennelgg
@@ -36,7 +36,7 @@ SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
-UninstallDisplayName=Kennel.gg Wardogs OBS Tool
+UninstallDisplayName=Kennel.gg Wardogs Streaming Tool
 WizardStyle=modern
 SetupLogging=yes
 

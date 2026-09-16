@@ -1,6 +1,6 @@
-# Kennel.gg Wardogs OBS Tool
+# Kennel.gg Wardogs Streaming Tool
 
-One OBS plugin (Windows, OBS 30+) for streaming **WARDOGS**, plus ClipHound, the companion app that
+A plugin for OBS Studio (Windows, OBS 30+) for streaming **WARDOGS**, plus ClipHound, the companion app that
 watches the kill feed. Made by [The Kennel](https://kennel.gg), the WARDOGS community: guides, Bootcamp,
 loadout builder, leaderboard and [Discord](https://discord.gg/nDyJ7SSM8q). Free, and one of the ways
 people find us.
@@ -53,7 +53,7 @@ Other squad-mate feeds still work when Discord is not an option: Twitch, Kick, Y
 Do not minimise a pop-out. A minimised window stops drawing and its feed freezes. Tucked away is fine,
 and **Show pop-outs** brings them back when you want their own volume slider.
 
-Settings live under Tools, Kennel.gg Wardogs OBS Tool; the dock under View, Docks.
+Settings live under Tools, Kennel.gg Wardogs Streaming Tool; the dock under View, Docks.
 
 ## Install
 

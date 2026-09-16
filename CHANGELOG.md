@@ -1,6 +1,9 @@
 # Changelog
 
-All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
+All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
+
+## 0.14.2
+- **Renamed: Kennel.gg Wardogs Streaming Tool.** The OBS Project asks that plugins do not carry the letters OBS in their name, so that nothing looks official; "for OBS Studio" as a description is fine. Everything that showed the name changes: the dock, the Tools menu entry, the setup and settings windows, the installer and the uninstall entry, the website and the GitHub repository (the old address redirects). Nothing else moves: settings, sources, hotkeys and the update check carry on as they are.
 
 ## 0.14.1
 - On the third start with the plugin, once, a note asks whether you are enjoying it and offers a link to support development. Maybe later closes it for good.
@@ -245,7 +248,7 @@ All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are t
 - **The 0.7.0 installer put the plugin in the wrong folder, so OBS never loaded it** - no dock, no Tools entry, no error. It kept the old AppId so Windows would see an upgrade, and Inno Setup then reused the previous install folder: `kennelgg.dll` ended up under `plugins\kennel-wardogs`, and OBS only loads a DLL named after its folder. 0.7.1 always installs to `plugins\kennelgg` and removes the stray folder 0.7.0 left. Nothing else changed.
 
 ## 0.7.0
-- **Renamed to Kennel.gg Wardogs OBS Tool, all the way down.** The window, the dock, the hotkey labels, the installer, the repo - and now the plugin itself: the module is `kennelgg`, it installs to `plugins\kennelgg`, ClipHound lives in `ProgramData\Kennel.gg\ClipHound`, and every source the plugin makes is named "Kennel.gg ..." ("Kennel.gg · Pup", "Kennel.gg web", "Kennel.gg look", "Kennel.gg dual"). The Help tab has an **About The Kennel** section with what kennel.gg is and links to the site, Discord, Twitch and X, and the installer's welcome page says who made it.
+- **Renamed to Kennel.gg Wardogs Streaming Tool, all the way down.** The window, the dock, the hotkey labels, the installer, the repo - and now the plugin itself: the module is `kennelgg`, it installs to `plugins\kennelgg`, ClipHound lives in `ProgramData\Kennel.gg\ClipHound`, and every source the plugin makes is named "Kennel.gg ..." ("Kennel.gg · Pup", "Kennel.gg web", "Kennel.gg look", "Kennel.gg dual"). The Help tab has an **About The Kennel** section with what kennel.gg is and links to the site, Discord, Twitch and X, and the installer's welcome page says who made it.
 - **Nothing is lost in the move.** The installer removes the old `plugins\kennel-wardogs` folder (two copies would both load), carries ClipHound's config over and removes its old folder; the plugin picks up its old settings file the first time it starts under the new id; sources made by earlier builds are renamed in place rather than made again, so scenes do not fill with duplicates; and the hotkey ids are unchanged, so bindings survive. Close OBS, run the installer, start OBS: that is all.
 - **Nothing of yours is muted when the POV changes, and no sound is taken from the squad mate's feed** - for everyone, including setups that had either ticked. Both are still there on the Switch tab to turn on. A Discord squad mate's audio capture follows the same rule now in every mode.
 - **Kick and YouTube live streams** as squad-mate kinds, alongside Twitch. Kick takes the channel name; YouTube takes a channel link, @handle, channel ID or a live video link - a handle is looked up once on Save for the channel ID the player needs. With a channel, whatever they are streaming right now is shown.

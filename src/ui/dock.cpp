@@ -701,7 +701,7 @@ void Dock::refresh()
 void Dock::showSupportNote()
 {
 	QMessageBox m((QWidget *)obs_frontend_get_main_window());
-	m.setWindowTitle("Kennel.gg Wardogs OBS Tool");
+	m.setWindowTitle("Kennel.gg Wardogs Streaming Tool");
 	m.setIcon(QMessageBox::NoIcon);
 	m.setTextFormat(Qt::RichText);
 	m.setText("<b>Enjoying the plugin?</b>");

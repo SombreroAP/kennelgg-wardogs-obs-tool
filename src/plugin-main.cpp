@@ -1,5 +1,5 @@
 /*
-Kennel.gg Wardogs OBS Tool - show a squad mate's POV while you are downed in WARDOGS.
+Kennel.gg Wardogs Streaming Tool - show a squad mate's POV while you are downed in WARDOGS.
 Copyright (C) 2026 Sombrero / The Kennel
 
 This program is free software; you can redistribute it and/or modify
@@ -223,7 +223,7 @@ bool obs_module_load(void)
 						      hotkeyHighlights, nullptr);
 	loadHotkeys();
 	obs_frontend_add_event_callback(onFrontendEvent, nullptr);
-	obs_log(LOG_INFO, "Kennel.gg Wardogs OBS Tool loaded (version %s)", PLUGIN_VERSION);
+	obs_log(LOG_INFO, "Kennel.gg Wardogs Streaming Tool loaded (version %s)", PLUGIN_VERSION);
 	return true;
 }
 
@@ -246,5 +246,5 @@ void obs_module_unload(void)
 		g_engine->stop();
 	g_engine = nullptr; // owned by the main window
 	g_dock = nullptr;
-	obs_log(LOG_INFO, "Kennel.gg Wardogs OBS Tool unloaded");
+	obs_log(LOG_INFO, "Kennel.gg Wardogs Streaming Tool unloaded");
 }

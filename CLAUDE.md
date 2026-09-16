@@ -1,6 +1,6 @@
-# kennelgg-wardogs-obs-tool — session context
+# kennelgg-wardogs-streaming-tool — session context
 
-**"Kennel.gg Wardogs OBS Tool"** — one OBS plugin (C++ / Qt, obs-plugintemplate, module id
+**"Kennel.gg Wardogs Streaming Tool"** — one OBS plugin (C++ / Qt, obs-plugintemplate, module id
 `kennelgg` since 0.7.0 - the DLL, plugin folder and `ProgramData\Kennel.gg\ClipHound` follow it; the
 installer removes the old `plugins\kennel-wardogs` and carries ClipHound's config over, `Config::load` picks up
 the old `plugin_config\kennel-wardogs\config.json`, and `Switcher::migrateNames` renames "Kennel ..." sources
@@ -9,7 +9,7 @@ swap** (downed → show a squad mate's POV; mic untouched) and **clips** (replay
 rename, from hotkey/dock/downed/**ClipHound**). ClipHound (`../ClipHound`, Python) stays a separate
 app that does the kill-feed OCR and talks to the plugin over a local WebSocket bridge; the split is
 deliberate (no Tesseract inside OBS, downed detection stays native). An earlier C# tray app was
-deleted; do not resurrect it. Builds go to Google Drive `My Drive/Kennel.gg Wardogs OBS Tools/`.
+deleted; do not resurrect it. Builds go to Google Drive `My Drive/Kennel.gg Wardogs Streaming Tool/`.
 
 | File | What |
 |---|---|

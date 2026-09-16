@@ -24,7 +24,7 @@ static QLabel *note(const QString &t, QWidget *p)
 
 SetupWizard::SetupWizard(Engine *engine, QWidget *parent) : QWizard(parent), e_(engine)
 {
-	setWindowTitle("Kennel.gg Wardogs OBS Tool - setup");
+	setWindowTitle("Kennel.gg Wardogs Streaming Tool - setup");
 	setWizardStyle(QWizard::ModernStyle);
 	setOption(QWizard::NoBackButtonOnStartPage, true);
 	setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowMinMaxButtonsHint);
@@ -47,7 +47,7 @@ SetupWizard::SetupWizard(Engine *engine, QWidget *parent) : QWizard(parent), e_(
 				QString("<p><b>Name:</b> %1<br><b>Game source:</b> %2<br><b>Squad mates:</b> %3<br><b>Clips:</b> replay buffer on%4</p>"
 					"<p>Press Finish, then <b>get downed once</b> with WARDOGS on screen. The dock (View → Docks → Kennel.gg Wardogs) turns red "
 					"and your stream shows the squad mate; it comes back the instant you are revived.</p>"
-					"<p>Everything here can be changed under Tools → Kennel.gg Wardogs OBS Tool...</p>")
+					"<p>Everything here can be changed under Tools → Kennel.gg Wardogs Streaming Tool...</p>")
 					.arg(name_->text().trimmed().isEmpty() ? QSysInfo::machineHostName()
 									       : name_->text().trimmed(),
 					     g.isEmpty() ? "(none yet)" : g)

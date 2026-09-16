@@ -1,6 +1,6 @@
 """Log in to Twitch from the OBS plugin with the device code flow: no developer app for the user,
 no client secret. Needs one registered *public* Twitch application for Kennel (client id below).
-Register at https://dev.twitch.tv/console/apps: name "Kennel.gg Wardogs OBS Tools", category
+Register at https://dev.twitch.tv/console/apps: name "Kennel.gg Wardogs Streaming Tool", category
 Application Integration, client type Public, redirect http://localhost. Paste its Client ID here."""
 import threading
 import time
