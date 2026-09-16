@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.15.1
+- **"Game language not supported yet?"** With Game language on Auto, if the damage-log header keeps scoring close to the line without ever matching English, Spanish or French, a note says so once and offers to save a frame right then and open the Kennel.gg Discord, so a ticket with the picture is two clicks. It never shows once a wording has matched, when a language is picked by hand, or with a custom header cut.
+
 ## 0.15.0
 - **The game in Spanish or French.** The downed detector looks for the damage-log header on your screen, and until now it only knew the English "VIEW DAMAGE LOG". A game in Spanish ("VER REGISTRO DE DAÑOS") or French ("AFFICHER LE JOURNAL DES DÉGÂTS") scored just under the line, so the swap fired once in a while and dropped after a few seconds. All three wordings ship now. Game language on the Detect tab is Auto: every wording is searched until one matches, the plugin logs which, keeps that one and remembers it for next time. Pick a language by hand if you would rather. The French wording was cut from a 1080p stream frame, the Spanish from a 1440p screenshot, so the Spanish one is the better tested of the two; if yours is not found, save a frame while downed (Detect tab) and open a ticket in the Kennel.gg Discord.
 - **More languages by ticket.** English, Spanish and French are the ones on board. For another language, open a ticket in the Kennel.gg Discord with a frame saved while downed and it goes in the next build.

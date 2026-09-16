@@ -220,10 +220,12 @@ struct Config {
 		true; // look for "REVIVING" on the friend's feed and switch back instantly when the damage log goes
 	double reviveThreshold = 0.80;
 	std::string gameLang =
-		"auto";            // damage-log wording: auto | en | es (auto tries every language until one matches)
-	std::string gameLangFound; // what auto settled on, so later sessions search one wording only
-	bool wideSearch = false;   // look over the whole frame at more sizes: slower, for unusual HUDs
-	double customTemplateWidthFrac = 0;                         // 0 = built-in damage-log template
+		"auto"; // damage-log wording: auto | en | es (auto tries every language until one matches)
+	std::string gameLangFound;
+	bool langAskShown =
+		false; // the once-only "language not supported" note has been shown // what auto settled on, so later sessions search one wording only
+	bool wideSearch = false;            // look over the whole frame at more sizes: slower, for unusual HUDs
+	double customTemplateWidthFrac = 0; // 0 = built-in damage-log template
 	double boxX = 0.84, boxY = 0.62, boxW = 0.13, boxH = 0.035; // capture box for a custom template
 
 	static const char *webSourceName() { return "Kennel.gg web"; }

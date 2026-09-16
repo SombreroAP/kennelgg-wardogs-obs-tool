@@ -24,6 +24,7 @@ public slots:
 	void openLogs();
 	void openSquad();
 	void showSupportNote();
+	void showLanguageNote();
 
 private:
 	Engine *e_;

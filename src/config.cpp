@@ -214,6 +214,7 @@ void Config::load()
 	DEFD(reviveThreshold);
 	DEFS(gameLang);
 	DEFS(gameLangFound);
+	DEFB(langAskShown);
 	DEFB(wideSearch);
 	DEFD(customTemplateWidthFrac);
 	DEFD(boxX);
@@ -355,6 +356,7 @@ void Config::load()
 	GETD(reviveThreshold);
 	GETS(gameLang);
 	GETS(gameLangFound);
+	GETB(langAskShown);
 	GETB(wideSearch);
 	GETD(customTemplateWidthFrac);
 	GETD(boxX);
@@ -640,6 +642,7 @@ void Config::save() const
 	SETD(reviveThreshold);
 	SETS(gameLang);
 	SETS(gameLangFound);
+	SETB(langAskShown);
 	SETB(wideSearch);
 	SETD(customTemplateWidthFrac);
 	SETD(boxX);

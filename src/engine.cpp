@@ -849,6 +849,12 @@ void Engine::supportNoteShown()
 	cfg.save();
 }
 
+void Engine::languageNoteShown()
+{
+	cfg.langAskShown = true;
+	cfg.save();
+}
+
 Engine::Access Engine::rosterAccess() const
 {
 	if (!roster.running() || !roster.healthy() || !roster.membersKnown())
@@ -2196,13 +2202,26 @@ void Engine::detect(const Match &m)
 			nearBest_ = m.score;
 		auto now = clock_::now();
 		if (now - nearSince_ >= std::chrono::seconds(60)) {
-			if (nearBest_ >= 0.60 && nearBest_ < cfg.threshold)
+			if (nearBest_ >= 0.60 && nearBest_ < cfg.threshold) {
 				log(QString("Downed search: best match %1 in the last minute, below the threshold of %2. "
 					    "If you were downed in that time, the damage-log header on your screen does "
 					    "not match the built-in one (game language or resolution): cut your own on "
 					    "the Detect tab.")
 					    .arg(nearBest_, 0, 'f', 3)
 					    .arg(cfg.threshold, 0, 'f', 2));
+				// three such minutes with every wording in play and none ever matching: the
+				// game is most likely in a language we do not have. Say so, once
+				if (nearBest_ >= 0.62 && ++nearMinutes_ >= 3 && !cfg.langAskShown &&
+				    cfg.gameLang == "auto" && cfg.gameLangFound.empty() &&
+				    cfg.customTemplateWidthFrac <= 0) {
+					cfg.langAskShown = true;
+					cfg.save();
+					log("The damage log never matched the English, Spanish or French wording: is the game "
+					    "in another language? Save a frame while downed and open a ticket in the Kennel.gg "
+					    "Discord.");
+					emit languageUnknown();
+				}
+			}
 			nearBest_ = 0;
 			nearSince_ = now;
 		}

@@ -132,6 +132,9 @@ signals:
 	void nearbyTested(const QJsonObject &result);
 	/// Discord on this PC answered who it is logged in as ("" when it did not). byHand: from a button.
 	void discordUserDetected(const QString &user, bool byHand);
+	/// The damage log keeps scoring close to, never over, the line for every wording we have:
+	/// the game is probably in a language the plugin does not know. Once per install.
+	void languageUnknown();
 
 public:
 	bool applied() const { return applied_; }
@@ -172,6 +175,7 @@ public:
 	/// True once: on the third start with the plugin, the dock shows the support note.
 	bool wantsSupportNote() const { return !cfg.supportAsked && cfg.startCount >= 3; }
 	void supportNoteShown();
+	void languageNoteShown();
 	/// Tick every desktop-audio input once, when nothing was chosen yet.
 	void autoPickAudio();
 
@@ -282,6 +286,7 @@ private:
 	int downRun_ = 0, upRun_ = 0, tickN_ = 0;
 	double peakScore_ = 0;
 	double nearBest_ = 0; // best below-threshold score since nearSince_
+	int nearMinutes_ = 0; // minutes in which the best score came close without a match
 	std::chrono::steady_clock::time_point nearSince_ = std::chrono::steady_clock::now();
 	float downX_ = 0, downY_ = 0; // where the log was found when we went down (it does not move)
 	std::chrono::steady_clock::time_point fullSince_; // last poll the log scored a clean match in that spot

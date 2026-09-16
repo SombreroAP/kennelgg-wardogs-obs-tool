@@ -463,6 +463,7 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 	v->addStretch(1);
 
 	connect(e_, &Engine::stateChanged, this, &Dock::refresh);
+	connect(e_, &Engine::languageUnknown, this, &Dock::showLanguageNote, Qt::QueuedConnection);
 	connect(&e_->roster, &Roster::changed, this, &Dock::refresh);
 	connect(&e_->roster, &Roster::polled, this, &Dock::refresh);
 	connect(e_, &Engine::frameUpdated, this, [this]() {
@@ -715,6 +716,38 @@ void Dock::showSupportNote()
 	if (m.clickedButton() == support)
 		QDesktopServices::openUrl(QUrl(Config::supportUrl()));
 	e_->supportNoteShown(); // once, whichever button
+}
+
+void Dock::showLanguageNote()
+{
+	QMessageBox m((QWidget *)obs_frontend_get_main_window());
+	m.setWindowTitle("Kennel.gg Wardogs Streaming Tool");
+	m.setIcon(QMessageBox::NoIcon);
+	m.setTextFormat(Qt::RichText);
+	m.setText("<b>Game language not supported yet?</b>");
+	m.setInformativeText(
+		"The plugin finds you are downed by the damage-log header on your screen, and it knows the "
+		"wording in <b>English, Spanish and French</b>. Something header-like has been on your screen "
+		"several times without matching any of them, so your game may be in another language.<br><br>"
+		"To add it: while you are downed, press <b>Save a frame</b> (Settings, Detect tab, or the button "
+		"below if you are downed right now) and open a ticket in the Kennel.gg Discord with the picture. "
+		"Your language goes into the next build.<br><br>"
+		"Game already in English, Spanish or French? Then this is a resolution or HUD-scale difference: "
+		"cut your own header on the Detect tab instead.");
+	auto *save = m.addButton("Save a frame now", QMessageBox::ActionRole);
+	auto *discord = m.addButton("Open the Kennel.gg Discord", QMessageBox::AcceptRole);
+	m.addButton("Close", QMessageBox::RejectRole);
+	m.exec();
+	if (m.clickedButton() == save) {
+		QString r = e_->saveFrame();
+		QMessageBox::information((QWidget *)obs_frontend_get_main_window(), "Kennel.gg Wardogs Streaming Tool",
+					 r.startsWith("Could not")
+						 ? r
+						 : "Saved: " + r +
+							   "\n\nAttach this to a ticket in the Kennel.gg Discord.");
+	} else if (m.clickedButton() == discord)
+		QDesktopServices::openUrl(QUrl(Config::kennelDiscordUrl()));
+	e_->languageNoteShown();
 }
 
 void Dock::openWizard()
