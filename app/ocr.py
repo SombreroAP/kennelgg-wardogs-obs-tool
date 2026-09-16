@@ -316,7 +316,9 @@ def name_matches(text: str, name: str, min_ratio: float = 0.72) -> bool:
     """Fuzzy: does `name` appear in OCR `text`? ('Kennel.gg-Sambrezo' still matches 'Sombrero').
     Also accepts a clean fragment of at least 5 characters ('pPOOH' for 'wOnderPOOH') at a
     stricter ratio, for rows where the background eats half the name."""
-    t, n = text.lower(), name.lower()
+    t, n = text.lower(), (name or "").strip().lower()
+    if len(n) < 2:
+        return False      # no name set: nothing is "me" (an empty needle is found in every string)
     if n in t:
         return True
     L = len(n)

@@ -2098,6 +2098,24 @@ void Engine::detect(const Match &m)
 	if (!cfg.enabled || !cfg.autoDetect || m.score < 0)
 		return;
 	bool match = m.score >= cfg.threshold;
+	// a near miss is a downed screen the template does not quite fit (the game in another
+	// language, an odd resolution): say so once a minute, so a log tells which
+	if (!detected_) {
+		if (m.score > nearBest_)
+			nearBest_ = m.score;
+		auto now = clock_::now();
+		if (now - nearSince_ >= std::chrono::seconds(60)) {
+			if (nearBest_ >= 0.60 && nearBest_ < cfg.threshold)
+				log(QString("Downed search: best match %1 in the last minute, below the threshold of %2. "
+					    "If you were downed in that time, the damage-log header on your screen does "
+					    "not match the built-in one (game language or resolution): cut your own on "
+					    "the Detect tab.")
+					    .arg(nearBest_, 0, 'f', 3)
+					    .arg(cfg.threshold, 0, 'f', 2));
+			nearBest_ = 0;
+			nearSince_ = now;
+		}
+	}
 	if (detected_) {
 		if (m.score > peakScore_)
 			peakScore_ = m.score;

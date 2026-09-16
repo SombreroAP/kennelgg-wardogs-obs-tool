@@ -271,6 +271,8 @@ private:
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
 	int downRun_ = 0, upRun_ = 0, tickN_ = 0;
 	double peakScore_ = 0;
+	double nearBest_ = 0; // best below-threshold score since nearSince_
+	std::chrono::steady_clock::time_point nearSince_ = std::chrono::steady_clock::now();
 	float downX_ = 0, downY_ = 0; // where the log was found when we went down (it does not move)
 	std::chrono::steady_clock::time_point fullSince_; // last poll the log scored a clean match in that spot
 	static constexpr int kHoldMs = 3000;              // how long a washed-out log is held as still there

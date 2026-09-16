@@ -135,7 +135,13 @@ def main():
 
     def apply_live(c):
         # settings changed from the OBS plugin: name, library, Twitch, clip rules, the areas we read
+        was = det.me
         det.me = c["detection"].get("player_name", det.me)
+        if not (det.me or "").strip():
+            print("[config] no player name set: kill-feed rows cannot be matched to you. "
+                  "Enter your in-game name in the plugin (Settings > ClipHound).")
+        elif det.me != was:
+            print(f"[config] player name: {det.me!r}")
         det.cfg["clip_every_kill"] = bool(c["detection"].get("clip_every_kill"))
         det.cfg["multikill_window_s"] = float(c["detection"].get("multikill_window_s", 30))
         det.set_rate(c["capture"].get("fps", 5))

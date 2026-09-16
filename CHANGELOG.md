@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.14.4
+- **No player name meant every kill was yours.** With the in-game name left blank on the ClipHound tab, every kill-feed row matched "me" on both sides, so ClipHound fired "Killed myself" on other people's kills every twenty seconds and asked for a clip each time. A blank name now matches nobody, and ClipHound's log says the name is missing.
+- **The downed search reports near misses.** Once a minute, if the damage-log header scored close to the threshold without reaching it, the log says so and points to the Detect tab, where you can cut the header from your own screen. That is the case for a game running in another language: the built-in header is the English "VIEW DAMAGE LOG", and the Spanish "VER REGISTRO DE DAÑOS" only crosses the line now and then, which looks like a swap that fires once an hour and drops after a few seconds.
+
 ## 0.14.3
 - **Pop-outs in any language.** Discord titles a popped-out stream in the client's own language, and only the English "x's Stream" was recognised: a French client's "Stream de bouga34" was reported as "no popped-out stream found" and the slot fell back to Discord's main window, which is why a squad mate's POV showed the Discord app instead of their game. French, German, Italian, Dutch, Spanish, Portuguese, Russian, Japanese, Korean and Chinese titles are read now, and a slot named by hand after the whole title matches its owner.
 - **Playing on a server the bot is not in no longer counts as "nobody streaming".** If the Kennel.gg roster cannot see you in a voice channel, it stays out of the decision: pop-outs decide who is live, the swap fires, and the dock lists the whole squad, as it does without a roster. Only when the roster sees your channel does it rule someone out.
