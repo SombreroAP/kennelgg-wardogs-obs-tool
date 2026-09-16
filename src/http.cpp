@@ -23,7 +23,8 @@ static QString lastError(const char *where)
 	return QString("%1 failed (WinHTTP error %2)").arg(where).arg(e);
 }
 
-Result get(const QString &url, int timeoutMs, const QString &userAgent)
+Result request(const QString &method, const QString &url, const QByteArray &body, const QString &headers, int timeoutMs,
+	       const QString &userAgent)
 {
 	Result out;
 	QUrl u(url);
@@ -49,7 +50,8 @@ Result get(const QString &url, int timeoutMs, const QString &userAgent)
 	}
 	WinHttpSetTimeouts(session, timeoutMs, timeoutMs, timeoutMs, timeoutMs);
 	HINTERNET conn = WinHttpConnect(session, host.c_str(), port, 0);
-	HINTERNET req = conn ? WinHttpOpenRequest(conn, L"GET", path.c_str(), nullptr, WINHTTP_NO_REFERER,
+	std::wstring meth = method.toStdWString();
+	HINTERNET req = conn ? WinHttpOpenRequest(conn, meth.c_str(), path.c_str(), nullptr, WINHTTP_NO_REFERER,
 						  WINHTTP_DEFAULT_ACCEPT_TYPES, secure ? WINHTTP_FLAG_SECURE : 0)
 			     : nullptr;
 	if (!req) {
@@ -59,8 +61,11 @@ Result get(const QString &url, int timeoutMs, const QString &userAgent)
 		WinHttpCloseHandle(session);
 		return out;
 	}
-	static const wchar_t *kHeaders = L"Cache-Control: no-cache\r\nAccept: application/json, */*\r\n";
-	if (!WinHttpSendRequest(req, kHeaders, (DWORD)-1L, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
+	std::wstring hdrs =
+		(QString("Cache-Control: no-cache\r\nAccept: application/json, */*\r\n") + headers).toStdWString();
+	if (!WinHttpSendRequest(req, hdrs.c_str(), (DWORD)-1L,
+				body.isEmpty() ? WINHTTP_NO_REQUEST_DATA : (LPVOID)body.constData(), (DWORD)body.size(),
+				(DWORD)body.size(), 0) ||
 	    !WinHttpReceiveResponse(req, nullptr)) {
 		out.error = lastError("the request");
 	} else {
@@ -91,7 +96,8 @@ Result get(const QString &url, int timeoutMs, const QString &userAgent)
 	return out;
 }
 #else
-Result get(const QString &url, int timeoutMs, const QString &userAgent)
+Result request(const QString &method, const QString &url, const QByteArray &body, const QString &headers, int timeoutMs,
+	       const QString &userAgent)
 {
 	Result out;
 	QNetworkAccessManager nam;
@@ -99,7 +105,12 @@ Result get(const QString &url, int timeoutMs, const QString &userAgent)
 	req.setHeader(QNetworkRequest::UserAgentHeader, userAgent);
 	req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 	req.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
-	QNetworkReply *r = nam.get(req);
+	for (const QString &line : headers.split("\r\n", Qt::SkipEmptyParts)) {
+		int c = line.indexOf(':');
+		if (c > 0)
+			req.setRawHeader(line.left(c).trimmed().toUtf8(), line.mid(c + 1).trimmed().toUtf8());
+	}
+	QNetworkReply *r = nam.sendCustomRequest(req, method.toUtf8(), body);
 	QEventLoop loop;
 	QTimer::singleShot(timeoutMs, &loop, [r]() {
 		if (r->isRunning())
@@ -117,6 +128,29 @@ Result get(const QString &url, int timeoutMs, const QString &userAgent)
 	return out;
 }
 #endif
+
+Result get(const QString &url, int timeoutMs, const QString &userAgent)
+{
+	return request("GET", url, QByteArray(), QString(), timeoutMs, userAgent);
+}
+
+void requestAsync(QObject *ctx, const QString &method, const QString &url, const QByteArray &body,
+		  const QString &headers, int timeoutMs, const QString &userAgent, std::function<void(Result)> done)
+{
+	QPointer<QObject> alive(ctx);
+	std::thread([alive, method, url, body, headers, timeoutMs, userAgent, done]() {
+		Result r = request(method, url, body, headers, timeoutMs, userAgent);
+		if (!alive)
+			return;
+		QMetaObject::invokeMethod(
+			alive.data(),
+			[alive, done, r]() {
+				if (alive)
+					done(r);
+			},
+			Qt::QueuedConnection);
+	}).detach();
+}
 
 void getAsync(QObject *ctx, const QString &url, int timeoutMs, const QString &userAgent,
 	      std::function<void(Result)> done)

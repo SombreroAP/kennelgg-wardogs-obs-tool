@@ -56,6 +56,8 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	connect(&roster, &Roster::changed, this, &Engine::syncRoster);
 	popoutTimer_.setInterval(2000);
 	connect(&popoutTimer_, &QTimer::timeout, this, &Engine::watchPopouts);
+	webLiveTimer_.setInterval(60000);
+	connect(&webLiveTimer_, &QTimer::timeout, this, &Engine::webLiveTick);
 	connect(&timer_, &QTimer::timeout, this, &Engine::tick);
 	connect(&frameTimer_, &QTimer::timeout, this, &Engine::frameTick);
 	downDelay_.setSingleShot(true);
@@ -523,6 +525,11 @@ void Engine::start()
 	applyReplaySeconds();
 	if (cfg.autoStartReplay && cfg.clipUseReplay)
 		clips.ensureReplayBuffer();
+	webLiveTimer_.start();
+	QTimer::singleShot(8000, this, [this]() {
+		if (!stopping_)
+			webLiveTick();
+	});
 	if (cfg.launchApp)
 		launchApp();
 	sw.migrateNames(cfg); // sources a build before 0.7.0 made, under their old names
@@ -824,6 +831,7 @@ void Engine::stop()
 	closeApp();
 	timer_.stop();
 	frameTimer_.stop();
+	webLiveTimer_.stop();
 	downDelay_.stop();
 	upDelay_.stop();
 	bridge.close();
@@ -1758,6 +1766,11 @@ bool Engine::feedUsable(const Friend &f) const
 
 Engine::Feed Engine::feedState(const Friend &f) const
 {
+	if (f.kind == FriendKind::Twitch || f.kind == FriendKind::Kick || f.kind == FriendKind::YouTube) {
+		if (rosterAccess() != Access::Ok)
+			return Feed::Unknown;
+		return webLive_.value(webLiveKey(f), Feed::Unknown);
+	}
 	if (f.kind != FriendKind::Discord)
 		return Feed::Unknown;
 	// The voice roster is the authority when it knows my channel: a squad mate it does not list
@@ -1981,6 +1994,121 @@ void Engine::switchTo(int idx, const QString &why)
 	log("Squad mate: " + why + ".");
 	addEvent("Closest: " + QString::fromStdString(cfg.friends[idx].name));
 	emit stateChanged();
+}
+
+QString Engine::webLiveKey(const Friend &f)
+{
+	QString ch = QString::fromStdString(f.channel).trimmed();
+	if (ch.startsWith('@') && f.kind != FriendKind::YouTube)
+		ch.remove(0, 1);
+	if (f.kind != FriendKind::YouTube)
+		ch = ch.toLower();
+	return QString::number((int)f.kind) + ":" + ch;
+}
+
+/// Ask each streaming service whether a squad mate's channel is live. Members of the Kennel.gg
+/// Discord only, like the rest of the squad automation; everyone else sees no change.
+void Engine::webLiveTick()
+{
+	if (stopping_ || rosterAccess() != Access::Ok)
+		return;
+	const QString ua = QString("KennelggWardogsOBSTool/%1").arg(PLUGIN_VERSION);
+	const QString browserUa = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+				  "Chrome/128.0 Safari/537.36";
+	QSet<QString> seen;
+	for (const Friend &f : cfg.friends) {
+		if (f.kind != FriendKind::Twitch && f.kind != FriendKind::Kick && f.kind != FriendKind::YouTube)
+			continue;
+		QString key = webLiveKey(f);
+		QString ch = key.mid(key.indexOf(':') + 1);
+		if (ch.isEmpty() || seen.contains(key) || webLiveBusy_.contains(key))
+			continue;
+		seen.insert(key);
+		webLiveBusy_.insert(key);
+		auto settle = [this, key, ch](Feed state, const QString &note) {
+			webLiveBusy_.remove(key);
+			Feed was = webLive_.value(key, Feed::Unknown);
+			if (state == Feed::Unknown)
+				webLive_.remove(key);
+			else
+				webLive_[key] = state;
+			if (was != state) {
+				log(QString("%1: %2%3")
+					    .arg(ch)
+					    .arg(state == Feed::Live  ? "live"
+						 : state == Feed::Off ? "offline"
+								      : "unknown")
+					    .arg(note.isEmpty() ? "" : " (" + note + ")"));
+				emit stateChanged();
+			}
+		};
+		if (f.kind == FriendKind::Twitch) {
+			// the same query Twitch's own site sends; no account needed
+			QJsonObject q;
+			q["query"] = "query($l:String!){user(login:$l){stream{id}}}";
+			QJsonObject v;
+			v["l"] = ch;
+			q["variables"] = v;
+			Http::requestAsync(
+				this, "POST", "https://gql.twitch.tv/gql",
+				QJsonDocument(q).toJson(QJsonDocument::Compact),
+				"Client-Id: kimne78kx3ncx6brgo4mv6wki5h1ko\r\nContent-Type: application/json\r\n", 8000,
+				ua, [settle](Http::Result r) {
+					if (!r.ok) {
+						settle(Feed::Unknown, r.error);
+						return;
+					}
+					QJsonObject d = QJsonDocument::fromJson(r.body).object()["data"].toObject();
+					QJsonValue user = d["user"];
+					if (!user.isObject()) {
+						settle(Feed::Unknown, "no such channel");
+						return;
+					}
+					settle(user.toObject()["stream"].isObject() ? Feed::Live : Feed::Off, "");
+				});
+		} else if (f.kind == FriendKind::Kick) {
+			Http::requestAsync(this, "GET",
+					   "https://kick.com/api/v2/channels/" +
+						   QString::fromUtf8(QUrl::toPercentEncoding(ch)),
+					   QByteArray(), "", 8000, browserUa, [settle](Http::Result r) {
+						   if (!r.ok) {
+							   settle(Feed::Unknown, r.error);
+							   return;
+						   }
+						   QJsonObject o = QJsonDocument::fromJson(r.body).object();
+						   if (o.isEmpty()) {
+							   settle(Feed::Unknown, "no answer");
+							   return;
+						   }
+						   settle(o["livestream"].isObject() ? Feed::Live : Feed::Off, "");
+					   });
+		} else {
+			// a channel id gets its /live page, a video id its watch page; both say isLiveNow
+			QString url = (ch.startsWith("UC") && ch.size() >= 20)
+					      ? "https://www.youtube.com/channel/" + ch + "/live"
+					      : "https://www.youtube.com/watch?v=" + ch;
+			Http::requestAsync(
+				this, "GET", url, QByteArray(), "Cookie: SOCS=CAI\r\nAccept-Language: en\r\n", 12000,
+				browserUa, [settle](Http::Result r) {
+					if (!r.ok) {
+						settle(Feed::Unknown, r.error);
+						return;
+					}
+					if (!r.body.contains("\"videoDetails\"") && !r.body.contains("\"isLiveNow\"")) {
+						settle(Feed::Unknown, "page not readable");
+						return;
+					}
+					settle(r.body.contains("\"isLiveNow\":true") ? Feed::Live : Feed::Off, "");
+				});
+		}
+	}
+	// slots that are gone take their answers with them
+	for (auto it = webLive_.begin(); it != webLive_.end();) {
+		if (seen.contains(it.key()))
+			++it;
+		else
+			it = webLive_.erase(it);
+	}
 }
 
 void Engine::sendPov(const QString &state)

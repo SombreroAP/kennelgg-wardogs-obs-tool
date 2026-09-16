@@ -8,6 +8,8 @@
 #include <QObject>
 #include <QImage>
 #include <QTimer>
+#include <QSet>
+#include <QHash>
 #include <QDateTime>
 #include <QElapsedTimer>
 #include "bridge.h"
@@ -247,6 +249,13 @@ private:
 
 	QTimer timer_, frameTimer_, downDelay_, upDelay_;
 	QTimer popoutTimer_;
+	// Twitch / Kick / YouTube squad mates: is their channel live right now? Asked every minute
+	// for members of the Kennel.gg Discord; a slot whose channel is offline is not shown
+	QTimer webLiveTimer_;
+	QHash<QString, Feed> webLive_; // "kind:channel" -> Live / Off (Unknown = not asked or no answer)
+	QSet<QString> webLiveBusy_;    // keys with a request in flight
+	void webLiveTick();
+	static QString webLiveKey(const Friend &f);
 	QTimer replayTimer_; // polls the playing replay: seek once loaded, stop at its end
 	qint64 replayStartMs_ = 0, replayEndMs_ = 0, replayLengthMs_ = 0;
 	QElapsedTimer replayClock_;

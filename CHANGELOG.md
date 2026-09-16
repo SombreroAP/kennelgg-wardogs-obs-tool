@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.15.2
+- The plugin's web requests can carry a method, a body and headers of their own; nothing changes for the update check or the roster.
+
 ## 0.15.1
 - **"Game language not supported yet?"** With Game language on Auto, if the damage-log header keeps scoring close to the line without ever matching English, Spanish or French, a note says so once and offers to save a frame right then and open the Kennel.gg Discord, so a ticket with the picture is two clicks. It never shows once a wording has matched, when a language is picked by hand, or with a custom header cut.
 

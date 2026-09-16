@@ -16,6 +16,12 @@ struct Result {
 };
 /// Blocking: call it off the UI thread.
 Result get(const QString &url, int timeoutMs, const QString &userAgent);
+/// Any method, with a body and extra headers ("Name: value\r\n" lines). Blocking.
+Result request(const QString &method, const QString &url, const QByteArray &body, const QString &headers, int timeoutMs,
+	       const QString &userAgent);
+/// request() on its own thread; `done` runs on ctx's thread afterwards (not at all if ctx is gone).
+void requestAsync(QObject *ctx, const QString &method, const QString &url, const QByteArray &body,
+		  const QString &headers, int timeoutMs, const QString &userAgent, std::function<void(Result)> done);
 /// get() on its own thread; `done` runs on ctx's thread afterwards (not at all if ctx is gone).
 void getAsync(QObject *ctx, const QString &url, int timeoutMs, const QString &userAgent,
 	      std::function<void(Result)> done);
