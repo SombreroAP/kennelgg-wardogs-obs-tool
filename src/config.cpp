@@ -129,6 +129,9 @@ void Config::load()
 	DEFS(highlightsFolder);
 	DEFS(replayLabel);
 	DEFS(sceneV);
+	DEFS(canvasV);
+	DEFB(verticalEnabled);
+	DEFB(verticalV2);
 	DEFI(vdoBitrateKbps);
 	DEFB(dualEnabled);
 	DEFI(dualFriend);
@@ -282,6 +285,9 @@ void Config::load()
 	GETS(highlightsFolder);
 	GETS(replayLabel);
 	GETS(sceneV);
+	GETS(canvasV);
+	GETB(verticalEnabled);
+	GETB(verticalV2);
 	GETI(vdoBitrateKbps);
 	GETB(dualEnabled);
 	GETI(dualFriend);
@@ -438,6 +444,10 @@ void Config::load()
 		minDownMs = 0;
 	// the built-in template is the wording only now, which scores lower but stands much further
 	// clear of everything else: 0.85 was tuned for the old one and is too strict for this
+	if (!verticalV2) {
+		verticalV2 = true;
+		verticalEnabled = !sceneV.empty(); // whoever had picked a vertical scene had opted in
+	}
 	if (voiceWake == "kennel")
 		voiceWake = "hey kennel"; // 0.16.5: what people actually say, and a clearer start
 	if (!thresholdV2) {
@@ -581,6 +591,9 @@ void Config::save() const
 	SETS(highlightsFolder);
 	SETS(replayLabel);
 	SETS(sceneV);
+	SETS(canvasV);
+	SETB(verticalEnabled);
+	SETB(verticalV2);
 	SETI(vdoBitrateKbps);
 	SETB(dualEnabled);
 	SETI(dualFriend);

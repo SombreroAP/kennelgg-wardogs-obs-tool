@@ -59,8 +59,13 @@ struct Config {
 	/// First in the list is the topmost.
 	std::vector<std::string> onTop;
 	bool onTopV1 = false; // seeded once from what is in the scene
-	// A second, portrait canvas (Aitum Vertical): the swap and the look overlay happen there too.
-	std::string sceneV;           // the vertical scene the swap is applied in ("" = off)
+	// A second, portrait canvas (OBS 31.1+ canvases, as Aitum Stream Suite makes them): the swap,
+	// the look overlay and the instant replay happen there too. Beta, off until switched on.
+	bool verticalEnabled = false;
+	bool verticalV2 = false; // one-time: an install that had a vertical scene keeps it on
+	std::string canvasV;     // the canvas the vertical scene lives on ("" = found by name alone)
+	std::string sceneV;      // the vertical scene the swap is applied in
+	bool verticalOn() const { return verticalEnabled && !sceneV.empty(); }
 	std::string lookPos = "ml";   // where the POV tag sits: tl tc ml mc bl br
 	bool lookPosV1 = false;       // one-time move off the bottom-left corner
 	bool audioAutoPicked = false; // desktop audio was ticked automatically once
@@ -133,6 +138,7 @@ struct Config {
 	int runGapS = 12;        // a gap longer than this is dead space
 	static const char *replaySourceName() { return "Kennel.gg · Replay"; }
 	static const char *replayFrameName() { return "Kennel.gg · Replay frame"; }
+	static const char *replayFrameNameV() { return "Kennel.gg · Replay frame (vertical)"; }
 	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (wired or fibre: 12-20 Mbit/s)
 
 	// dual POV: a squad mate's feed in a small window over your own POV (tank / chopper crews)

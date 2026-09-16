@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.17.0
+- **Vertical canvas (beta), off by default.** Settings, Switch, a new group: tick it and pick the scene your portrait stream shows, and the POV swap happens there as well (the squad mate's feed full-height, sides cropped, the look overlay in its portrait form), and the instant replay plays there too, full width and centred with its frame. The same sources as the main canvas, so nothing is decoded twice.
+- The vertical scene picker now lists the scenes of OBS's own extra canvases, as Aitum Stream Suite makes them ("canvas / scene"), which the old picker could not see: OBS keeps each canvas's scenes apart from the main list, and the plugin now looks canvas by canvas, both to find the scene and to hide a feed everywhere when you come back up. An install that had a vertical scene set keeps it on.
+
 ## 0.16.5
 - **"Hey kennel" is the wake phrase.** Two words are much clearer to the listener than one, and it is what people say anyway: "hey kennel, replay", "hey kennel, clip that, he fell off the roof". "Kennel" on its own still counts. An install that had the old "kennel" is moved to "hey kennel"; the field on the Voice tab takes any phrase.
 

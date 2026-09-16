@@ -3183,7 +3183,7 @@ void Engine::previewLook(bool on)
 {
 	lookPreview_ = on && !applied_;
 	std::string e = sw.updateLook(cfg, lookPreview_ || applied_);
-	if (!cfg.sceneV.empty()) {
+	if (cfg.verticalOn()) {
 		// the portrait overlay previews too, on its own, without moving a squad mate's feed about
 		bool show = lookPreview_ || applied_;
 		std::string ev = sw.applyVertical(cfg, show);

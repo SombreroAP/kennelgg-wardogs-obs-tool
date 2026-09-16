@@ -29,7 +29,13 @@ public:
 
 	static std::vector<std::string> sceneNames();
 	/// Scenes of another canvas (Aitum Vertical's), which the scene list does not show.
-	static std::vector<std::string> otherCanvasScenes();
+	/// Scenes on the other canvases (canvas name, scene name); canvas "" for scenes an older
+	/// vertical plugin keeps outside the scene list.
+	static std::vector<std::pair<std::string, std::string>> otherCanvasScenes();
+	/// The vertical scene as a source (a reference: release it), or null.
+	static obs_source_t *verticalSceneSource(const Config &cfg);
+	/// The instant replay on the vertical scene as well: full width, centred (the clip is 16:9).
+	std::string playMediaVertical(const Config &cfg, int scalePct, bool frame);
 	/// The swap and the look overlay in the vertical scene, if one is set. "" or a problem.
 	std::string applyVertical(const Config &cfg, bool on);
 	/// Scene items in the plugin's scene, topmost first: name and source type.

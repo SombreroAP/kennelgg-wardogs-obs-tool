@@ -782,30 +782,38 @@ int Switcher::hideEverywhere(const std::string &sourceName)
 		const std::string *name;
 		int hidden = 0;
 	} ctx{&sourceName};
-	// every scene OBS has, not only the ones in the scene list: a vertical canvas's scenes are
-	// real scenes too, they just live in another plugin's dock
-	obs_enum_scenes(
-		[](void *param, obs_source_t *ss) {
-			auto *c = (Ctx *)param;
-			obs_scene_t *scene = obs_scene_from_source(ss);
-			if (!scene)
+	// every scene OBS has, on every canvas: obs_enum_scenes walks the main canvas only, and a
+	// vertical canvas's scenes are real scenes on a canvas of their own
+	auto perScene = [](void *param, obs_source_t *ss) {
+		auto *c = (Ctx *)param;
+		obs_scene_t *scene = obs_scene_from_source(ss);
+		if (!scene)
+			return true;
+		obs_scene_enum_items(
+			scene,
+			[](obs_scene_t *, obs_sceneitem_t *item, void *p) {
+				auto *c = (Ctx *)p;
+				obs_source_t *src = obs_sceneitem_get_source(item);
+				if (src && obs_source_get_name(src) && *c->name == obs_source_get_name(src) &&
+				    obs_sceneitem_visible(item)) {
+					obs_sceneitem_set_visible(item, false);
+					c->hidden++;
+				}
 				return true;
-			obs_scene_enum_items(
-				scene,
-				[](obs_scene_t *, obs_sceneitem_t *item, void *p) {
-					auto *c = (Ctx *)p;
-					obs_source_t *src = obs_sceneitem_get_source(item);
-					if (src && obs_source_get_name(src) && *c->name == obs_source_get_name(src) &&
-					    obs_sceneitem_visible(item)) {
-						obs_sceneitem_set_visible(item, false);
-						c->hidden++;
-					}
-					return true;
-				},
-				c);
+			},
+			c);
+		return true;
+	};
+	obs_enum_scenes(perScene, &ctx);
+	std::pair<Ctx *, bool (*)(void *, obs_source_t *)> both(&ctx, perScene);
+	obs_enum_canvases(
+		[](void *param, obs_canvas_t *cv) {
+			auto *b = (std::pair<Ctx *, bool (*)(void *, obs_source_t *)> *)param;
+			if (!(obs_canvas_get_flags(cv) & MAIN))
+				obs_canvas_enum_scenes(cv, b->second, b->first);
 			return true;
 		},
-		&ctx);
+		&both);
 	return ctx.hidden;
 }
 
@@ -918,18 +926,43 @@ std::string Switcher::trimToContent(const Config &cfg, const Friend &f)
 	return err;
 }
 
-/// Scenes OBS knows about that are not in the scene list: another canvas's scenes. Aitum's
-/// vertical canvas keeps its scenes this way, and they are the ones a vertical stream shows.
-std::vector<std::string> Switcher::otherCanvasScenes()
+/// Scenes on the other canvases. OBS 31.1+ keeps every extra canvas (Aitum Stream Suite's
+/// portrait one, say) with its own scene list, which obs_enum_scenes and obs_get_source_by_name
+/// never look at - so they are walked canvas by canvas. Scenes an older vertical plugin keeps
+/// outside the scene list (main canvas, not in the front end) come last, with no canvas.
+std::vector<std::pair<std::string, std::string>> Switcher::otherCanvasScenes()
 {
-	std::vector<std::string> front = sceneNames(), out;
-	std::pair<std::vector<std::string> *, std::vector<std::string> *> ctx(&front, &out);
+	std::vector<std::pair<std::string, std::string>> out;
+	obs_enum_canvases(
+		[](void *param, obs_canvas_t *cv) {
+			if (obs_canvas_get_flags(cv) & MAIN)
+				return true;
+			auto *o = (std::vector<std::pair<std::string, std::string>> *)param;
+			const char *cn = obs_canvas_get_name(cv);
+			std::pair<std::string, std::vector<std::pair<std::string, std::string>> *> ctx(cn ? cn : "", o);
+			obs_canvas_enum_scenes(
+				cv,
+				[](void *p, obs_source_t *ss) {
+					auto *c = (std::pair<std::string,
+							     std::vector<std::pair<std::string, std::string>> *> *)p;
+					const char *n = obs_source_get_name(ss);
+					if (n)
+						c->second->emplace_back(c->first, n);
+					return true;
+				},
+				&ctx);
+			return true;
+		},
+		&out);
+	std::vector<std::string> front = sceneNames();
+	std::pair<std::vector<std::string> *, std::vector<std::pair<std::string, std::string>> *> ctx(&front, &out);
 	obs_enum_scenes(
 		[](void *param, obs_source_t *ss) {
-			auto *pr = (std::pair<std::vector<std::string> *, std::vector<std::string> *> *)param;
+			auto *pr = (std::pair<std::vector<std::string> *,
+					      std::vector<std::pair<std::string, std::string>> *> *)param;
 			const char *n = obs_source_get_name(ss);
 			if (n && std::find(pr->first->begin(), pr->first->end(), n) == pr->first->end())
-				pr->second->push_back(n);
+				pr->second->emplace_back("", n);
 			return true;
 		},
 		&ctx);
@@ -937,14 +970,47 @@ std::vector<std::string> Switcher::otherCanvasScenes()
 	return out;
 }
 
+obs_source_t *Switcher::verticalSceneSource(const Config &cfg)
+{
+	if (cfg.sceneV.empty())
+		return nullptr;
+	obs_source_t *ss = nullptr;
+	if (!cfg.canvasV.empty()) {
+		obs_canvas_t *cv = obs_get_canvas_by_name(cfg.canvasV.c_str());
+		if (cv) {
+			ss = obs_canvas_get_source_by_name(cv, cfg.sceneV.c_str());
+			obs_canvas_release(cv);
+		}
+	}
+	if (!ss) {
+		// the scene may have moved canvas, or be an older plugin's: any canvas that has it
+		std::pair<const char *, obs_source_t *> ctx(cfg.sceneV.c_str(), nullptr);
+		obs_enum_canvases(
+			[](void *p, obs_canvas_t *cv) {
+				auto *c = (std::pair<const char *, obs_source_t *> *)p;
+				c->second = obs_canvas_get_source_by_name(cv, c->first);
+				return c->second == nullptr;
+			},
+			&ctx);
+		ss = ctx.second;
+	}
+	if (!ss)
+		ss = obs_get_source_by_name(cfg.sceneV.c_str());
+	if (ss && !obs_scene_from_source(ss)) {
+		obs_source_release(ss);
+		ss = nullptr;
+	}
+	return ss;
+}
+
 /// The same swap, in the vertical scene: the squad mate's source full-canvas in portrait, the look
 /// overlay over it in its portrait form. The video source is the very same one the main canvas
 /// shows - a source can sit in any number of scenes - so nothing is decoded twice.
 std::string Switcher::applyVertical(const Config &cfg, bool on)
 {
-	if (cfg.sceneV.empty())
+	if (!cfg.verticalOn())
 		return "";
-	obs_source_t *ss = obs_get_source_by_name(cfg.sceneV.c_str());
+	obs_source_t *ss = verticalSceneSource(cfg);
 	obs_scene_t *scene = ss ? obs_scene_from_source(ss) : nullptr;
 	if (!scene) {
 		if (ss)
@@ -1251,6 +1317,64 @@ std::string Switcher::playMedia(const Config &cfg, const std::string &path, int 
 	raiseOnTop(cfg); // camera and alerts back over it
 	obs_source_release(src);
 	obs_source_release(ss);
+	if (cfg.verticalOn()) {
+		std::string ev = playMediaVertical(cfg, scalePct, frame);
+		if (!ev.empty() && log)
+			log("Replay (vertical): " + ev);
+	}
+	return "";
+}
+
+std::string Switcher::playMediaVertical(const Config &cfg, int scalePct, bool frame)
+{
+	obs_source_t *ss = verticalSceneSource(cfg);
+	if (!ss)
+		return "vertical scene '" + cfg.sceneV + "' is not there";
+	obs_scene_t *scene = obs_scene_from_source(ss);
+	obs_source_t *src = obs_get_source_by_name(Config::replaySourceName());
+	if (!src) {
+		obs_source_release(ss);
+		return "no replay source";
+	}
+	uint32_t cw = obs_source_get_width(ss), ch = obs_source_get_height(ss);
+	if (cw == 0 || ch == 0) {
+		cw = 1080;
+		ch = 1920;
+	}
+	// the same media source, a second scene item: full width at the chosen scale, 16:9, centred
+	obs_sceneitem_t *item = obs_scene_find_source(scene, Config::replaySourceName());
+	if (!item)
+		item = obs_scene_add(scene, src);
+	float f = std::clamp(scalePct, 10, 100) / 100.0f;
+	float w = cw * f, h = w * 9.0f / 16.0f;
+	struct vec2 pos = {(cw - w) / 2.0f, (ch - h) / 2.0f}, bounds = {w, h};
+	if (item) {
+		obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_INNER);
+		obs_sceneitem_set_bounds(item, &bounds);
+		obs_sceneitem_set_pos(item, &pos);
+		obs_sceneitem_set_visible(item, true);
+		moveToTop(item);
+	}
+	if (frame) {
+		char *pp = obs_module_file("overlay/overlay.html");
+		std::string page = pp ? pp : "";
+		bfree(pp);
+		std::replace(page.begin(), page.end(), '\\', '/');
+		std::string url = "file:///" + page + "?replay=1&rlabel=" + urlEncode(cfg.replayLabel);
+		std::string e2 = ensureBrowserSource(scene, Config::replayFrameNameV(), url, false, (int)w, (int)h);
+		if (e2.empty()) {
+			if (obs_sceneitem_t *fi = obs_scene_find_source(scene, Config::replayFrameNameV())) {
+				obs_sceneitem_set_bounds_type(fi, OBS_BOUNDS_SCALE_INNER);
+				obs_sceneitem_set_bounds(fi, &bounds);
+				obs_sceneitem_set_pos(fi, &pos);
+				obs_sceneitem_set_visible(fi, true);
+				moveToTop(fi);
+			}
+		}
+	} else
+		hideEverywhere(Config::replayFrameNameV());
+	obs_source_release(src);
+	obs_source_release(ss);
 	return "";
 }
 
@@ -1319,6 +1443,7 @@ void Switcher::stopMedia(const Config &cfg)
 	}
 	hideEverywhere(Config::replaySourceName());
 	hideEverywhere(Config::replayFrameName());
+	hideEverywhere(Config::replayFrameNameV());
 	(void)cfg;
 }
 

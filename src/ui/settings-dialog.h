@@ -118,6 +118,7 @@ private:
 	QCheckBox *voiceCmdReplay_ = nullptr, *voiceCmdClip_ = nullptr, *voiceCmdDual_ = nullptr,
 		  *voiceCmdForce_ = nullptr, *voiceCmdChange_ = nullptr, *voiceCmdClosest_ = nullptr;
 	QComboBox *voiceMic_ = nullptr;
+	QCheckBox *verticalOn_ = nullptr;
 	QLineEdit *voiceWake_ = nullptr;
 	QLabel *voiceStatus_ = nullptr;
 	QRadioButton *dragWin_ = nullptr, *dragKeys_ = nullptr;

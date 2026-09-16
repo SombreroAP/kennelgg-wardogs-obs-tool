@@ -748,13 +748,6 @@ QWidget *SettingsDialog::buildSwitchTab()
 	});
 	f1->addRow("Your game source", gr);
 	f1->addRow("Scene", scene_);
-	sceneV_ = new QComboBox(g1);
-	f1->addRow("Vertical scene", sceneV_);
-	f1->addRow(muted(
-		"For a second, portrait canvas (Aitum Vertical): pick the vertical scene your stream shows and the "
-		"swap happens there as well - the squad mate's feed full-height, sides cropped, and the look overlay "
-		"in its portrait form with the POV tag across the top. Same source, so nothing is decoded twice.",
-		g1));
 	f1->addRow(muted(
 		"The game source is watched for the damage log (rendered on its own, so it can stay under the friend). Squad mates are shown on top of it in this scene. Browser sources for Twitch / VDO.Ninja and the look overlay are created here when first needed.",
 		g1));
@@ -769,6 +762,23 @@ QWidget *SettingsDialog::buildSwitchTab()
 		saveAndApply();
 	});
 	connect(scene_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) { saveAndApply(); });
+	// ----- the vertical canvas, beta
+	auto *gv = new QGroupBox("Vertical canvas (beta)", w);
+	auto *fv = new QFormLayout(gv);
+	verticalOn_ = new QCheckBox("Also swap and replay on a vertical canvas (beta, off by default)", gv);
+	verticalOn_->setChecked(e_->cfg.verticalEnabled);
+	fv->addRow(verticalOn_);
+	sceneV_ = new QComboBox(gv);
+	fv->addRow("Vertical scene", sceneV_);
+	fv->addRow(muted(
+		"For a second, portrait canvas (OBS 32's own canvases, as Aitum Stream Suite makes them): pick the "
+		"vertical scene your portrait stream shows. The POV swap happens there as well - the squad mate's feed "
+		"full-height, sides cropped, the look overlay in its portrait form - and the instant replay plays "
+		"there too, full width and centred. Same sources, so nothing is decoded twice. Beta: tell us what "
+		"you see.",
+		gv));
+	v->addWidget(gv);
+	connect(verticalOn_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(sceneV_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
 
 	auto *g2 = new QGroupBox("Squad mates", w);
@@ -2637,12 +2647,27 @@ void SettingsDialog::fillSources()
 		sceneV_->blockSignals(true);
 		sceneV_->clear();
 		sceneV_->addItem("(none)", "");
-		for (const auto &sn : Switcher::otherCanvasScenes())
-			sceneV_->addItem(QString::fromStdString(sn), QString::fromStdString(sn));
-		if (!e_->cfg.sceneV.empty() && sceneV_->findData(QString::fromStdString(e_->cfg.sceneV)) < 0)
-			sceneV_->addItem(QString::fromStdString(e_->cfg.sceneV) + "  (not found now)",
-					 QString::fromStdString(e_->cfg.sceneV));
-		sceneV_->setCurrentIndex(std::max(0, sceneV_->findData(QString::fromStdString(e_->cfg.sceneV))));
+		for (const auto &cs : Switcher::otherCanvasScenes()) {
+			QString label = cs.first.empty() ? QString::fromStdString(cs.second)
+							 : QString::fromStdString(cs.first) + "  /  " +
+								   QString::fromStdString(cs.second);
+			sceneV_->addItem(label,
+					 QString::fromStdString(cs.first) + "\n" + QString::fromStdString(cs.second));
+		}
+		QString have = QString::fromStdString(e_->cfg.canvasV) + "\n" + QString::fromStdString(e_->cfg.sceneV);
+		if (!e_->cfg.sceneV.empty() && sceneV_->findData(have) < 0) {
+			// the canvas may have been renamed: the scene name alone, on any canvas
+			int alt = -1;
+			for (int i = 1; i < sceneV_->count() && alt < 0; i++)
+				if (sceneV_->itemData(i).toString().section('\n', 1) ==
+				    QString::fromStdString(e_->cfg.sceneV))
+					alt = i;
+			if (alt >= 0)
+				have = sceneV_->itemData(alt).toString();
+			else
+				sceneV_->addItem(QString::fromStdString(e_->cfg.sceneV) + "  (not found now)", have);
+		}
+		sceneV_->setCurrentIndex(std::max(0, sceneV_->findData(have)));
 		sceneV_->blockSignals(false);
 	}
 	mute_->clear();
@@ -2802,8 +2827,13 @@ void SettingsDialog::collect()
 			c.muteWhileDowned.push_back(mute_->item(i)->data(Qt::UserRole).toString().toStdString());
 	c.bringToFront = bringFront_->isChecked();
 	c.playerName = playerName_->text().trimmed().toStdString();
-	if (sceneV_)
-		c.sceneV = sceneV_->currentData().toString().toStdString();
+	if (sceneV_) {
+		QString d = sceneV_->currentData().toString();
+		c.canvasV = d.section('\n', 0, 0).toStdString();
+		c.sceneV = d.section('\n', 1).toStdString();
+	}
+	if (verticalOn_)
+		c.verticalEnabled = verticalOn_->isChecked();
 	c.rosterEnabled = rosterOn_->isChecked();
 	c.rosterUrl = Config::kennelRosterUrl();
 	c.rosterChannel.clear(); // whichever channel you are in
