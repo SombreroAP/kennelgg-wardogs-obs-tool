@@ -162,6 +162,11 @@ static void onFrontendEvent(enum obs_frontend_event event, void *)
 					if (g_dock)
 						g_dock->openWizard();
 				});
+			else if (g_engine->wantsSupportNote() && g_dock)
+				QTimer::singleShot(4000, g_dock, [] {
+					if (g_dock && g_engine && g_engine->wantsSupportNote())
+						g_dock->showSupportNote();
+				});
 		}
 	} else if (event == OBS_FRONTEND_EVENT_SCENE_COLLECTION_CHANGED) {
 		if (g_engine)

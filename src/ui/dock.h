@@ -23,6 +23,7 @@ public slots:
 	void openWizard();
 	void openLogs();
 	void openSquad();
+	void showSupportNote();
 
 private:
 	Engine *e_;

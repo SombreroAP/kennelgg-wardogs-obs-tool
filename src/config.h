@@ -90,6 +90,9 @@ struct Config {
 	std::string rosterChannel; // only this voice channel ("" = whichever one people are in)
 	std::string rosterGuild;   // only this Discord server ("" = every one the bot can see)
 	bool setupDone = false;    // the setup ran once; an empty squad at start is normal with pop-outs
+	int startCount = 0;        // OBS starts with the plugin loaded, for the one-time support note
+	bool supportAsked = false; // the support note was shown (once, on the third start)
+	static const char *supportUrl() { return "https://streamlabs.com/sombrerogg/tip"; }
 	/// The Kennel.gg Discord, through the plugin's own invite (its joins are counted apart).
 	static const char *kennelDiscordUrl() { return "https://discord.gg/nDyJ7SSM8q"; }
 	static const char *kennelHomeGuild() { return "Kennel.gg"; }

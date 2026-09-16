@@ -421,6 +421,8 @@ void Engine::autoPickAudio()
 
 void Engine::start()
 {
+	cfg.startCount++;
+	cfg.save();
 	autoPickAudio();
 	// the Discord app knows who you are; a moment after start, so OBS is up first
 	QTimer::singleShot(3000, this, [this]() {
@@ -776,6 +778,12 @@ void Engine::applyRosterConfig()
 	}
 	roster.configure(QString::fromStdString(cfg.rosterUrl), cfg.rosterPollS,
 			 QString::fromStdString(cfg.rosterChannel), QString::fromStdString(cfg.rosterGuild));
+}
+
+void Engine::supportNoteShown()
+{
+	cfg.supportAsked = true;
+	cfg.save();
 }
 
 Engine::Access Engine::rosterAccess() const

@@ -698,6 +698,25 @@ void Dock::refresh()
 	}
 }
 
+void Dock::showSupportNote()
+{
+	QMessageBox m((QWidget *)obs_frontend_get_main_window());
+	m.setWindowTitle("Kennel.gg Wardogs OBS Tool");
+	m.setIcon(QMessageBox::NoIcon);
+	m.setTextFormat(Qt::RichText);
+	m.setText("<b>Enjoying the plugin?</b>");
+	m.setInformativeText("If you are enjoying the plugin and would like to support development, please consider "
+			     "supporting us. It is free and always will be; this keeps it moving.<br><br>"
+			     "<a href=\"" +
+			     QString(Config::supportUrl()) + "\">" + QString(Config::supportUrl()) + "</a>");
+	auto *support = m.addButton("Support development", QMessageBox::AcceptRole);
+	m.addButton("Maybe later", QMessageBox::RejectRole);
+	m.exec();
+	if (m.clickedButton() == support)
+		QDesktopServices::openUrl(QUrl(Config::supportUrl()));
+	e_->supportNoteShown(); // once, whichever button
+}
+
 void Dock::openWizard()
 {
 	if (wizard_) {

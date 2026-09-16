@@ -167,6 +167,9 @@ public:
 	/// Squads fill themselves in from pop-outs now, so an empty squad at start is normal: the setup
 	/// runs until it has been finished once, or while there is no game source.
 	bool needsSetup() const { return cfg.gameSource.empty() || (!cfg.setupDone && cfg.friends.empty()); }
+	/// True once: on the third start with the plugin, the dock shows the support note.
+	bool wantsSupportNote() const { return !cfg.supportAsked && cfg.startCount >= 3; }
+	void supportNoteShown();
 	/// Tick every desktop-audio input once, when nothing was chosen yet.
 	void autoPickAudio();
 

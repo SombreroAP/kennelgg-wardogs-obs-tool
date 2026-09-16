@@ -102,6 +102,8 @@ void Config::load()
 	DEFS(rosterChannel);
 	DEFS(rosterGuild);
 	DEFB(setupDone);
+	DEFI(startCount);
+	DEFB(supportAsked);
 	DEFI(rosterPollS);
 	DEFB(rosterAddSources);
 	DEFB(popoutTuck);
@@ -239,6 +241,8 @@ void Config::load()
 	GETS(rosterChannel);
 	GETS(rosterGuild);
 	GETB(setupDone);
+	GETI(startCount);
+	GETB(supportAsked);
 	GETI(rosterPollS);
 	GETB(rosterAddSources);
 	GETB(popoutTuck);
@@ -520,6 +524,8 @@ void Config::save() const
 	SETS(rosterChannel);
 	SETS(rosterGuild);
 	SETB(setupDone);
+	SETI(startCount);
+	SETB(supportAsked);
 	SETI(rosterPollS);
 	SETB(rosterAddSources);
 	SETB(popoutTuck);

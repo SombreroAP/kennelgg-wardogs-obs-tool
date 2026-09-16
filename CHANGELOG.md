@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.14.1
+- On the third start with the plugin, once, a note asks whether you are enjoying it and offers a link to support development. Maybe later closes it for good.
+
 ## 0.14.0
 - **Clips are trimmed to the action.** Seconds after a clip lands, ClipHound cuts the 45 s file so it starts 10 s before the first kill it was made for (adjustable, Settings, Clips). It is a straight cut with no re-encode and no quality loss; the end of the file is untouched, so the offsets in the name and the sidecar stay right.
 - **A run becomes one clip.** Clips made within the run window of each other (the "[1 of 3]" runs) are merged into one file of continuous action, "... [run of 3].mp4", next to the originals. Where two clips overlap, the seam is placed by lining their sound up rather than trusting the clock, so nothing repeats or skips. Re-encoded on the GPU at low priority.
