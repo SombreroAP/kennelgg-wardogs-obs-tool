@@ -75,6 +75,10 @@ detection:
     - {kind: longrange,    killer: me,       victim: other,  min_dist: 120, title: "Long range shot {dist}m", tags: [longrange]}
     - {kind: sniped,       killer: other,    victim: me,     min_dist: 120, title: "Sniped from {dist}m", tags: [longrange, death]}
     - {kind: headshot,     killer: me,       victim: other,  icon: skull,   title: "Headshot {dist}m",    tags: [headshot]}
+    # deaths with nobody to blame but me: the feed names me on both sides (my own explosive is
+    # caught by the icon rules above), or names nobody at all (fall damage, drowning, the map edge)
+    - {kind: self_death,   killer: me,       victim: me,                     title: "Killed myself",         tags: [death, self, funny]}
+    - {kind: fall_death,   killer: none,     victim: me,                     title: "Fall damage",           tags: [death, fall, funny]}
   # Tags are what you search on later (`python clips.py headshot`). Every trigger also gets
   # its icons (skull, tank, heli, car, rifle...) and its kind as tags automatically, so a
   # 120 m headshot that fires the longrange rule is still found under "headshot".

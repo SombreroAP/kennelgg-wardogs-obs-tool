@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.13.4
+- **Dying to fall damage is a highlight.** A death in the kill feed with nobody in the killer column is clipped as "Fall damage" (tags death, fall, funny), and one where the feed names you on both sides, with no explosive or vehicle icon, as "Killed myself". Both feed the replay and the compilation. Rules added in a build are now merged into an existing config.yaml, which used to keep the old list for ever.
+
 ## 0.13.3
 - **The chat trigger word is yours to set.** Next to the cooldown on the Clips tab: what viewers type to play the replay, "!replay" by default. Case does not matter.
 

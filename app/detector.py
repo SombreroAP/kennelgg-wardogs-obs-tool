@@ -317,11 +317,13 @@ class KillDetector:
     @staticmethod
     def _rule_hits(rule: dict, ev: FeedEvent) -> bool:
         # killer / victim in a rule: me | squad | team | friendly (squad or team) | enemy | other (not me) | any
-        def ok(want, rel):
+        def ok(want, rel, name=""):
             return {"any": True, "me": rel == "me", "squad": rel == "squad", "team": rel == "team",
                     "friendly": rel in ("squad", "team"), "enemy": rel == "enemy",
-                    "other": rel != "me"}[want]
-        if not ok(rule.get("killer", "any"), ev.killer_rel) or not ok(rule.get("victim", "any"), ev.victim_rel):
+                    "other": rel != "me",
+                    # nobody readable in that column: an environmental death has no killer
+                    "none": rel != "me" and len(re.sub(r"[^A-Za-z0-9]", "", name)) < 3}[want]
+        if not ok(rule.get("killer", "any"), ev.killer_rel, ev.killer) or not ok(rule.get("victim", "any"), ev.victim_rel, ev.victim):
             return False
         if ev.distance_m < rule.get("min_dist", 0):
             return False

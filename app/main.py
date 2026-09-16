@@ -280,6 +280,19 @@ def load_config():
             c = yaml.safe_load(f)
         if not isinstance(c, dict) or "detection" not in c:
             raise ValueError("config.yaml is not a ClipHound config")
+        # a config.yaml survives upgrades, so rules added in a newer build are merged in by kind
+        try:
+            if os.path.exists("config.default.yaml"):
+                with open("config.default.yaml", encoding="utf-8") as f:
+                    d = yaml.safe_load(f) or {}
+                have = {r.get("kind") for r in (c.get("rules") or [])}
+                new = [r for r in (d.get("rules") or []) if r.get("kind") and r.get("kind") not in have]
+                if new:
+                    c.setdefault("rules", []).extend(new)
+                    print(f"[config] rules added from this build: {', '.join(r['kind'] for r in new)}")
+                    save_config(c)
+        except Exception as e:
+            print(f"[config] could not merge new rules: {e}")
         return c
     except Exception as e:
         print(f"[config] config.yaml is unreadable ({e}); starting from defaults")
