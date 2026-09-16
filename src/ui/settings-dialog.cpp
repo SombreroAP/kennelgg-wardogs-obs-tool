@@ -1541,10 +1541,20 @@ QWidget *SettingsDialog::buildClipsTab()
 	replayLabel_ = new QLineEdit(QString::fromStdString(e_->cfg.replayLabel), gi);
 	replayLabel_->setPlaceholderText("Instant replay");
 	fi->addRow("Frame says", replayLabel_);
-	replayChat_ = new QCheckBox("Subscribers and moderators can type !replay in chat to play it", gi);
+	replayChat_ = new QCheckBox("Subscribers, VIPs and moderators can play it from chat", gi);
 	replayChat_->setChecked(e_->cfg.replayChat);
 	fi->addRow(replayChat_);
-	fi->addRow("Cooldown", replayCool_);
+	auto *chatRow = new QHBoxLayout();
+	replayWord_ = new QLineEdit(QString::fromStdString(e_->cfg.replayWord), gi);
+	replayWord_->setPlaceholderText("!replay");
+	replayWord_->setToolTip("What they type. Case does not matter; anything after the word is ignored.");
+	replayWord_->setMaximumWidth(140);
+	chatRow->addWidget(new QLabel("They type", gi));
+	chatRow->addWidget(replayWord_);
+	chatRow->addSpacing(12);
+	chatRow->addWidget(new QLabel("Cooldown", gi));
+	chatRow->addWidget(replayCool_, 1);
+	fi->addRow("Chat trigger", chatRow);
 	chatKick_ = new QLineEdit(QString::fromStdString(e_->cfg.chatKick), gi);
 	chatKick_->setPlaceholderText("your Kick channel (optional)");
 	chatYouTube_ = new QLineEdit(QString::fromStdString(e_->cfg.chatYouTube), gi);
@@ -1580,7 +1590,7 @@ QWidget *SettingsDialog::buildClipsTab()
 	connect(replaySound_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(highlightsAuto_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(highlightsMax_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
-	for (auto *le : {chatKick_, chatYouTube_, highlightsFolder_, replayLabel_})
+	for (auto *le : {chatKick_, chatYouTube_, highlightsFolder_, replayLabel_, replayWord_})
 		connect(le, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
 	connect(hotkeyFilter_, &QLineEdit::textChanged, this, [this](const QString &) { fillHotkeys(); });
 	connect(hotkeyList_, &QListWidget::itemChanged, this, [this](QListWidgetItem *) { saveAndApply(); });
@@ -2678,6 +2688,8 @@ void SettingsDialog::collect()
 		c.replayVolume = replayVol_->value();
 		c.replayCooldownS = replayCool_->value();
 		c.replayChat = replayChat_->isChecked();
+		c.replayWord = replayWord_->text().trimmed().isEmpty() ? "!replay"
+								       : replayWord_->text().trimmed().toStdString();
 		c.replaySound = replaySound_->isChecked();
 		c.highlightsAuto = highlightsAuto_->isChecked();
 		c.highlightsMax = highlightsMax_->value();

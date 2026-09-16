@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs OBS Tool. Release notes on GitHub are taken from here.
 
+## 0.13.3
+- **The chat trigger word is yours to set.** Next to the cooldown on the Clips tab: what viewers type to play the replay, "!replay" by default. Case does not matter.
+
 ## 0.13.2
 - **"!replay" in Twitch chat works.** ClipHound reads your Twitch chat through the same login the clips use, and a "!replay" from you, a moderator, a VIP or a subscriber plays the last highlight, once per cooldown. The login needs one more permission for this, so log out and back in to Twitch on the ClipHound tab once after installing.
 - **The replay lands on the kill now.** 0.12.0 asked the media source to seek before the file had started playing, so the seek was dropped and some replays ran the whole clip from the start while others stopped after two seconds. The seek now waits for playback, is checked and retried, and the replay ends by the file's own clock. Hardware decoding is off for the replay: the GPU decoder refused a 1440p60 recording at load. The replay source also forgets its file at start-up instead of decoding last session's clip while OBS loads.

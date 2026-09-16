@@ -185,6 +185,8 @@ class Bridge:
                 c["detection"]["series_window_s"] = float(v["series_window"])
             if "replay_chat" in v:
                 c.setdefault("replay", {})["chat"] = bool(v["replay_chat"])
+            if "replay_word" in v:
+                c.setdefault("replay", {})["word"] = str(v["replay_word"]).strip() or "!replay"
             if self.save_cfg:
                 self.save_cfg(c)
             print(f"[bridge] settings from the plugin: {v}")

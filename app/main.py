@@ -169,7 +169,8 @@ def main():
             chat["c"] = None
         if c["twitch"].get("enabled") and c["twitch"].get("access_token"):
             from twitch_chat import TwitchChat
-            chat["c"] = TwitchChat(c["twitch"], bridge, lambda: bool((c.get("replay") or {}).get("chat", True)))
+            chat["c"] = TwitchChat(c["twitch"], bridge, lambda: bool((c.get("replay") or {}).get("chat", True)),
+                                   lambda: str((c.get("replay") or {}).get("word") or "!replay"))
             chat["c"].start()
 
     try:

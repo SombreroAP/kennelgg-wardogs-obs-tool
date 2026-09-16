@@ -34,10 +34,11 @@ def _parse(line: str):
 
 
 class TwitchChat:
-    def __init__(self, cfg_twitch: dict, bridge, enabled_fn):
+    def __init__(self, cfg_twitch: dict, bridge, enabled_fn, word_fn=lambda: "!replay"):
         self.tw = cfg_twitch
         self.b = bridge
         self.enabled = enabled_fn        # () -> bool: the plugin's "chat may trigger replays" switch
+        self.word = word_fn              # () -> str: what they type (Settings, Clips), "!replay" by default
         self._stop = False
         self._sock = None
         self._thread = threading.Thread(target=self._run, daemon=True, name="twitch-chat")
@@ -130,7 +131,8 @@ class TwitchChat:
 
     def _message(self, tags: dict, user: str, msg: str):
         m = msg.strip().lower()
-        if not (m == "!replay" or m.startswith("!replay ")):
+        w = (self.word() or "!replay").strip().lower()
+        if not (m == w or m.startswith(w + " ")):
             return
         badges = tags.get("badges", "") or ""
         allowed = any(b.split("/")[0] in ALLOWED_BADGES for b in badges.split(",") if b) or tags.get("mod") == "1" \

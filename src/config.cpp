@@ -116,6 +116,7 @@ void Config::load()
 	DEFB(replaySound);
 	DEFB(highlightsAuto);
 	DEFI(highlightsMax);
+	DEFS(replayWord);
 	DEFS(chatKick);
 	DEFS(chatYouTube);
 	DEFS(highlightsFolder);
@@ -247,6 +248,7 @@ void Config::load()
 	GETB(replaySound);
 	GETB(highlightsAuto);
 	GETI(highlightsMax);
+	GETS(replayWord);
 	GETS(chatKick);
 	GETS(chatYouTube);
 	GETS(highlightsFolder);
@@ -522,6 +524,7 @@ void Config::save() const
 	SETB(replaySound);
 	SETB(highlightsAuto);
 	SETI(highlightsMax);
+	SETS(replayWord);
 	SETS(chatKick);
 	SETS(chatYouTube);
 	SETS(highlightsFolder);

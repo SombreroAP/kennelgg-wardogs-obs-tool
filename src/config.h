@@ -108,16 +108,17 @@ struct Config {
 	int popoutMonitor = -1;
 	int clipSeriesS = 45; // clips this close together are a run: "[1 of 3]" names, "part 2" on Twitch
 	// Instant replay: the last highlight played back on the stream, cut down to the action.
-	int replayPreS = 3;           // seconds before the first kill
-	int replayPostS = 5;          // seconds after the last kill
-	int replayScale = 75;         // percent of the canvas it takes, centred, under the always-on-top list
-	int replayVolume = 40;        // the clip's own sound on the stream, percent, when replaySound is on
-	bool replaySound = false;     // off by default: the clip carries your mic and the game from a minute ago
-	int replayCooldownS = 60;     // chat may trigger it this often at most (30 s to 15 min)
-	bool replayChat = true;       // "!replay" from subscribers and moderators in chat plays it
-	std::string chatKick;         // your Kick channel, for the chat trigger (Twitch comes from the login)
-	std::string chatYouTube;      // your YouTube channel or @handle, for the chat trigger
-	std::string highlightsFolder; // where the highlights compilations live ("" = <clip folder>/highlights)
+	int replayPreS = 3;                 // seconds before the first kill
+	int replayPostS = 5;                // seconds after the last kill
+	int replayScale = 75;               // percent of the canvas it takes, centred, under the always-on-top list
+	int replayVolume = 40;              // the clip's own sound on the stream, percent, when replaySound is on
+	bool replaySound = false;           // off by default: the clip carries your mic and the game from a minute ago
+	int replayCooldownS = 60;           // chat may trigger it this often at most (30 s to 15 min)
+	bool replayChat = true;             // the trigger word from subscribers and moderators in chat plays it
+	std::string replayWord = "!replay"; // what they type
+	std::string chatKick;               // your Kick channel, for the chat trigger (Twitch comes from the login)
+	std::string chatYouTube;            // your YouTube channel or @handle, for the chat trigger
+	std::string highlightsFolder;       // where the highlights compilations live ("" = <clip folder>/highlights)
 	std::string replayLabel = "Instant replay"; // the tag on the replay's frame
 	bool highlightsAuto = true;                 // build the session's highlights compilation when the stream stops
 	int highlightsMax = 12;                     // at most this many clips in it

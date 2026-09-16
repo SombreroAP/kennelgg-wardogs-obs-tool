@@ -547,6 +547,7 @@ void Engine::pushAppConfig()
 	set["series_window"] = cfg.clipSeriesS; // Twitch titles get "part 2", "part 3" inside this
 	set["replay_chat"] = cfg.replayChat;    // "!replay" in chat plays the last highlight
 	set["replay_cooldown_s"] = cfg.replayCooldownS;
+	set["replay_word"] = QString::fromStdString(cfg.replayWord.empty() ? "!replay" : cfg.replayWord);
 	set["chat_kick"] = QString::fromStdString(cfg.chatKick);
 	set["chat_youtube"] = QString::fromStdString(cfg.chatYouTube);
 	set["fps"] = cfg.appFps > 0 ? cfg.appFps : 10;
