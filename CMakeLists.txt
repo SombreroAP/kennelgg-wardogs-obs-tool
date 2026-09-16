@@ -53,6 +53,7 @@ target_sources(
     src/http.cpp
     src/voice.cpp
     src/ui/dock.cpp
+    src/ui/clips-dialog.cpp
     src/ui/squad.cpp
     src/ui/wizard.cpp
     src/ui/settings-dialog.cpp

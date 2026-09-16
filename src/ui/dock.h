@@ -25,6 +25,8 @@ public slots:
 	void openSquad();
 	void showSupportNote();
 	void showLanguageNote();
+	void openClips(const QString &focusPath = QString());
+	bool noteNext_ = false; // the next manual clip opens the note dialog
 
 private:
 	Engine *e_;

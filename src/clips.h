@@ -4,6 +4,8 @@
 #include <QStringList>
 #include <QDateTime>
 #include <deque>
+#include <QHash>
+#include <vector>
 #include <QSet>
 #include <QTimer>
 #include <QJsonObject>
@@ -53,6 +55,18 @@ public:
 	/// Write the replay buffer length into OBS's profile (both output modes).
 	ReplayChange setReplaySeconds(int seconds);
 	const std::deque<Entry> &history() const { return history_; }
+	/// Give a saved clip a new title and/or tags: the file and sidecar are renamed to the title,
+	/// the sidecar gains the words that were said (`spoken`) and the tags. An empty title keeps the
+	/// name; `tags` null keeps the tags. Returns the path afterwards, or "" when the clip is not
+	/// known or the file cannot move.
+	QString relabel(const QString &path, const QString &title, const QString &spoken, const QStringList *tags);
+	QString retitle(const QString &path, const QString &title, const QString &spoken)
+	{
+		return relabel(path, title, spoken, nullptr);
+	}
+	/// Only this session's clips are in history(); the sidecars of every clip in the folder are
+	/// read for the labelling window, newest first, up to `max`.
+	std::vector<Entry> allClips(int max = 300) const;
 	QString lastPath() const { return history_.empty() ? QString() : history_.back().path; }
 
 signals:
@@ -71,6 +85,7 @@ private:
 	};
 	std::deque<Pending> pending_;
 	std::deque<Entry> history_;
+	QHash<QString, QString> renamed_; // old path -> new, so a second label finds a clip the first one moved
 	QDateTime lastRequest_;
 	struct Watch {
 		QDateTime since;
@@ -86,9 +101,6 @@ private:
 	void pollWatches();
 	/// "name" -> "name @-7.4s" when the moment is known: the marker Kennel Cut reads off the name.
 	static QString withMoment(const QString &name, double momentS);
-	/// Give a saved clip a new title: the file and sidecar are renamed, the sidecar gains the
-	/// words that were said. Returns the new path, or "" when the clip is not known / cannot move.
-	QString retitle(const QString &path, const QString &title, const QString &spoken);
 	/// Rename a clip and its .json sidecar together.
 	static bool renameClip(const QString &from, const QString &to);
 	/// The row in clips.csv and the JSON sidecar next to the file, for every clip however it was saved.

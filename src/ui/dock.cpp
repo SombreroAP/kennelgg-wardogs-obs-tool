@@ -1,4 +1,5 @@
 #include "ui/dock.h"
+#include "ui/clips-dialog.h"
 #include "ui/settings-dialog.h"
 #include "ui/wizard.h"
 #include "ui/squad.h"
@@ -435,7 +436,22 @@ Dock::Dock(Engine *engine, QWidget *parent) : QWidget(parent), e_(engine)
 			    [this]() { e_->clipNow("funny", {"funny", "manual"}, "dock"); });
 	saveMenu->addAction("Save clip tagged 'fail'", this,
 			    [this]() { e_->clipNow("fail", {"fail", "manual"}, "dock"); });
+	saveMenu->addSeparator();
+	saveMenu->addAction("Save clip and add a note...", this, [this]() {
+		noteNext_ = true; // the clip is saved now; the note comes when the file has landed
+		e_->clipNow("manual", {"manual"}, "dock");
+	});
+	saveMenu->addAction("Clips: titles and tags...", this, [this]() { openClips(); });
 	saveBtn_->setMenu(saveMenu);
+	connect(&e_->clips, &Clips::saved, this, [this](const Clips::Entry &e) {
+		if (!noteNext_ || !e.tags.contains("manual"))
+			return;
+		noteNext_ = false;
+		auto *d = new ClipNoteDialog(e_, e.path, (QWidget *)obs_frontend_get_main_window());
+		d->show();
+		d->raise();
+		d->activateWindow();
+	});
 	connect(saveBtn_, &QToolButton::clicked, this, [this]() { e_->clipNow("manual", {"manual"}, "dock"); });
 	appRow->addWidget(saveBtn_);
 	v->addLayout(appRow);
@@ -716,6 +732,14 @@ void Dock::showSupportNote()
 	if (m.clickedButton() == support)
 		QDesktopServices::openUrl(QUrl(Config::supportUrl()));
 	e_->supportNoteShown(); // once, whichever button
+}
+
+void Dock::openClips(const QString &focusPath)
+{
+	auto *d = new ClipsDialog(e_, (QWidget *)obs_frontend_get_main_window());
+	d->show();
+	if (!focusPath.isEmpty())
+		d->focusClip(focusPath);
 }
 
 void Dock::showLanguageNote()

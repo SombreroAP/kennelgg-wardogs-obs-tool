@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QTextStream>
+#include <QSet>
 #include <obs-module.h>
 #include <algorithm>
 #include <cstring>
@@ -182,39 +183,126 @@ bool Clips::renameClip(const QString &from, const QString &to)
 	return true;
 }
 
-QString Clips::retitle(const QString &path, const QString &title, const QString &spoken)
+QString Clips::relabel(const QString &given, const QString &title, const QString &spoken, const QStringList *tags)
 {
-	QString t = safe(title).trimmed();
-	if (path.isEmpty() || t.isEmpty())
+	if (given.isEmpty())
 		return QString();
-	for (auto &e : history_) {
-		if (e.path != path)
-			continue;
+	QString path = given;
+	for (int i = 0; i < 8 && renamed_.contains(path); i++)
+		path = renamed_.value(path); // a voice name and a typed note can both land on one clip
+	Entry *e = nullptr;
+	for (auto &h : history_)
+		if (h.path == path)
+			e = &h;
+	Entry loaded;
+	if (!e) {
+		// a clip from an earlier session: its sidecar is what we know about it
+		QFileInfo fi(path);
+		QFile f(fi.dir().filePath(fi.completeBaseName() + ".json"));
+		if (!fi.exists())
+			return QString();
+		QJsonObject o;
+		if (f.open(QIODevice::ReadOnly))
+			o = QJsonDocument::fromJson(f.readAll()).object();
+		loaded.path = path;
+		loaded.title = o.value("title").toString();
+		for (const auto &t : o.value("tags").toArray())
+			loaded.tags << t.toString();
+		loaded.when = QDateTime::fromString(o.value("created").toString(), Qt::ISODate);
+		if (!loaded.when.isValid())
+			loaded.when = fi.lastModified();
+		loaded.momentS = o.value("moment_s_from_end").toDouble(-1);
+		loaded.firstS = o.value("first_s_from_end").toDouble(-1);
+		loaded.kills = o.value("kills").toInt();
+		loaded.info = o;
+		e = &loaded;
+	}
+	QString t = safe(title).trimmed();
+	QString to = path;
+	if (!t.isEmpty() && t != safe(e->title)) {
 		QFileInfo fi(path);
 		// keep the run mark ("[2 of 3]") and the moment mark ("@-12s") the name may carry
 		QString base = fi.completeBaseName();
-		QString oldTitle = safe(e.title);
+		QString oldTitle = safe(e->title);
 		QString newBase = base;
 		if (!oldTitle.isEmpty() && base.contains(oldTitle))
 			newBase.replace(base.indexOf(oldTitle), oldTitle.size(), t);
 		else
 			newBase = t + " - " + base;
-		QString to = fi.dir().filePath(newBase + "." + fi.suffix());
+		to = fi.dir().filePath(newBase + "." + fi.suffix());
 		if (to != path && QFile::exists(to))
-			to = fi.dir().filePath(newBase + " " + e.when.toString("HH-mm-ss") + "." + fi.suffix());
+			to = fi.dir().filePath(newBase + " " + e->when.toString("HH-mm-ss") + "." + fi.suffix());
 		if (to != path && !renameClip(path, to))
 			return QString();
-		e.path = to;
-		e.title = title.trimmed();
-		if (!spoken.isEmpty())
-			e.info["spoken"] = spoken;
-		if (!e.tags.contains("voice"))
-			e.tags << "voice";
-		writeSidecar(e);
-		emit logged("Clip named by voice: " + QFileInfo(to).fileName());
-		return to;
+		if (to != path)
+			renamed_[path] = to;
+		e->path = to;
+		e->title = title.trimmed();
 	}
-	return QString();
+	if (!spoken.isEmpty()) {
+		e->info["spoken"] = spoken;
+		if (!e->tags.contains("voice"))
+			e->tags << "voice";
+	}
+	if (tags) {
+		QStringList clean;
+		for (QString g : *tags) {
+			g = safe(g.trimmed().toLower()).replace(' ', '-');
+			if (!g.isEmpty() && !clean.contains(g))
+				clean << g;
+		}
+		e->tags = clean;
+	}
+	writeSidecar(*e);
+	emit logged((spoken.isEmpty() ? "Clip labelled: " : "Clip named by voice: ") + QFileInfo(to).fileName() +
+		    (e->tags.isEmpty() ? "" : "  [" + e->tags.join(", ") + "]"));
+	return to;
+}
+
+std::vector<Clips::Entry> Clips::allClips(int max) const
+{
+	std::vector<Entry> out;
+	QSet<QString> seen;
+	// this session first, newest first
+	for (auto it = history_.rbegin(); it != history_.rend(); ++it)
+		if (!it->path.isEmpty() && !seen.contains(it->path)) {
+			seen.insert(it->path);
+			out.push_back(*it);
+		}
+	QStringList folders;
+	if (!folder.isEmpty())
+		folders << folder;
+	folders << watchFolders;
+	if (!history_.empty())
+		folders << QFileInfo(history_.back().path).absolutePath();
+	folders.removeDuplicates();
+	for (const QString &dir : folders) {
+		for (const QFileInfo &fi : listClips(dir)) {
+			if ((int)out.size() >= max)
+				break;
+			if (seen.contains(fi.absoluteFilePath()))
+				continue;
+			QFile f(fi.dir().filePath(fi.completeBaseName() + ".json"));
+			if (!f.open(QIODevice::ReadOnly))
+				continue; // not one of ours
+			QJsonObject o = QJsonDocument::fromJson(f.readAll()).object();
+			Entry e;
+			e.path = fi.absoluteFilePath();
+			e.title = o.value("title").toString();
+			for (const auto &t : o.value("tags").toArray())
+				e.tags << t.toString();
+			e.when = QDateTime::fromString(o.value("created").toString(), Qt::ISODate);
+			if (!e.when.isValid())
+				e.when = fi.lastModified();
+			e.momentS = o.value("moment_s_from_end").toDouble(-1);
+			e.kills = o.value("kills").toInt();
+			e.info = o;
+			seen.insert(e.path);
+			out.push_back(e);
+		}
+	}
+	std::stable_sort(out.begin(), out.end(), [](const Entry &a, const Entry &b) { return a.when > b.when; });
+	return out;
 }
 
 void Clips::logEntry(const Entry &e)
