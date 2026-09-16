@@ -26,10 +26,10 @@ public slots:
 	void showSupportNote();
 	void showLanguageNote();
 	void openClips(const QString &focusPath = QString());
-	bool noteNext_ = false; // the next manual clip opens the note dialog
 
 private:
 	Engine *e_;
+	bool noteNext_ = false; // the next manual clip opens the note dialog
 	QLabel *state_, *last_, *app_, *clip_;
 	QListWidget *events_;
 	QLabel *detector_;
