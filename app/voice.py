@@ -81,6 +81,10 @@ class Voice:
         self.names = True
         self.squad: list[str] = []
         self.allow: list[str] = []      # commands the plugin has on; empty = all
+        self.chime = True
+        self._armed_until = 0.0         # after a bare "hey kennel": the next words are the command
+        self._chimed_at = 0.0
+        self._chime_path = ""
         self._ring = np.zeros(RATE * RING_S, np.int16)
         self._ring_pos = 0
         self._ring_epoch = 0.0          # wall clock of the newest sample in the ring
@@ -110,6 +114,7 @@ class Voice:
         self.names = bool(o.get("names", True))
         self.squad = [str(n) for n in (o.get("squad") or [])]
         self.allow = [str(c) for c in (o.get("allow") or [])]
+        self.chime = bool(o.get("chime", True))
         if self.enabled and self._loader is None:
             self._loader = threading.Thread(target=self._load_models, daemon=True)
             self._loader.start()
@@ -239,6 +244,38 @@ class Voice:
                 print(f"[voice] recogniser: {e}")
                 rec = None
 
+    def _play_chime(self):
+        """A soft two-note chime through this PC's speakers: 'listening'. Not on the stream (it
+        goes to the default output, not into OBS) and not recorded."""
+        if not self.chime:
+            return
+        try:
+            import winsound
+        except ImportError:
+            return
+        try:
+            if not self._chime_path:
+                path = os.path.join(models_dir(), "chime.wav")
+                if not os.path.exists(path):
+                    import wave
+                    sr = 22050
+
+                    def tone(freq, ms, vol):
+                        n = int(sr * ms / 1000)
+                        t = np.arange(n) / sr
+                        env = np.minimum(1.0, np.minimum(t / 0.01, (n / sr - t) / 0.06))
+                        return np.sin(2 * np.pi * freq * t) * env * vol
+                    a = np.concatenate([tone(659.25, 110, 0.18), tone(987.77, 160, 0.16), np.zeros(int(sr * 0.05))])
+                    with wave.open(path, "wb") as w:
+                        w.setnchannels(1)
+                        w.setsampwidth(2)
+                        w.setframerate(sr)
+                        w.writeframes((a * 32767).astype(np.int16).tobytes())
+                self._chime_path = path
+            winsound.PlaySound(self._chime_path, winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_NODEFAULT)
+        except Exception as e:
+            print(f"[voice] chime: {e}")
+
     def _recogniser(self):
         """Vosk with a grammar: the wake word and every way of asking, everything else [unk].
         Free-form, the small model made "kendall replay" and "kennel club that" of a clear
@@ -246,13 +283,14 @@ class Voice:
         turns ordinary talk into [unk]. A name after "show" is [unk] too; Whisper reads it."""
         from vosk import KaldiRecognizer
         self._grammar_wake = self.wake
-        phrases = {"[unk]"}
+        phrases = {"[unk]", "show [unk]", "switch to [unk]", "clip that [unk]"}
         for wk in self.wakes():
-            phrases |= {f"{wk} show [unk]", f"{wk} switch to [unk]", f"{wk} change to [unk]", f"{wk} clip that [unk]",
+            phrases |= {wk, f"{wk} show [unk]", f"{wk} switch to [unk]", f"{wk} change to [unk]", f"{wk} clip that [unk]",
                         f"{wk} clip [unk]"}
             for ps in INTENTS.values():
                 for p in ps:
                     phrases.add(f"{wk} {p}")
+                    phrases.add(p)   # on its own: counts only in the moment after the wake phrase
         try:
             rec = KaldiRecognizer(self._vosk, RATE, json.dumps(sorted(phrases)))
             print(f"[voice] listening for {len(phrases)} phrases after '{self.wake}'")
@@ -296,11 +334,21 @@ class Voice:
         for k, w in enumerate(ws):
             if w == last or (len(w) >= 4 and difflib.SequenceMatcher(None, w, last).ratio() >= 0.8):
                 wi = k
+        now = time.time()
         if wi < 0:
-            return False
-        after = " ".join(ws[wi + 1:]).strip()
-        if not after:
-            return False
+            # no wake phrase in this: it counts only in the few seconds after a bare "hey kennel"
+            if now > self._armed_until or not ws:
+                return False
+            after = " ".join(ws).strip()
+        else:
+            after = " ".join(ws[wi + 1:]).strip()
+            if not after:
+                # "hey kennel" on its own: chime, and take the next few seconds' words as the command
+                if now - self._chimed_at > 2.0:
+                    self._chimed_at = now
+                    self._armed_until = now + 6.0
+                    self._play_chime()
+                return False
         cmd, name, score = self.intent(after)
         if not cmd and not partial and after in ("show", "switch to", "change to", "clip that", "clip"):
             cmd, name, score = ("clip", "", 1.0) if after.startswith("clip") else ("change", "", 1.0)
@@ -321,6 +369,7 @@ class Voice:
         if now - self._last_cmd < 2.0:
             return True                # the same command, heard twice (partial then final)
         self._last_cmd = now
+        self._armed_until = 0.0
         if cmd == "clip":
             self._last_clip_cmd = now
         print(f"[voice] command: {cmd} {name!r} ({score:.2f})  <- {text!r}")

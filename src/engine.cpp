@@ -1473,6 +1473,12 @@ void Engine::watchPopouts()
 void Engine::reloadConfig()
 {
 	applyVoice();
+	if (cfg.verticalOn()) {
+		// the squad's sources into the vertical scene now, not only at the first swap
+		std::string ev = sw.applyVertical(cfg, applied_);
+		if (!ev.empty())
+			log(QString::fromStdString("Vertical: " + ev));
+	}
 	autoPickAudio(); // the game source may have just been chosen
 	clips.nameTemplate = QString::fromStdString(cfg.clipNameTemplate);
 	clips.seriesWindowS = cfg.clipSeriesS;
@@ -1752,6 +1758,7 @@ void Engine::applyVoice()
 	o["wake"] = QString::fromStdString(cfg.voiceWake);
 	o["commands"] = cfg.voiceCommands;
 	o["names"] = cfg.voiceNames;
+	o["chime"] = cfg.voiceChime;
 	QJsonArray allow;
 	if (cfg.voiceCmdReplay)
 		allow.append("replay");

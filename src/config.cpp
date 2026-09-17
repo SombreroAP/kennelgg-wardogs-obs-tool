@@ -223,6 +223,7 @@ void Config::load()
 	DEFS(voiceWake);
 	DEFB(voiceNames);
 	DEFB(voiceCommands);
+	DEFB(voiceChime);
 	DEFB(voiceCmdReplay);
 	DEFB(voiceCmdClip);
 	DEFB(voiceCmdDual);
@@ -379,6 +380,7 @@ void Config::load()
 	GETS(voiceWake);
 	GETB(voiceNames);
 	GETB(voiceCommands);
+	GETB(voiceChime);
 	GETB(voiceCmdReplay);
 	GETB(voiceCmdClip);
 	GETB(voiceCmdDual);
@@ -448,6 +450,7 @@ void Config::load()
 		verticalV2 = true;
 		verticalEnabled = !sceneV.empty(); // whoever had picked a vertical scene had opted in
 	}
+	rosterGuild.clear(); // the roster is the Kennel.gg server only now; nothing else to pick
 	if (voiceWake == "kennel")
 		voiceWake = "hey kennel"; // 0.16.5: what people actually say, and a clearer start
 	if (!thresholdV2) {
@@ -685,6 +688,7 @@ void Config::save() const
 	SETS(voiceWake);
 	SETB(voiceNames);
 	SETB(voiceCommands);
+	SETB(voiceChime);
 	SETB(voiceCmdReplay);
 	SETB(voiceCmdClip);
 	SETB(voiceCmdDual);

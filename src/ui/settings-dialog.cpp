@@ -2412,6 +2412,12 @@ QWidget *SettingsDialog::buildVoiceTab()
 		"Say this first, then the command: \"hey kennel, replay\". Two words are clearer than one; "
 		"the last word on its own (\"kennel replay\") counts too.");
 	f->addRow("Wake phrase", voiceWake_);
+	voiceChime_ = new QCheckBox("Chime when the wake phrase is heard", g);
+	voiceChime_->setChecked(e_->cfg.voiceChime);
+	voiceChime_->setToolTip("A soft two-note chime through this PC's speakers (not the stream) a moment after "
+				"\"hey kennel\", so you know it is listening: hey kennel, chime, then the command. "
+				"The command can also follow straight on without a pause.");
+	f->addRow(voiceChime_);
 	voiceStatus_ = new QLabel(e_->voiceStatus().isEmpty() ? "not listening" : e_->voiceStatus(), g);
 	voiceStatus_->setWordWrap(true);
 	f->addRow("Status", voiceStatus_);
@@ -2455,8 +2461,8 @@ QWidget *SettingsDialog::buildVoiceTab()
 	   "(needs ClipHound's NEARBY reading).");
 	v->addWidget(gc);
 	v->addStretch(1);
-	for (auto *c : {voiceOn_, voiceNames_, voiceCommands_, voiceCmdReplay_, voiceCmdClip_, voiceCmdDual_,
-			voiceCmdForce_, voiceCmdChange_, voiceCmdClosest_})
+	for (auto *c : {voiceOn_, voiceNames_, voiceCommands_, voiceChime_, voiceCmdReplay_, voiceCmdClip_,
+			voiceCmdDual_, voiceCmdForce_, voiceCmdChange_, voiceCmdClosest_})
 		connect(c, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(voiceMic_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
 	connect(voiceWake_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
@@ -2753,6 +2759,33 @@ void SettingsDialog::fillFriends()
 	}
 }
 
+bool addFriendByHand(Engine *e, QWidget *parent)
+{
+	FriendDialog dlg(nullptr, Switcher::inputs(), parent, e->cfg.vdoBitrateKbps);
+	if (dlg.exec() != QDialog::Accepted)
+		return false;
+	Friend f = dlg.result;
+	if (f.kind == FriendKind::Discord)
+		QTimer::singleShot(900, e, [e, f]() { e->sw.trimToContent(e->cfg, f); });
+	if (f.ownsSources()) {
+		std::string err = e->sw.createFriendSources(e->cfg, f);
+		if (!err.empty()) {
+			QMessageBox::warning(parent, "Kennel.gg Wardogs",
+					     "Could not set up the sources: " + QString::fromStdString(err));
+			return false;
+		}
+	}
+	e->cfg.friends.push_back(f);
+	if (e->cfg.friends.size() == 1) {
+		e->cfg.activeFriend = 0;
+		e->setActive(0);
+	}
+	e->cfg.save();
+	e->log("Squad mate added: " + QString::fromStdString(f.name) + ".");
+	emit e->stateChanged();
+	return true;
+}
+
 void SettingsDialog::editFriend(int row)
 {
 	Friend *existing = row >= 0 && row < (int)e_->cfg.friends.size() ? &e_->cfg.friends[row] : nullptr;
@@ -2925,6 +2958,7 @@ void SettingsDialog::collect()
 				      : voiceWake_->text().trimmed().toLower().toStdString();
 		c.voiceNames = voiceNames_->isChecked();
 		c.voiceCommands = voiceCommands_->isChecked();
+		c.voiceChime = voiceChime_->isChecked();
 		c.voiceCmdReplay = voiceCmdReplay_->isChecked();
 		c.voiceCmdClip = voiceCmdClip_->isChecked();
 		c.voiceCmdDual = voiceCmdDual_->isChecked();

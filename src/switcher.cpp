@@ -1025,30 +1025,38 @@ std::string Switcher::applyVertical(const Config &cfg, bool on)
 	}
 	std::string err;
 	const Friend *f = cfg.active();
-	if (f) {
-		std::string name = cfg.sourceFor(*f);
+	// every squad mate whose source exists gets a scene item here, so the vertical scene carries
+	// the same squad as the main one from the moment it is switched on; only the active one shows
+	for (const Friend &g : cfg.friends) {
+		std::string name = cfg.sourceFor(g);
+		bool isActive = f && &g == f;
 		obs_source_t *src = obs_get_source_by_name(name.c_str());
-		if (src) {
-			obs_sceneitem_t *item = obs_scene_find_source(scene, name.c_str());
-			bool fresh = !item;
-			if (!item)
-				item = obs_scene_add(scene, src);
-			if (item) {
-				if (fresh) {
-					// full height of the portrait canvas, centred: the sides of a 16:9 feed fall away
-					struct vec2 pos = {0, 0}, bounds = {(float)cw, (float)ch};
-					obs_sceneitem_set_pos(item, &pos);
-					obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_OUTER);
-					obs_sceneitem_set_bounds_alignment(item, OBS_ALIGN_CENTER);
-					obs_sceneitem_set_bounds(item, &bounds);
-				}
-				if (on)
-					moveToTop(item);
-				obs_sceneitem_set_visible(item, on);
+		if (!src) {
+			if (isActive && on)
+				err = "'" + name + "' does not exist yet";
+			continue;
+		}
+		obs_sceneitem_t *item = obs_scene_find_source(scene, name.c_str());
+		bool fresh = !item;
+		if (!item)
+			item = obs_scene_add(scene, src);
+		if (item) {
+			if (fresh) {
+				// full height of the portrait canvas, centred: the sides of a 16:9 feed fall away
+				struct vec2 pos = {0, 0}, bounds = {(float)cw, (float)ch};
+				obs_sceneitem_set_pos(item, &pos);
+				obs_sceneitem_set_bounds_type(item, OBS_BOUNDS_SCALE_OUTER);
+				obs_sceneitem_set_bounds_alignment(item, OBS_ALIGN_CENTER);
+				obs_sceneitem_set_bounds(item, &bounds);
+				if (log)
+					log("Vertical: added " + g.name + "'s feed to '" + cfg.sceneV + "'.");
 			}
-			obs_source_release(src);
-		} else if (on)
-			err = "'" + name + "' does not exist yet";
+			bool show = on && isActive;
+			if (show)
+				moveToTop(item);
+			obs_sceneitem_set_visible(item, show);
+		}
+		obs_source_release(src);
 	}
 	// the look overlay, portrait
 	const char *lookName = Config::overlaySourceNameV();

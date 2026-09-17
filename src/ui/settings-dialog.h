@@ -46,6 +46,10 @@ private:
 	QRect imageRect() const;
 };
 
+/// The "Add a squad mate" window on its own: Twitch, Kick, YouTube, VDO.Ninja or an OBS source. Adds
+/// the squad mate to the config and makes their sources. True when one was added.
+bool addFriendByHand(Engine *e, QWidget *parent);
+
 class SettingsDialog : public QDialog {
 	Q_OBJECT
 public:
@@ -114,7 +118,7 @@ private:
 	QLineEdit *chatKick_ = nullptr, *chatYouTube_ = nullptr, *highlightsFolder_ = nullptr, *replayLabel_ = nullptr,
 		  *replayWord_ = nullptr;
 	QLabel *pastResult_ = nullptr;
-	QCheckBox *voiceOn_ = nullptr, *voiceNames_ = nullptr, *voiceCommands_ = nullptr;
+	QCheckBox *voiceOn_ = nullptr, *voiceNames_ = nullptr, *voiceCommands_ = nullptr, *voiceChime_ = nullptr;
 	QCheckBox *voiceCmdReplay_ = nullptr, *voiceCmdClip_ = nullptr, *voiceCmdDual_ = nullptr,
 		  *voiceCmdForce_ = nullptr, *voiceCmdChange_ = nullptr, *voiceCmdClosest_ = nullptr;
 	QComboBox *voiceMic_ = nullptr;

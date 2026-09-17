@@ -235,6 +235,7 @@ struct Config {
 	std::string voiceMic;                 // OBS source name; "" = the first microphone found
 	std::string voiceWake = "hey kennel"; // what starts a command ("hey kennel replay")
 	bool voiceNames = true;               // manual clips take their title from what was said around them
+	bool voiceChime = true;               // a soft two-note chime on this PC when the wake phrase is heard
 	bool voiceCommands = true;            // "<wake> replay", "<wake> show <name>", ...
 	// each command on its own switch (all on when commands are on)
 	bool voiceCmdReplay = true, voiceCmdClip = true, voiceCmdDual = true, voiceCmdForce = true,

@@ -2,6 +2,12 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.17.1
+- **Vertical canvas (beta): the whole squad comes along.** Switching it on, or changing the squad, puts every squad mate's source into the vertical scene straight away, full height and centred, hidden until they are shown; the look overlay in its portrait form and the instant replay with its frame were already there. Dual POV stays on the main canvas.
+- **Add a squad mate from the Squad window, any way.** Under the Discord pop-out button there is now "Add a squad mate another way": Twitch, Kick, YouTube, VDO.Ninja or an OBS source, the same window as Settings, Switch, Add.
+- **A chime after "hey kennel".** A soft two-note chime through your PC's speakers (never the stream) a moment after the wake phrase, and the next few seconds of words are the command: "hey kennel", chime, "replay". Saying it in one breath still works. Off with one tick on the Voice tab.
+- **Kennel.gg Discord only.** The Squad window's server picker and the "add the bot to your server" link are gone: the squad automation is a Kennel.gg thing, the roster lists that server alone, and the bot leaves any other server it is added to.
+
 ## 0.17.0
 - **Vertical canvas (beta), off by default.** Settings, Switch, a new group: tick it and pick the scene your portrait stream shows, and the POV swap happens there as well (the squad mate's feed full-height, sides cropped, the look overlay in its portrait form), and the instant replay plays there too, full width and centred with its frame. The same sources as the main canvas, so nothing is decoded twice.
 - The vertical scene picker now lists the scenes of OBS's own extra canvases, as Aitum Stream Suite makes them ("canvas / scene"), which the old picker could not see: OBS keeps each canvas's scenes apart from the main list, and the plugin now looks canvas by canvas, both to find the scene and to hide a feed everywhere when you come back up. An install that had a vertical scene set keeps it on.
