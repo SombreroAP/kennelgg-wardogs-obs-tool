@@ -196,6 +196,20 @@ void Bridge::handle(Client *c, const QJsonObject &o)
 			roi_ = QRectF(r[0].toDouble(), r[1].toDouble(), r[2].toDouble(), r[3].toDouble());
 		roiWidth_ = o.value("width").toInt(0);
 		frameFps_ = frames ? std::clamp(fps, 0.5, 30.0) : 0;
+		streams_.clear();
+		for (const QJsonValue &sv : o.value("streams").toArray()) {
+			QJsonObject so = sv.toObject();
+			Stream s;
+			s.id = so.value("id").toInt(0);
+			s.fps = std::clamp(so.value("fps").toDouble(4), 0.2, 30.0);
+			QJsonArray sr = so.value("roi").toArray();
+			if (sr.size() == 4)
+				s.roi = QRectF(sr[0].toDouble(), sr[1].toDouble(), sr[2].toDouble(), sr[3].toDouble());
+			s.width = so.value("width").toInt(0);
+			streams_.push_back(s);
+		}
+		if (!streams_.empty())
+			frameFps_ = frames ? 20.0 : 0; // the tick that serves the streams; each keeps its own rate
 		(void)c;
 	}
 	emit message(o);
@@ -221,6 +235,24 @@ void Bridge::sendAudio(const QByteArray &pcm)
 	payload.reserve(4 + pcm.size());
 	payload.append("KWA1", 4);
 	payload.append(pcm);
+	for (auto *c : clients_)
+		if (c->upgraded)
+			sendRaw(c, 2, payload);
+}
+
+void Bridge::sendFrame2(int id, const QByteArray &jpeg, int w, int h, qint64 tsMs)
+{
+	QByteArray payload;
+	payload.reserve(17 + jpeg.size());
+	payload.append("KWF2", 4);
+	quint8 sid = (quint8)id;
+	quint16 ww = qToLittleEndian<quint16>((quint16)w), hh = qToLittleEndian<quint16>((quint16)h);
+	quint64 ts = qToLittleEndian<quint64>((quint64)tsMs);
+	payload.append((const char *)&sid, 1);
+	payload.append((const char *)&ww, 2);
+	payload.append((const char *)&hh, 2);
+	payload.append((const char *)&ts, 8);
+	payload.append(jpeg);
 	for (auto *c : clients_)
 		if (c->upgraded)
 			sendRaw(c, 2, payload);

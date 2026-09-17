@@ -2,6 +2,9 @@
 #include <obs-module.h>
 #include <graphics/graphics.h>
 #include <graphics/vec4.h>
+#include <algorithm>
+#include <cmath>
+#include <cstring>
 
 Capture::~Capture()
 {
@@ -15,16 +18,28 @@ Capture::~Capture()
 
 bool Capture::grab(obs_source_t *source, int targetWidth, std::vector<uint8_t> &bgra, int &w, int &h, int &linesize)
 {
+	return grabRegion(source, 0, 0, 1, 1, targetWidth, bgra, w, h, linesize);
+}
+
+bool Capture::grabRegion(obs_source_t *source, double rx, double ry, double rw, double rh, int targetWidth,
+			 std::vector<uint8_t> &bgra, int &w, int &h, int &linesize)
+{
 	if (!source)
 		return false;
 	uint32_t sw = obs_source_get_width(source), sh = obs_source_get_height(source);
 	if (sw == 0 || sh == 0)
 		return false;
-	w = targetWidth;
-	h = (int)((uint64_t)sh * targetWidth / sw);
+	rx = std::max(0.0, std::min(1.0, rx));
+	ry = std::max(0.0, std::min(1.0, ry));
+	rw = std::max(0.0, std::min(1.0 - rx, rw));
+	rh = std::max(0.0, std::min(1.0 - ry, rh));
+	double pw = rw * sw, ph = rh * sh; // the part, in source pixels
+	if (pw < 4 || ph < 4)
+		return false;
+	w = targetWidth > 0 ? targetWidth : (int)std::lround(pw);
+	h = (int)std::lround(ph * w / pw);
 	if (h < 8)
 		return false;
-
 	bool ok = false;
 	obs_enter_graphics();
 	if (!tr_)
@@ -41,13 +56,14 @@ bool Capture::grab(obs_source_t *source, int targetWidth, std::vector<uint8_t> &
 		struct vec4 zero;
 		vec4_zero(&zero);
 		gs_clear(GS_CLEAR_COLOR, &zero, 0.0f, 0);
-		gs_ortho(0.0f, (float)sw, 0.0f, (float)sh, -100.0f, 100.0f);
+		// the projection window is the part: everything outside it falls off the texture
+		gs_ortho((float)(rx * sw), (float)(rx * sw + pw), (float)(ry * sh), (float)(ry * sh + ph), -100.0f,
+			 100.0f);
 		gs_blend_state_push();
 		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 		obs_source_video_render(source);
 		gs_blend_state_pop();
 		gs_texrender_end(tr_);
-
 		gs_stage_texture(st_, gs_texrender_get_texture(tr_));
 		uint8_t *data = nullptr;
 		uint32_t ls = 0;

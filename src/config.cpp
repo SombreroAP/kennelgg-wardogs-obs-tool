@@ -219,6 +219,7 @@ void Config::load()
 	DEFS(gameLangFound);
 	DEFB(langAskShown);
 	DEFB(dualStartV2);
+	DEFB(cpuDefaultsV1);
 	DEFB(voiceEnabled);
 	DEFS(voiceMic);
 	DEFS(voiceWake);
@@ -379,6 +380,7 @@ void Config::load()
 	GETS(gameLangFound);
 	GETB(langAskShown);
 	GETB(dualStartV2);
+	GETB(cpuDefaultsV1);
 	GETB(voiceEnabled);
 	GETS(voiceMic);
 	GETS(voiceWake);
@@ -457,6 +459,13 @@ void Config::load()
 		verticalEnabled = !sceneV.empty(); // whoever had picked a vertical scene had opted in
 	}
 	rosterGuild.clear(); // the roster is the Kennel.gg server only now; nothing else to pick
+	if (!cpuDefaultsV1) {
+		// they were on for everyone without anyone choosing; the encodes they run are the
+		// heaviest thing the app does, so they start off and are switched on on purpose
+		cpuDefaultsV1 = true;
+		highlightsAuto = false;
+		runMerge = false;
+	}
 	if (!dualStartV2) {
 		// the Dual tab's tick used to follow the window being up, so a save while it was up made it
 		// come back at every start; nobody chose that
@@ -696,6 +705,7 @@ void Config::save() const
 	SETS(gameLangFound);
 	SETB(langAskShown);
 	SETB(dualStartV2);
+	SETB(cpuDefaultsV1);
 	SETB(voiceEnabled);
 	SETS(voiceMic);
 	SETS(voiceWake);

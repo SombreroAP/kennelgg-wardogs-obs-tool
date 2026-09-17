@@ -24,9 +24,21 @@ public:
 	double wantedFps() const { return frameFps_; }
 	QRectF wantedRoi() const { return roi_; }
 	int wantedWidth() const { return roiWidth_; }
+	/// Several regions at their own rates: the kill feed ten times a second, the whole frame once
+	/// a second. Each has an id the frames carry back. Empty = the single legacy stream above.
+	struct Stream {
+		int id = 0;
+		double fps = 4;
+		QRectF roi{0, 0, 1, 1};
+		int width = 0;
+		qint64 nextMs = 0; // when it is next due
+	};
+	std::vector<Stream> &streams() { return streams_; }
 
 	void sendJson(const QJsonObject &o);
 	void sendFrame(const QByteArray &jpeg, int w, int h, qint64 tsMs);
+	/// "KWF2": uint8 stream id, uint16 w, uint16 h, uint64 ts ms, then JPEG.
+	void sendFrame2(int id, const QByteArray &jpeg, int w, int h, qint64 tsMs);
 	/// Microphone audio for ClipHound: "KWA1" then 16 kHz mono int16 PCM.
 	void sendAudio(const QByteArray &pcm);
 
@@ -46,6 +58,7 @@ private:
 	double frameFps_ = 0;
 	QRectF roi_{0, 0, 1, 1};
 	int roiWidth_ = 0;
+	std::vector<Stream> streams_;
 
 	void onNewConnection();
 	void onReadyRead(Client *c);

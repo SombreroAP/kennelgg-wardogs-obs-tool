@@ -43,8 +43,11 @@ class Bridge:
         self.ws = None
         self.connected = False
         self._last_err = None   # so the same connection error is not printed every 3 s
-        self._frame = None            # latest full frame (BGR)
+        self._frame = None            # latest full frame (BGR), once a second
         self._frame_ts = 0.0
+        self._feed = None             # latest kill-feed crop (BGR), at the reading rate
+        self._feed_ts = 0.0
+        self.feed_roi = _roi_list(cfg.get("roi")) or [0.0, 0.5, 0.25, 0.25]   # fractions of the frame
         self._lock = threading.Lock()
         self._pending = {}            # clip id -> callback(path)
         self._seq = 0
@@ -132,6 +135,17 @@ class Bridge:
             if len(msg) >= 4 and msg[:4] == b"KWA1":
                 if self.on_audio:
                     self.on_audio(bytes(msg[4:]))
+                return
+            if len(msg) >= 17 and msg[:4] == b"KWF2":
+                # a stream: 0 = the kill-feed crop, 1 = the whole frame
+                sid, w, h, ts = struct.unpack_from("<BHHQ", msg, 4)
+                frame = cv2.imdecode(np.frombuffer(msg[17:], np.uint8), cv2.IMREAD_COLOR)
+                if frame is not None:
+                    with self._lock:
+                        if sid == 0:
+                            self._feed, self._feed_ts = frame, ts / 1000.0
+                        else:
+                            self._frame, self._frame_ts = frame, ts / 1000.0
                 return
             if len(msg) < 16 or msg[:4] != b"KWF1":
                 return
@@ -265,9 +279,20 @@ class Bridge:
                     cb(o.get("path", ""), o)
 
     def _subscribe(self):
-        """Full frame at native size: we crop the kill feed (and the NEARBY panel) ourselves, so the
-        minimap team check keeps working from the same frames."""
-        self.send({"type": "subscribe", "frames": True, "fps": self.fps, "roi": [0, 0, 1, 1], "width": 0})
+        """Two streams. The kill-feed crop at the reading rate (a few hundred kilobytes a second),
+        and the whole frame once a second for the minimap team check, the NEARBY panel and the
+        vehicle list. The whole frame at the reading rate was fourteen megabytes ten times a
+        second, rendered, read back, JPEG-encoded and decoded: most of the CPU the app used."""
+        r = self.feed_roi
+        self.send({"type": "subscribe", "frames": True, "fps": self.fps, "roi": [0, 0, 1, 1], "width": 0,
+                   "streams": [{"id": 0, "fps": self.fps, "roi": [r[0], r[1], r[2], r[3]], "width": 0},
+                               {"id": 1, "fps": 1.0, "roi": [0, 0, 1, 1], "width": 0}]})
+
+    def set_feed_roi(self, r):
+        rl = _roi_list(r)
+        if rl and rl[2] > 0.01 and rl != self.feed_roi:
+            self.feed_roi = rl
+            self._subscribe()
 
     def send(self, o: dict):
         try:
@@ -289,6 +314,10 @@ class Bridge:
     def latest(self):
         with self._lock:
             return self._frame, self._frame_ts
+
+    def latest_feed(self):
+        with self._lock:
+            return self._feed, self._feed_ts
 
     # ---- clips ----
     def clip(self, title: str, tags: list, source: str = "cliphound", on_saved=None, info: dict | None = None) -> bool:
@@ -313,6 +342,7 @@ class BridgeRoiCapture:
         self.r = cap_cfg["roi"]
         self.upscale = float(cap_cfg.get("upscale", 2.0))
         print("[capture] waiting for the first frame from the plugin (is OBS running with the plugin?)")
+        self.b.set_feed_roi([self.r["x"], self.r["y"], self.r["w"], self.r["h"]])
         frame = self._wait_frame()
         h, w = frame.shape[:2]
         self.box = (int(w * self.r["x"]), int(h * self.r["y"]), int(w * self.r["w"]), int(h * self.r["h"]))
@@ -334,6 +364,7 @@ class BridgeRoiCapture:
         h, w = f.shape[:2]
         self.box = (int(w * rl[0]), int(h * rl[1]), int(w * rl[2]), int(h * rl[3]))
         print(f"[capture] kill-feed ROI is now x,y,w,h = {self.box}")
+        self.b.set_feed_roi(rl)   # the plugin crops it for us from now on
 
     def _wait_frame(self):
         while True:
@@ -343,6 +374,13 @@ class BridgeRoiCapture:
             time.sleep(0.5)
 
     def grab(self) -> np.ndarray:
+        # the plugin sends the kill-feed crop itself; the whole frame is the fallback
+        c, cts = self.b.latest_feed()
+        if c is not None and time.time() - cts <= 5:
+            f, ts = self.b.latest()
+            if f is not None:
+                self._last = f
+            return c
         f, ts = self.b.latest()
         if f is None or time.time() - ts > 5:
             f = self._wait_frame()
@@ -351,7 +389,13 @@ class BridgeRoiCapture:
         return f[y:y + h, x:x + w]
 
     def full_frame(self) -> np.ndarray:
+        f, _ = self.b.latest()
+        if f is not None:
+            self._last = f
         return self._last if getattr(self, "_last", None) is not None else self._wait_frame()
+
+    def full_frame_ts(self) -> float:
+        return self.b.latest()[1]
 
     def preprocess(self, bgr: np.ndarray) -> np.ndarray:
         if self.upscale != 1.0:

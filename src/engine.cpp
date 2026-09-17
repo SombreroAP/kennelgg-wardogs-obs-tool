@@ -2398,41 +2398,67 @@ void Engine::frameTick()
 {
 	if (frameBusy_ || stopping_ || cfg.gameSource.empty() || bridge.clients() == 0)
 		return;
+	// which streams are due now; none = the legacy single region
+	qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+	std::vector<Bridge::Stream> due;
+	for (auto &s : bridge.streams())
+		if (nowMs >= s.nextMs) {
+			s.nextMs = nowMs + (qint64)(1000.0 / s.fps);
+			due.push_back(s);
+		}
+	if (!bridge.streams().empty() && due.empty())
+		return;
+	if (due.empty()) {
+		Bridge::Stream s;
+		s.id = -1;
+		s.roi = bridge.wantedRoi();
+		s.width = bridge.wantedWidth();
+		due.push_back(s);
+	}
 	frameBusy_ = true;
-	QRectF roi = bridge.wantedRoi();
-	int width = bridge.wantedWidth();
 	std::string name = cfg.gameSource;
-	std::thread([this, roi, width, name]() {
-		QByteArray jpeg;
-		int cw = 0, ch = 0;
+	std::thread([this, due, name]() {
+		struct Out {
+			int id;
+			QByteArray jpeg;
+			int w = 0, h = 0;
+		};
+		std::vector<Out> outs;
 		obs_source_t *src = obs_get_source_by_name(name.c_str());
 		if (src) {
-			int native = (int)obs_source_get_width(src);
-			std::vector<uint8_t> bgra;
-			int w, h, ls;
-			if (native > 0 && capRoi_.grab(src, native, bgra, w, h, ls)) {
+			for (const auto &s : due) {
+				// only that region is rendered and read back: a kill-feed crop is a few hundred
+				// kilobytes, where the whole frame used to be fourteen megabytes ten times a second
+				std::vector<uint8_t> bgra;
+				int w, h, ls;
+				if (!capRoi_.grabRegion(src, s.roi.x(), s.roi.y(), s.roi.width(), s.roi.height(),
+							s.width, bgra, w, h, ls))
+					continue;
 				QImage img(bgra.data(), w, h, ls, QImage::Format_ARGB32);
-				QRect r((int)(roi.x() * w), (int)(roi.y() * h), (int)(roi.width() * w),
-					(int)(roi.height() * h));
-				r &= QRect(0, 0, w, h);
-				QImage crop = img.copy(r);
-				if (width > 0 && width < crop.width())
-					crop = crop.scaledToWidth(width, Qt::SmoothTransformation);
-				cw = crop.width();
-				ch = crop.height();
-				QBuffer buf(&jpeg);
+				Out o;
+				o.id = s.id;
+				o.w = w;
+				o.h = h;
+				QBuffer buf(&o.jpeg);
 				buf.open(QIODevice::WriteOnly);
-				crop.save(&buf, "JPG", 88);
+				img.save(&buf, "JPG", 88);
+				outs.push_back(std::move(o));
 			}
 			obs_source_release(src);
 		}
 		qint64 ts = QDateTime::currentMSecsSinceEpoch();
 		QMetaObject::invokeMethod(
 			this,
-			[this, jpeg, cw, ch, ts]() {
+			[this, outs, ts]() {
 				frameBusy_ = false;
-				if (!jpeg.isEmpty())
-					bridge.sendFrame(jpeg, cw, ch, ts);
+				for (const auto &o : outs) {
+					if (o.jpeg.isEmpty())
+						continue;
+					if (o.id < 0)
+						bridge.sendFrame(o.jpeg, o.w, o.h, ts);
+					else
+						bridge.sendFrame2(o.id, o.jpeg, o.w, o.h, ts);
+				}
 			},
 			Qt::QueuedConnection);
 	}).detach();

@@ -10,6 +10,11 @@ class Capture {
 public:
 	~Capture();
 	bool grab(obs_source_t *source, int targetWidth, std::vector<uint8_t> &bgra, int &w, int &h, int &linesize);
+	/// Only a part of the source (fractions of its width and height), rendered straight into a
+	/// texture of that part's size: the read-back is a few hundred kilobytes, not the whole frame.
+	/// targetWidth 0 = the part's own size on the source.
+	bool grabRegion(obs_source_t *source, double rx, double ry, double rw, double rh, int targetWidth,
+			std::vector<uint8_t> &bgra, int &w, int &h, int &linesize);
 
 private:
 	gs_texrender_t *tr_ = nullptr;

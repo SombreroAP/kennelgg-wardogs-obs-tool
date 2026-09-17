@@ -93,7 +93,7 @@ def main():
     bridge = None
     if cfg["capture"].get("backend", "obs") == "bridge" or cfg["obs"].get("mode") == "bridge":
         from bridge import Bridge
-        bridge = Bridge({**(cfg.get("bridge") or {}), "fps": cfg["capture"]["fps"]})
+        bridge = Bridge({**(cfg.get("bridge") or {}), "fps": cfg["capture"]["fps"], "roi": cfg["capture"].get("roi")})
     if bridge is not None:
         bridge.cfg = cfg
         bridge.save_cfg = save_config
@@ -252,6 +252,7 @@ def main():
         from vehicle import Watcher as VehicleWatcher
         vehicle = VehicleWatcher(bridge)
     last_team_check = 0.0
+    last_full_ts = -1.0
     while True:
         t0 = time.time()
         period = 1.0 / max(1.0, float(cfg["capture"]["fps"]))   # the plugin can change the rate live
@@ -269,8 +270,12 @@ def main():
             test = bridge is not None and bridge.nearby_test
             if bridge is not None:
                 bridge.nearby_test = False
-            watcher.maybe_read(cap.full_frame(), t0, force=test)
-            vehicle.maybe_read(cap.full_frame(), t0)
+            # the whole frame arrives once a second: read it once, not at every kill-feed tick
+            fts = cap.full_frame_ts() if hasattr(cap, "full_frame_ts") else t0
+            if test or fts != last_full_ts:
+                last_full_ts = fts
+                watcher.maybe_read(cap.full_frame(), t0, force=test)
+                vehicle.maybe_read(cap.full_frame(), t0)
         roi = cap.grab()
         if cfg["capture"].get("debug_dump"):
             cv2.imwrite("debug/roi.png", roi)

@@ -128,12 +128,12 @@ struct Config {
 	std::string chatYouTube;            // your YouTube channel or @handle, for the chat trigger
 	std::string highlightsFolder;       // where the highlights compilations live ("" = <clip folder>/highlights)
 	std::string replayLabel = "Instant replay"; // the tag on the replay's frame
-	bool highlightsAuto = true;                 // build the session's highlights compilation when the stream stops
+	bool highlightsAuto = false;                // build the session's highlights compilation when the stream stops
 	int highlightsMax = 12;                     // at most this many clips in it
 	// What ClipHound does to a clip file once it is named (Settings, Clips)
 	bool clipTrim = true; // cut the file so it starts clipTrimLeadS before the first kill (stream copy)
 	int clipTrimLeadS = 10;
-	bool runMerge = true;    // clips within the run window become one file of continuous action
+	bool runMerge = false;   // clips within the run window become one file of continuous action
 	bool runCutGaps = false; // ...with the dead space between kills cut out
 	int runGapS = 12;        // a gap longer than this is dead space
 	static const char *replaySourceName() { return "Kennel.gg · Replay"; }
@@ -143,8 +143,10 @@ struct Config {
 	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (wired or fibre: 12-20 Mbit/s)
 
 	// dual POV: a squad mate's feed in a small window over your own POV (tank / chopper crews)
-	bool dualEnabled = false;               // the window up from start-up, forced
-	bool dualStartV2 = false;               // one-time: clears a dualEnabled that ticked itself (0.17.3)
+	bool dualEnabled = false; // the window up from start-up, forced
+	bool dualStartV2 = false;
+	bool cpuDefaultsV1 =
+		false; // one-time: the compilation and run merging go off unless chosen (0.18.0)               // one-time: clears a dualEnabled that ticked itself (0.17.3)
 	int dualFriend = -1;                    // index into friends, -1 = none
 	std::string dualPreset = "tank-driver"; // tank-driver | tank-gunner | havoc-pilot | havoc-gunner | custom
 	double dualX = 0.012, dualY = 0.19, dualW = 0.26; // fractions of the canvas; height keeps 16:9

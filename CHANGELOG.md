@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.0
+- **Much less CPU.** The plugin was rendering the whole game frame at its native size, reading it back from the GPU, JPEG-encoding it and handing it to ClipHound, which decoded it, ten times a second - fourteen megabytes a frame at 1440p - and ClipHound then cut the kill feed out of it. Now the plugin renders and sends only the kill-feed crop at the reading rate, a few hundred kilobytes a second, and the whole frame once a second for the minimap team check, the NEARBY panel and the vehicle list, which are read once per frame instead of ten times. On the PC that reported 20 %, most of that was this.
+- **The encodes are off unless chosen.** The end-of-stream compilation (segments cut and encoded after every clip while you play) and run merging (clips re-encoded into one) were on for everyone. They are now off by default and switched off once for existing installs; tick them on the Clips tab if you want them. Clip trimming stays on: it is a straight cut, no encode.
+
 ## 0.17.6
 - **"Hey kennel, clip replay."** One ask, two things: the clip is saved and, the moment the file lands, played back as the instant replay. "Clip and replay", "save and replay" and "clip that and replay" all count. Needs both the clip and the instant replay commands on.
 
