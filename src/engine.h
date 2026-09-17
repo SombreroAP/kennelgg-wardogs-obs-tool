@@ -307,11 +307,12 @@ private:
 	bool applied_ = false, detected_ = false, applying_ = false, lookPreview_ = false, previewWanted_ = false;
 	int downRun_ = 0, upRun_ = 0, tickN_ = 0;
 	double peakScore_ = 0;
-	double nearBest_ = 0;       // best below-threshold score since nearSince_
-	int nearMinutes_ = 0;       // minutes in which the best score came close without a match
-	QString voiceStatus_;       // what ClipHound says the listener is doing
-	QString voicePending_;      // the manual clip waiting for its spoken name
-	bool voiceFlowing_ = false; // the first audio piece has been sent since the tap was attached
+	double nearBest_ = 0;          // best below-threshold score since nearSince_
+	int nearMinutes_ = 0;          // minutes in which the best score came close without a match
+	QString voiceStatus_;          // what ClipHound says the listener is doing
+	QString voicePending_;         // the manual clip waiting for its spoken name
+	bool replayAfterClip_ = false; // "clip replay": play the clip back once it is saved
+	bool voiceFlowing_ = false;    // the first audio piece has been sent since the tap was attached
 	std::chrono::steady_clock::time_point nearSince_ = std::chrono::steady_clock::now();
 	float downX_ = 0, downY_ = 0; // where the log was found when we went down (it does not move)
 	std::chrono::steady_clock::time_point fullSince_; // last poll the log scored a clean match in that spot

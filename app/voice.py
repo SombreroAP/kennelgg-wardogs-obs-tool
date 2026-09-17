@@ -39,6 +39,8 @@ WHISPER_MODEL = "base"            # ~75 MB int8; "small" is better and 3x slower
 INTENTS = {
     "replay":   ["replay", "instant replay", "play that back", "play it back", "run it back", "play it again",
                  "rewind", "show the replay", "replay that"],
+    "clip_replay": ["clip replay", "clip and replay", "clip then replay", "clip that and replay", "save and replay",
+                    "clip it and replay", "replay clip", "clip and play it back"],
     "clip":     ["clip", "clip that", "clip it", "clip this", "save that", "save clip", "save the clip",
                  "record that", "clip him", "clip the last bit"],
     "dual_off": ["dual off", "dual pov off", "stop dual", "single pov", "end dual", "turn off dual"],
@@ -408,14 +410,16 @@ class Voice:
             # word for word, fires early; anything with a name or a fuzzy fit waits for the end
             if score < 0.87 or name or after.split()[0] in ("show", "switch", "change", "swap", "go", "put", "watch"):
                 return False
-        if self.allow and cmd not in self.allow and cmd not in ("me", "highlights"):
+        if cmd == "clip_replay" and self.allow and not ("clip" in self.allow and "replay" in self.allow):
+            return True                # one of the two halves is switched off
+        if self.allow and cmd not in self.allow and cmd not in ("me", "highlights", "clip_replay"):
             return True                # switched off in the plugin: swallow it, say nothing
         now = time.time()
         if now - self._last_cmd < 2.0:
             return True                # the same command, heard twice (partial then final)
         self._last_cmd = now
         self._armed_until = 0.0
-        if cmd == "clip":
+        if cmd in ("clip", "clip_replay"):
             self._last_clip_cmd = now
         print(f"[voice] command: {cmd} {name!r} ({score:.2f})  <- {text!r}")
         self.b.send({"type": "voice", "cmd": cmd, "name": name, "heard": text})
@@ -539,7 +543,8 @@ class Voice:
         # "kennel clip that <what it was>": what follows the ask is the title, whatever came before
         # the ask can arrive as "kennel clip that", or with the wake word misheard ("then I'll
         # clip that", "can I clip that"): the clip words are the anchor, the wake word optional
-        ask = re.compile(r"(?:\b" + re.escape(wake) + r"\b\s*)?\b(clip|clipped|save|record)\s+(that|this|it|him|her|them)\b\s*")
+        ask = re.compile(r"(?:\b" + re.escape(wake) + r"\b\s*)?\b(clip|clipped|save|record)\s+"
+                         r"(that and replay|it and replay|and replay|then replay|replay|that|this|it|him|her|them)\b\s*")
         m = None
         for m in ask.finditer(t):
             pass
@@ -552,7 +557,8 @@ class Voice:
                   "holy", "wow", "lets", "let's", "please"}
         words = [w for w in t.split() if w not in filler]
         # leading noise ("that was", "oh my god") goes; the little words inside a phrase stay
-        lead = {"that", "this", "it", "was", "is", "my", "god", "what", "no", "way", "there", "we", "and", "the", "a"}
+        lead = {"that", "this", "it", "was", "is", "my", "god", "no", "way", "there", "we", "and", "the", "a", "hey",
+                "so", "then"}
         while words and words[0] in lead:
             words.pop(0)
         if not words:

@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.17.6
+- **"Hey kennel, clip replay."** One ask, two things: the clip is saved and, the moment the file lands, played back as the instant replay. "Clip and replay", "save and replay" and "clip that and replay" all count. Needs both the clip and the instant replay commands on.
+
 ## 0.17.5
 - **Your replay buffer length is yours.** The plugin used to write its own 45 s into OBS's replay-buffer setting at every start, over whatever you had chosen. It now reads OBS's length and follows it. The Clip length box on the Clips tab shows OBS's value; change it there and it is written into OBS once, restarting the buffer if it is running. Change it in OBS and the plugin picks it up at the next start. 45 s is what Sombrero uses, not a rule.
 

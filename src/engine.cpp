@@ -112,6 +112,14 @@ Engine::Engine(QObject *parent) : QObject(parent)
 		o["title"] = e.title;
 		o["tags"] = QJsonArray::fromStringList(e.tags);
 		bridge.sendJson(o);
+		if (replayAfterClip_ && e.tags.contains("manual")) {
+			// "hey kennel, clip replay": the clip is on disk; a moment for OBS to close it, then play
+			replayAfterClip_ = false;
+			QTimer::singleShot(1200, this, [this]() {
+				if (!stopping_)
+					playReplay("voice: clip replay");
+			});
+		}
 		// a clip you asked for yourself is named by what you said around the moment you asked
 		if (cfg.voiceEnabled && cfg.voiceNames && voice.attached() && e.tags.contains("manual") &&
 		    bridge.clients() > 0) {
@@ -1820,6 +1828,10 @@ void Engine::onVoiceCommand(const QString &cmd, const QString &name, const QStri
 	} else if (cmd == "dual_off" && cfg.voiceCmdDual) {
 		setDual(false, "voice");
 	} else if (cmd == "clip" && cfg.voiceCmdClip) {
+		clipNow("clip", {"manual", "voice"}, "voice");
+	} else if (cmd == "clip_replay" && cfg.voiceCmdClip && cfg.voiceCmdReplay) {
+		// save now, play it back the moment the file lands
+		replayAfterClip_ = true;
 		clipNow("clip", {"manual", "voice"}, "voice");
 	} else if (cmd == "highlights") {
 		requestHighlights("voice", true);

@@ -2481,6 +2481,9 @@ QWidget *SettingsDialog::buildVoiceTab()
 	   "\"replay\", \"instant replay\", \"play that back\", \"run it back\": plays the last highlight.");
 	mk(voiceCmdClip_, "Kennel - clip that", e_->cfg.voiceCmdClip,
 	   "\"clip that\", \"clip it\", \"save that\": saves a clip of the replay buffer (as long as OBS keeps it).");
+	fc->addRow(muted("Kennel - clip replay: \"clip replay\", \"clip and replay\": saves the clip and plays it back "
+			 "straight away (needs both clip and instant replay on).",
+			 gc));
 	voiceNames_ = new QCheckBox("    ... and the sentence after \"clip that\" becomes the file name", gc);
 	voiceNames_->setChecked(e_->cfg.voiceNames);
 	fc->addRow(
