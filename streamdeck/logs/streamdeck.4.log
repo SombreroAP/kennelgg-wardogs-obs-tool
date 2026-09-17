@@ -1,0 +1,11 @@
+2026-09-17T19:09:06.404Z ERROR Process encountered uncaught exception 
+Error: Failed to read manifest.json as the file does not exist.
+    at readManifest (file:///Users/andrew/WARDOGS%20COMMUNITY%20WORK/kennel-wardogs-obs/streamdeck/node_modules/@elgato/streamdeck/dist/index.js:1417:15)
+    at getManifest (file:///Users/andrew/WARDOGS%20COMMUNITY%20WORK/kennel-wardogs-obs/streamdeck/node_modules/@elgato/streamdeck/dist/index.js:1408:28)
+    at get manifest (file:///Users/andrew/WARDOGS%20COMMUNITY%20WORK/kennel-wardogs-obs/streamdeck/node_modules/@elgato/streamdeck/dist/index.js:3110:16)
+    at file:///Users/andrew/WARDOGS%20COMMUNITY%20WORK/kennel-wardogs-obs/streamdeck/node_modules/@elgato/streamdeck/dist/index.js:3152:16
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:246:26)
+    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:243:20)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)

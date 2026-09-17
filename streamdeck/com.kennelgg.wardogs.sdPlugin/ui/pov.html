@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<script src="sdpi-components.js"></script>
+</head>
+<body>
+<sdpi-item label="Squad mate">
+  <sdpi-select setting="who" id="who" default="auto" placeholder="the one who is live">
+    <option value="auto">Whoever is live (Kennel.gg voice)</option>
+  </sdpi-select>
+</sdpi-item>
+<sdpi-item label="">
+  <div id="note" style="color:#9a9a9a;font-size:11px">Squad mates come from the OBS plugin once it is running.</div>
+</sdpi-item>
+<sdpi-item label="Bridge port">
+  <sdpi-textfield setting="port" global default="47820" placeholder="47820"></sdpi-textfield>
+</sdpi-item>
+<script>
+  const { streamDeckClient } = SDPIComponents;
+  const sel = document.getElementById("who");
+  const note = document.getElementById("note");
+  function fill(friends, connected) {
+    const cur = sel.value || "auto";
+    const keep = ['<option value="auto">Whoever is live (Kennel.gg voice)</option>'];
+    for (const f of friends || []) {
+      const v = f.name.replace(/"/g, "&quot;");
+      keep.push(`<option value="${v}">${f.name}${f.live ? " ● live" : ""}</option>`);
+    }
+    if (cur !== "auto" && !(friends || []).some((f) => f.name === cur))
+      keep.push(`<option value="${cur.replace(/"/g, "&quot;")}">${cur} (not in the squad now)</option>`);
+    sel.innerHTML = keep.join("");
+    sel.value = cur;
+    note.textContent = connected
+      ? (friends && friends.length ? "Press the key: that squad mate's POV goes on stream; press again to come back." : "No squad mates in the OBS plugin yet.")
+      : "The OBS plugin is not running (or the bridge port differs). Start OBS with the plugin.";
+  }
+  streamDeckClient.onSendToPropertyInspector.subscribe((ev) => {
+    const p = ev && ev.payload;
+    if (p && p.event === "squad") fill(p.friends, p.connected);
+  });
+  streamDeckClient.send("sendToPlugin", { event: "squad" });
+  setInterval(() => streamDeckClient.send("sendToPlugin", { event: "squad" }), 3000);
+</script>
+</body>
+</html>

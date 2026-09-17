@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.4
+- **Stream Deck plugin.** A separate download, `com.kennelgg.wardogs.streamDeckPlugin` (double-click to install, Stream Deck 6.4 or newer), with eight keys: squad mate POV (a chosen squad mate, or "whoever is live" in Kennel.gg voice; press again to come back), next squad mate, clip, instant replay, clip + replay, voice control on/off, Dual POV on/off, and my POV. The keys follow the OBS plugin: a dot marks who is live, on/off keys light up, and they say "OBS?" when the plugin is not running. It talks to the plugin over the same local bridge ClipHound uses; nothing leaves the PC.
+- The bridge tells a controller apart from ClipHound, so a Stream Deck connecting or leaving never stops the kill-feed frames or the microphone.
+- Voice (beta): a soft or swallowed "hey" no longer loses the command. "[unk] kennel replay" from the listener, or "okay kennel", "a kennel", "hi kennel" from Whisper, all count as the wake phrase; "dog kennel" still does not.
+
 ## 0.18.3
 - **Every voice command, and every way to say it,** in a window from the Voice tab ("All voice commands and the ways to say them..."): ten commands, each with its phrasings, what it does and which switch it lives under. The list is taken from the listener itself, so it is what actually works.
 

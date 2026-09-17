@@ -1,0 +1,4 @@
+node_modules/
+dist/
+com.kennelgg.wardogs.sdPlugin/bin/plugin.js
+com.kennelgg.wardogs.sdPlugin/logs/

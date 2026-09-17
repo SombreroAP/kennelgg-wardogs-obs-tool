@@ -35,6 +35,13 @@ public:
 	VoiceTap voice; // the microphone, on its way to ClipHound
 	/// Start or stop the microphone tap to match the settings and whether ClipHound is connected.
 	void applyVoice();
+	/// A command from a controller on the bridge (the Stream Deck plugin): the same verbs as
+	/// voice, plus toggles, with none of the voice gates.
+	void onControl(const QJsonObject &o);
+	/// What a controller shows on its keys: sent to every bridge client whenever it changes.
+	QJsonObject stateJson() const;
+	void broadcastState();
+	QTimer stateTimer_; // stateChanged fires a lot; the broadcast is coalesced
 	QString voiceStatus() const { return voiceStatus_; }
 	/// The scene live in OBS right now, when it is not the scene the plugin works in (else "").
 	QString sceneMismatch() const;

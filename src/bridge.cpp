@@ -53,10 +53,16 @@ void Bridge::onDisconnected(Client *c)
 	auto it = std::find(clients_.begin(), clients_.end(), c);
 	if (it != clients_.end())
 		clients_.erase(it);
-	bool was = c->upgraded;
+	bool was = c->upgraded && !c->controller, frames = c->wantsFrames;
 	c->sock->deleteLater();
 	delete c;
 	recomputeWants();
+	if (frames) {
+		// the one that wanted frames is gone: stop making them, whoever else is connected
+		frameFps_ = 0;
+		streams_.clear();
+		emit message(QJsonObject{{"type", "subscribe"}, {"frames", false}});
+	}
 	if (was)
 		emit clientDisconnected();
 }
@@ -102,7 +108,8 @@ bool Bridge::handshake(Client *c)
 	hello["version"] = PLUGIN_VERSION;
 	hello["protocol"] = 1;
 	sendRaw(c, 1, QJsonDocument(hello).toJson(QJsonDocument::Compact));
-	emit clientConnected();
+	// "connected" is said on the client's first message, once it is known whether it is the
+	// companion app or a controller
 	return true;
 }
 
@@ -187,9 +194,24 @@ void Bridge::sendRaw(Client *c, int opcode, const QByteArray &payload)
 void Bridge::handle(Client *c, const QJsonObject &o)
 {
 	QString type = o.value("type").toString();
+	if (!c->announced) {
+		c->announced = true;
+		bool controller = type == "subscribe" && !o.value("frames").toBool(true);
+		c->controller = controller;
+		if (!controller)
+			emit clientConnected();
+	}
 	if (type == "subscribe") {
 		// {"type":"subscribe","frames":true,"fps":4,"roi":[x,y,w,h],"width":0}
 		bool frames = o.value("frames").toBool(true);
+		if (!frames && !c->wantsFrames) {
+			// a controller (the Stream Deck plugin) saying it wants no frames: nothing to change
+			// for whoever does, and it is not the companion app
+			c->controller = true;
+			emit message(o);
+			return;
+		}
+		c->wantsFrames = frames;
 		double fps = o.value("fps").toDouble(4);
 		QJsonArray r = o.value("roi").toArray();
 		if (r.size() == 4)

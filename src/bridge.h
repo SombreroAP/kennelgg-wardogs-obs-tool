@@ -13,11 +13,29 @@
 class Bridge : public QObject {
 	Q_OBJECT
 public:
+	struct Client {
+		QTcpSocket *sock = nullptr;
+		bool upgraded = false;
+		bool wantsFrames = false; // subscribed to frames (ClipHound); a controller does not
+		bool controller = false;  // said so with a frames:false subscribe (the Stream Deck plugin)
+		bool announced = false;   // clientConnected has been emitted (or withheld, for a controller)
+		QByteArray buf;
+	};
 	explicit Bridge(QObject *parent = nullptr);
 	bool listen(quint16 port);
 	void close();
 	bool listening() const { return server_.isListening(); }
-	int clients() const { return (int)clients_.size(); }
+	/// Companion-app clients (ClipHound): a controller such as the Stream Deck plugin is not counted,
+	/// so "is ClipHound here" keeps meaning that. Everyone still gets sendJson.
+	int clients() const
+	{
+		int n = 0;
+		for (auto *c : clients_)
+			if (c->upgraded && !c->controller)
+				n++;
+		return n;
+	}
+	int allClients() const { return (int)clients_.size(); }
 	quint16 port() const { return server_.serverPort(); }
 
 	/// A client asked for frames of this region (fractions of the game source) at this rate. 0 = nobody.
@@ -48,11 +66,6 @@ signals:
 	void message(const QJsonObject &o); // JSON from the app
 
 private:
-	struct Client {
-		QTcpSocket *sock = nullptr;
-		bool upgraded = false;
-		QByteArray buf;
-	};
 	QTcpServer server_;
 	std::vector<Client *> clients_;
 	double frameFps_ = 0;

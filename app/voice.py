@@ -244,14 +244,14 @@ class Voice:
             try:
                 if rec.AcceptWaveform(chunk):
                     text = json.loads(rec.Result()).get("text", "")
-                    clean = text.replace("[unk]", " ").strip()
-                    if clean:
+                    clean = text.replace("[unk]", " unk ").strip()
+                    if clean.replace("unk", "").strip():
                         print(f"[voice] heard: {text[:120]}")   # what the model makes of you, [unk] = not a command
                         self._heard(clean)
                 else:
                     # a command should not wait for a pause in the talking: look at the partial too
-                    part = json.loads(rec.PartialResult()).get("partial", "").replace("[unk]", " ").strip()
-                    if part and self._heard(part, partial=True):
+                    part = json.loads(rec.PartialResult()).get("partial", "").replace("[unk]", " unk ").strip()
+                    if part.replace("unk", "").strip() and self._heard(part, partial=True):
                         rec.Reset()
             except Exception as e:
                 print(f"[voice] recogniser: {e}")
@@ -402,6 +402,7 @@ class Voice:
         now = time.time()
         if wi < 0:
             # no wake phrase in this: it counts only in the few seconds after a bare "hey kennel"
+            ws = [w for w in ws if w != "unk"]
             if now > self._armed_until or not ws:
                 return False
             after = " ".join(ws).strip()
@@ -410,7 +411,7 @@ class Voice:
             # or "get to the". A second opinion: Whisper on the last two seconds has to hear it too
             if not self._wake_confirmed(now):
                 return False
-            after = " ".join(ws[wi + 1:]).strip()
+            after = " ".join(w for w in ws[wi + 1:] if w != "unk").strip()
             if not after:
                 # "hey kennel" on its own: chime, and take the next few seconds' words as the command
                 if now - self._chimed_at > 2.0:
@@ -549,10 +550,10 @@ class Voice:
     def _lead_ok(w: str, lead: str) -> bool:
         """The word before "kennel" has to be the "hey": as said, or as the listeners tend to
         write it ("hay", "hi", "a")."""
-        if w == lead:
-            return True
+        if w == lead or w == "unk":
+            return True                # "[unk] kennel": something was said first; Whisper decides what
         if lead == "hey":
-            return w in ("hay", "hi", "a", "hey")
+            return w in ("hay", "hi", "a", "hey", "okay", "ok", "yo", "oi", "eh", "ay", "hae", "hei")
         return len(w) >= 3 and difflib.SequenceMatcher(None, w, lead).ratio() >= 0.75
 
     @staticmethod

@@ -88,6 +88,13 @@ Engine::Engine(QObject *parent) : QObject(parent)
 		});
 		emit stateChanged();
 	});
+	stateTimer_.setSingleShot(true);
+	stateTimer_.setInterval(150);
+	connect(&stateTimer_, &QTimer::timeout, this, &Engine::broadcastState);
+	connect(this, &Engine::stateChanged, this, [this]() {
+		if (!stateTimer_.isActive())
+			stateTimer_.start();
+	});
 	connect(&voice, &VoiceTap::pcm, this, [this](const QByteArray &pcm) {
 		if (bridge.clients() > 0)
 			bridge.sendAudio(pcm);
@@ -1706,6 +1713,10 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 			applyNow(true, "companion app");
 		else if (force == "up")
 			applyNow(false, "companion app");
+	} else if (type == "control") {
+		onControl(o);
+	} else if (type == "state_please") {
+		bridge.sendJson(stateJson());
 	} else if (type == "voice") {
 		onVoiceCommand(o.value("cmd").toString(), o.value("name").toString(), o.value("heard").toString());
 	} else if (type == "voice_chime") {
@@ -1758,6 +1769,118 @@ QString Engine::sceneMismatch() const
 	if (live.isEmpty() || live == QString::fromStdString(cfg.sceneName))
 		return QString();
 	return live;
+}
+
+QJsonObject Engine::stateJson() const
+{
+	QJsonObject o;
+	o["type"] = "state";
+	o["applied"] = applied_;
+	o["enabled"] = cfg.enabled;
+	o["active"] = cfg.active() ? QString::fromStdString(cfg.active()->name) : "";
+	o["activeIndex"] = cfg.activeFriend;
+	o["dual"] = dualOn_;
+	o["voice"] = cfg.voiceEnabled;
+	o["voiceStatus"] = voiceStatus_;
+	o["replayPlaying"] = replayTimer_.isActive();
+	o["inVoice"] = rosterLive();
+	QJsonArray fr;
+	for (size_t i = 0; i < cfg.friends.size(); i++) {
+		const Friend &f = cfg.friends[i];
+		QJsonObject j;
+		j["name"] = QString::fromStdString(f.name);
+		j["index"] = (int)i;
+		Feed st = feedState(f);
+		j["live"] = st == Feed::Live;
+		j["off"] = st == Feed::Off;
+		fr.append(j);
+	}
+	o["friends"] = fr;
+	return o;
+}
+
+void Engine::broadcastState()
+{
+	if (bridge.allClients() > 0)
+		bridge.sendJson(stateJson());
+}
+
+void Engine::onControl(const QJsonObject &o)
+{
+	QString cmd = o.value("cmd").toString();
+	QString name = o.value("name").toString();
+	log("Controller: " + cmd + (name.isEmpty() ? "" : " " + name));
+	if (cmd == "replay") {
+		playReplay("controller");
+	} else if (cmd == "clip") {
+		clipNow("manual", {"manual", "controller"}, "controller");
+	} else if (cmd == "clip_replay") {
+		replayAfterClip_ = true;
+		clipNow("manual", {"manual", "controller"}, "controller");
+	} else if (cmd == "dual_toggle") {
+		toggleDual();
+	} else if (cmd == "dual_on") {
+		setDual(true, "controller");
+	} else if (cmd == "dual_off") {
+		setDual(false, "controller");
+	} else if (cmd == "voice_toggle" || cmd == "voice_on" || cmd == "voice_off") {
+		bool on = cmd == "voice_on" ? true : cmd == "voice_off" ? false : !cfg.voiceEnabled;
+		cfg.voiceEnabled = on;
+		cfg.save();
+		applyVoice();
+		if (!on)
+			voiceStatus_.clear();
+		log(on ? "Voice control on (controller)." : "Voice control off (controller).");
+		emit stateChanged();
+	} else if (cmd == "auto_toggle") {
+		setEnabled(!cfg.enabled);
+	} else if (cmd == "me") {
+		if (applied_)
+			applyNow(false, "controller");
+	} else if (cmd == "highlights") {
+		requestHighlights("controller", true);
+	} else if (cmd == "show") {
+		// by name, by index, or "auto": the live squad mate (the first one live, else the chosen one)
+		int idx = -1;
+		if (o.contains("index"))
+			idx = o.value("index").toInt(-1);
+		else if (name == "auto" || name.isEmpty()) {
+			idx = anyLiveFriend();
+			if (idx < 0)
+				idx = cfg.activeFriend;
+		} else
+			for (size_t i = 0; i < cfg.friends.size(); i++)
+				if (QString::fromStdString(cfg.friends[i].name).compare(name, Qt::CaseInsensitive) == 0)
+					idx = (int)i;
+		if (idx < 0 || idx >= (int)cfg.friends.size()) {
+			log("Controller: no squad mate to show.");
+			return;
+		}
+		// the same key again while they are up: back to your own POV
+		if (applied_ && cfg.activeFriend == idx && o.value("toggle").toBool(true)) {
+			applyNow(false, "controller");
+			return;
+		}
+		setActive(idx);
+		applyNow(true, "controller: " + QString::fromStdString(cfg.friends[idx].name));
+	} else if (cmd == "cycle") {
+		int n = (int)cfg.friends.size();
+		if (n == 0) {
+			log("Controller: no squad mates.");
+			return;
+		}
+		int next = cfg.activeFriend;
+		for (int k = 1; k <= n; k++) {
+			int i = (cfg.activeFriend + k) % n;
+			if (feedState(cfg.friends[i]) != Feed::Off) {
+				next = i;
+				break;
+			}
+		}
+		setActive(next);
+		applyNow(true, "controller: " + QString::fromStdString(cfg.friends[next].name));
+	}
+	emit stateChanged();
 }
 
 void Engine::applyVoice()

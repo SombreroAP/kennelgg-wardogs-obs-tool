@@ -1,0 +1,165 @@
+{
+  "Name": "Kennel.gg Wardogs",
+  "Version": "0.1.0.0",
+  "Author": "The Kennel [KNL]",
+  "Description": "Keys for the Kennel.gg Wardogs Streaming Tool in OBS: squad mate POVs, clips, instant replay, Dual POV and voice control.",
+  "Icon": "imgs/plugin/marketplace",
+  "UUID": "com.kennelgg.wardogs",
+  "Category": "Kennel.gg Wardogs",
+  "CategoryIcon": "imgs/plugin/category",
+  "CodePath": "bin/plugin.js",
+  "URL": "https://kennel.gg/obs",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "6.4"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    },
+    {
+      "Platform": "mac",
+      "MinimumVersion": "12"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20",
+    "Debug": "disabled"
+  },
+  "Actions": [
+    {
+      "Name": "Squad mate POV",
+      "UUID": "com.kennelgg.wardogs.pov",
+      "Icon": "imgs/actions/pov/icon",
+      "Tooltip": "Show a squad mate's POV on stream, or the one who is live in Kennel.gg voice; press again to come back to your own",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/pov/key",
+          "TitleAlignment": "bottom"
+        },
+        {
+          "Image": "imgs/actions/pov/key-on",
+          "TitleAlignment": "bottom"
+        }
+      ],
+      "PropertyInspectorPath": "ui/pov.html"
+    },
+    {
+      "Name": "Next squad mate",
+      "UUID": "com.kennelgg.wardogs.cycle",
+      "Icon": "imgs/actions/cycle/icon",
+      "Tooltip": "Cycle to the next squad mate with a picture",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/cycle/key",
+          "TitleAlignment": "bottom"
+        }
+      ]
+    },
+    {
+      "Name": "Clip",
+      "UUID": "com.kennelgg.wardogs.clip",
+      "Icon": "imgs/actions/clip/icon",
+      "Tooltip": "Save a clip of the replay buffer",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/clip/key",
+          "TitleAlignment": "bottom"
+        }
+      ]
+    },
+    {
+      "Name": "Instant replay",
+      "UUID": "com.kennelgg.wardogs.replay",
+      "Icon": "imgs/actions/replay/icon",
+      "Tooltip": "Play the last highlight",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/replay/key",
+          "TitleAlignment": "bottom"
+        }
+      ]
+    },
+    {
+      "Name": "Clip + replay",
+      "UUID": "com.kennelgg.wardogs.clipreplay",
+      "Icon": "imgs/actions/clipreplay/icon",
+      "Tooltip": "Save a clip and play it back at once",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/clipreplay/key",
+          "TitleAlignment": "bottom"
+        }
+      ]
+    },
+    {
+      "Name": "Voice control",
+      "UUID": "com.kennelgg.wardogs.voice",
+      "Icon": "imgs/actions/voice/icon",
+      "Tooltip": "Voice control on / off (beta)",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/voice/key",
+          "TitleAlignment": "bottom"
+        },
+        {
+          "Image": "imgs/actions/voice/key-on",
+          "TitleAlignment": "bottom"
+        }
+      ]
+    },
+    {
+      "Name": "Dual POV",
+      "UUID": "com.kennelgg.wardogs.dual",
+      "Icon": "imgs/actions/dual/icon",
+      "Tooltip": "The small second-POV window on / off",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/dual/key",
+          "TitleAlignment": "bottom"
+        },
+        {
+          "Image": "imgs/actions/dual/key-on",
+          "TitleAlignment": "bottom"
+        }
+      ]
+    },
+    {
+      "Name": "My POV",
+      "UUID": "com.kennelgg.wardogs.me",
+      "Icon": "imgs/actions/me/icon",
+      "Tooltip": "Back to your own POV",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/me/key",
+          "TitleAlignment": "bottom"
+        }
+      ]
+    }
+  ]
+}
