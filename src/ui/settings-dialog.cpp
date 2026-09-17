@@ -2416,7 +2416,7 @@ QWidget *SettingsDialog::buildVoiceTab()
 		"Say this first, then the command: \"hey kennel, replay\". Two words are clearer than one; "
 		"the last word on its own (\"kennel replay\") counts too.");
 	f->addRow("Wake phrase", voiceWake_);
-	voiceChime_ = new QCheckBox("Chime when the wake phrase is heard (on this PC and on the stream)", g);
+	voiceChime_ = new QCheckBox("Chime when the wake phrase is heard", g);
 	voiceChime_->setChecked(e_->cfg.voiceChime);
 	voiceChime_->setToolTip(
 		"A soft two-note chime a moment after \"hey kennel\", through this PC's speakers and "
@@ -2432,6 +2432,18 @@ QWidget *SettingsDialog::buildVoiceTab()
 		voiceChimeVol_->setToolTip("How loud, on your PC and on the stream alike.");
 		cr->addWidget(new QLabel("volume", g));
 		cr->addWidget(voiceChimeVol_);
+		voiceChimeWhere_ = new QComboBox(g);
+		voiceChimeWhere_->addItem("through this PC's speakers", "pc");
+		voiceChimeWhere_->addItem("into the stream through OBS", "obs");
+		voiceChimeWhere_->addItem("both", "both");
+		voiceChimeWhere_->setToolTip(
+			"One device, so it is not heard twice. Through the speakers: you hear it, and if OBS captures your "
+			"desktop audio the stream hears that same copy. Through OBS: it goes straight into the mix and you "
+			"hear it only if you monitor OBS. Both: pick this only if your desktop audio is NOT captured, or "
+			"the recording gets it twice.");
+		int wi = voiceChimeWhere_->findData(QString::fromStdString(e_->cfg.voiceChimeWhere));
+		voiceChimeWhere_->setCurrentIndex(wi < 0 ? 0 : wi);
+		cr->addWidget(voiceChimeWhere_);
 		cr->addStretch(1);
 		f->addRow(cr);
 	}
@@ -2484,6 +2496,7 @@ QWidget *SettingsDialog::buildVoiceTab()
 	connect(voiceMic_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
 	connect(voiceWake_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
 	connect(voiceChimeVol_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
+	connect(voiceChimeWhere_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
 	connect(e_, &Engine::stateChanged, this, [this]() {
 		if (voiceStatus_)
 			voiceStatus_->setText(
@@ -2978,6 +2991,7 @@ void SettingsDialog::collect()
 		c.voiceCommands = voiceCommands_->isChecked();
 		c.voiceChime = voiceChime_->isChecked();
 		c.voiceChimeVol = voiceChimeVol_->value();
+		c.voiceChimeWhere = voiceChimeWhere_->currentData().toString().toStdString();
 		c.voiceCmdReplay = voiceCmdReplay_->isChecked();
 		c.voiceCmdClip = voiceCmdClip_->isChecked();
 		c.voiceCmdDual = voiceCmdDual_->isChecked();

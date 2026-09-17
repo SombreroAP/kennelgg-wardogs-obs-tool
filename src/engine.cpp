@@ -1690,7 +1690,7 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		onVoiceCommand(o.value("cmd").toString(), o.value("name").toString(), o.value("heard").toString());
 	} else if (type == "voice_chime") {
 		// the same chime into the stream: viewers hear that a command is coming
-		if (cfg.voiceEnabled && cfg.voiceChime) {
+		if (cfg.voiceEnabled && cfg.voiceChime && cfg.voiceChimeWhere != "pc") {
 			char *p = obs_module_file("sounds/chime.wav");
 			if (p) {
 				std::string e = sw.playSound(cfg, p, cfg.voiceChimeVol);
@@ -1771,6 +1771,7 @@ void Engine::applyVoice()
 	o["names"] = cfg.voiceNames;
 	o["chime"] = cfg.voiceChime;
 	o["chime_volume"] = cfg.voiceChimeVol;
+	o["chime_local"] = cfg.voiceChimeWhere != "obs"; // ClipHound plays it on the PC's speakers
 	QJsonArray allow;
 	if (cfg.voiceCmdReplay)
 		allow.append("replay");

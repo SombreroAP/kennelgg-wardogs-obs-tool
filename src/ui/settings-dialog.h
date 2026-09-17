@@ -123,6 +123,7 @@ private:
 		  *voiceCmdForce_ = nullptr, *voiceCmdChange_ = nullptr, *voiceCmdClosest_ = nullptr;
 	QComboBox *voiceMic_ = nullptr;
 	QSpinBox *voiceChimeVol_ = nullptr;
+	QComboBox *voiceChimeWhere_ = nullptr;
 	QCheckBox *verticalOn_ = nullptr;
 	QLineEdit *voiceWake_ = nullptr;
 	QLabel *voiceStatus_ = nullptr;

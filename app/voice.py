@@ -118,6 +118,7 @@ class Voice:
         self.squad = [str(n) for n in (o.get("squad") or [])]
         self.allow = [str(c) for c in (o.get("allow") or [])]
         self.chime = bool(o.get("chime", True))
+        self.chime_local = bool(o.get("chime_local", True))
         vol = int(o.get("chime_volume", 60) or 60)
         if vol != self._chime_vol:
             self._chime_vol, self._chime_path = vol, ""   # a new file at the new level
@@ -285,7 +286,9 @@ class Voice:
         goes to the default output, not into OBS) and not recorded."""
         if not self.chime:
             return
-        self.b.send({"type": "voice_chime"})   # the plugin plays it into the stream as well
+        self.b.send({"type": "voice_chime"})   # the plugin plays it into the stream, if that is where it goes
+        if not self.chime_local:
+            return
         try:
             import winsound
         except ImportError:

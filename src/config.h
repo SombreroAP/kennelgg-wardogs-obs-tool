@@ -238,9 +238,9 @@ struct Config {
 	std::string voiceWake = "hey kennel"; // what starts a command ("hey kennel replay")
 	bool voiceNames = true;               // manual clips take their title from what was said around them
 	bool voiceChime = true;
-	int voiceChimeVol =
-		60; // 0..100, on the PC and on the stream               // a soft two-note chime on this PC when the wake phrase is heard
-	bool voiceCommands = true; // "<wake> replay", "<wake> show <name>", ...
+	int voiceChimeVol = 60;             // 0..100
+	std::string voiceChimeWhere = "pc"; // pc: this PC's speakers | obs: into the stream's mix | both
+	bool voiceCommands = true;          // "<wake> replay", "<wake> show <name>", ...
 	// each command on its own switch (all on when commands are on)
 	bool voiceCmdReplay = true, voiceCmdClip = true, voiceCmdDual = true, voiceCmdForce = true,
 	     voiceCmdChange = true, voiceCmdClosest = true;
