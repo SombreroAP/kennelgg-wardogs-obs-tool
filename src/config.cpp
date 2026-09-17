@@ -224,6 +224,7 @@ void Config::load()
 	DEFB(voiceNames);
 	DEFB(voiceCommands);
 	DEFB(voiceChime);
+	DEFI(voiceChimeVol);
 	DEFB(voiceCmdReplay);
 	DEFB(voiceCmdClip);
 	DEFB(voiceCmdDual);
@@ -381,6 +382,7 @@ void Config::load()
 	GETB(voiceNames);
 	GETB(voiceCommands);
 	GETB(voiceChime);
+	GETI(voiceChimeVol);
 	GETB(voiceCmdReplay);
 	GETB(voiceCmdClip);
 	GETB(voiceCmdDual);
@@ -689,6 +691,7 @@ void Config::save() const
 	SETB(voiceNames);
 	SETB(voiceCommands);
 	SETB(voiceChime);
+	SETI(voiceChimeVol);
 	SETB(voiceCmdReplay);
 	SETB(voiceCmdClip);
 	SETB(voiceCmdDual);

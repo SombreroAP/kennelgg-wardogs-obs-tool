@@ -2418,7 +2418,19 @@ QWidget *SettingsDialog::buildVoiceTab()
 		"A soft two-note chime a moment after \"hey kennel\", through this PC's speakers and "
 		"into the stream's mix, so you and your viewers know it is listening: hey kennel, chime, "
 		"then the command. The command can also follow straight on without a pause.");
-	f->addRow(voiceChime_);
+	{
+		auto *cr = new QHBoxLayout();
+		cr->addWidget(voiceChime_);
+		voiceChimeVol_ = new QSpinBox(g);
+		voiceChimeVol_->setRange(5, 100);
+		voiceChimeVol_->setSuffix(" %");
+		voiceChimeVol_->setValue(e_->cfg.voiceChimeVol);
+		voiceChimeVol_->setToolTip("How loud, on your PC and on the stream alike.");
+		cr->addWidget(new QLabel("volume", g));
+		cr->addWidget(voiceChimeVol_);
+		cr->addStretch(1);
+		f->addRow(cr);
+	}
 	voiceStatus_ = new QLabel(e_->voiceStatus().isEmpty() ? "not listening" : e_->voiceStatus(), g);
 	voiceStatus_->setWordWrap(true);
 	f->addRow("Status", voiceStatus_);
@@ -2467,6 +2479,7 @@ QWidget *SettingsDialog::buildVoiceTab()
 		connect(c, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(voiceMic_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
 	connect(voiceWake_, &QLineEdit::editingFinished, this, [this]() { saveAndApply(); });
+	connect(voiceChimeVol_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
 	connect(e_, &Engine::stateChanged, this, [this]() {
 		if (voiceStatus_)
 			voiceStatus_->setText(
@@ -2960,6 +2973,7 @@ void SettingsDialog::collect()
 		c.voiceNames = voiceNames_->isChecked();
 		c.voiceCommands = voiceCommands_->isChecked();
 		c.voiceChime = voiceChime_->isChecked();
+		c.voiceChimeVol = voiceChimeVol_->value();
 		c.voiceCmdReplay = voiceCmdReplay_->isChecked();
 		c.voiceCmdClip = voiceCmdClip_->isChecked();
 		c.voiceCmdDual = voiceCmdDual_->isChecked();

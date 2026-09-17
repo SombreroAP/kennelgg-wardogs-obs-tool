@@ -3,7 +3,7 @@
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
 ## 0.17.2
-- The "hey kennel" chime plays on the stream as well as on your PC: the plugin drops the same two notes into the mix through a small media source in your scene, so viewers hear that a command is coming. One tick on the Voice tab turns both off.
+- The "hey kennel" chime plays on the stream as well as on your PC: the plugin drops the same two notes into the mix through a small media source in your scene, so viewers hear that a command is coming. One tick on the Voice tab turns both off, and a volume next to it sets how loud, on the PC and the stream alike.
 
 ## 0.17.1
 - **Vertical canvas (beta): the whole squad comes along.** Switching it on, or changing the squad, puts every squad mate's source into the vertical scene straight away, full height and centred, hidden until they are shown; the look overlay in its portrait form and the instant replay with its frame were already there. Dual POV stays on the main canvas.

@@ -85,6 +85,7 @@ class Voice:
         self._armed_until = 0.0         # after a bare "hey kennel": the next words are the command
         self._chimed_at = 0.0
         self._chime_path = ""
+        self._chime_vol = 60
         self._ring = np.zeros(RATE * RING_S, np.int16)
         self._ring_pos = 0
         self._ring_epoch = 0.0          # wall clock of the newest sample in the ring
@@ -115,6 +116,9 @@ class Voice:
         self.squad = [str(n) for n in (o.get("squad") or [])]
         self.allow = [str(c) for c in (o.get("allow") or [])]
         self.chime = bool(o.get("chime", True))
+        vol = int(o.get("chime_volume", 60) or 60)
+        if vol != self._chime_vol:
+            self._chime_vol, self._chime_path = vol, ""   # a new file at the new level
         if self.enabled and self._loader is None:
             self._loader = threading.Thread(target=self._load_models, daemon=True)
             self._loader.start()
@@ -256,7 +260,7 @@ class Voice:
             return
         try:
             if not self._chime_path:
-                path = os.path.join(models_dir(), "chime.wav")
+                path = os.path.join(models_dir(), f"chime-{self._chime_vol}.wav")
                 if not os.path.exists(path):
                     import wave
                     sr = 22050
@@ -266,7 +270,8 @@ class Voice:
                         t = np.arange(n) / sr
                         env = np.minimum(1.0, np.minimum(t / 0.01, (n / sr - t) / 0.06))
                         return np.sin(2 * np.pi * freq * t) * env * vol
-                    a = np.concatenate([tone(659.25, 110, 0.18), tone(987.77, 160, 0.16), np.zeros(int(sr * 0.05))])
+                    k = max(0.05, min(1.0, self._chime_vol / 100.0)) * 0.3   # 100 % is still soft, -10 dBFS
+                    a = np.concatenate([tone(659.25, 110, k), tone(987.77, 160, k * 0.9), np.zeros(int(sr * 0.05))])
                     with wave.open(path, "wb") as w:
                         w.setnchannels(1)
                         w.setsampwidth(2)

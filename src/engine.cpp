@@ -1693,7 +1693,7 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		if (cfg.voiceEnabled && cfg.voiceChime) {
 			char *p = obs_module_file("sounds/chime.wav");
 			if (p) {
-				std::string e = sw.playSound(cfg, p, 60);
+				std::string e = sw.playSound(cfg, p, cfg.voiceChimeVol);
 				if (!e.empty())
 					log("Chime: " + QString::fromStdString(e));
 			}
@@ -1770,6 +1770,7 @@ void Engine::applyVoice()
 	o["commands"] = cfg.voiceCommands;
 	o["names"] = cfg.voiceNames;
 	o["chime"] = cfg.voiceChime;
+	o["chime_volume"] = cfg.voiceChimeVol;
 	QJsonArray allow;
 	if (cfg.voiceCmdReplay)
 		allow.append("replay");

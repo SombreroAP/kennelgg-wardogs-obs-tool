@@ -1406,7 +1406,7 @@ std::string Switcher::playSound(const Config &cfg, const std::string &path, int 
 		return "no chime source";
 	obs_source_set_volume(src, std::clamp(volumePct, 0, 100) / 100.0f);
 	obs_source_set_muted(src, false);
-	obs_source_set_monitoring_type(src, OBS_MONITORING_NONE);
+	obs_source_set_monitoring_type(src, OBS_MONITORING_TYPE_NONE);
 	obs_source_media_restart(src);
 	obs_source_release(src);
 	return "";
