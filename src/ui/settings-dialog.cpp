@@ -2412,11 +2412,12 @@ QWidget *SettingsDialog::buildVoiceTab()
 		"Say this first, then the command: \"hey kennel, replay\". Two words are clearer than one; "
 		"the last word on its own (\"kennel replay\") counts too.");
 	f->addRow("Wake phrase", voiceWake_);
-	voiceChime_ = new QCheckBox("Chime when the wake phrase is heard", g);
+	voiceChime_ = new QCheckBox("Chime when the wake phrase is heard (on this PC and on the stream)", g);
 	voiceChime_->setChecked(e_->cfg.voiceChime);
-	voiceChime_->setToolTip("A soft two-note chime through this PC's speakers (not the stream) a moment after "
-				"\"hey kennel\", so you know it is listening: hey kennel, chime, then the command. "
-				"The command can also follow straight on without a pause.");
+	voiceChime_->setToolTip(
+		"A soft two-note chime a moment after \"hey kennel\", through this PC's speakers and "
+		"into the stream's mix, so you and your viewers know it is listening: hey kennel, chime, "
+		"then the command. The command can also follow straight on without a pause.");
 	f->addRow(voiceChime_);
 	voiceStatus_ = new QLabel(e_->voiceStatus().isEmpty() ? "not listening" : e_->voiceStatus(), g);
 	voiceStatus_->setWordWrap(true);

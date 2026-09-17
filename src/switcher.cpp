@@ -1386,6 +1386,32 @@ std::string Switcher::playMediaVertical(const Config &cfg, int scalePct, bool fr
 	return "";
 }
 
+std::string Switcher::playSound(const Config &cfg, const std::string &path, int volumePct)
+{
+	obs_data_t *st = obs_data_create();
+	obs_data_set_string(st, "local_file", path.c_str());
+	obs_data_set_bool(st, "is_local_file", true);
+	obs_data_set_bool(st, "looping", false);
+	obs_data_set_bool(st, "restart_on_activate", false);
+	obs_data_set_bool(st, "close_when_inactive", true);
+	obs_data_set_bool(st, "clear_on_media_end", true);
+	obs_data_set_bool(st, "hw_decode", false);
+	// a sound has no picture: the item exists so the source is active and in the mix
+	std::string e = createInScene(cfg, "ffmpeg_source", Config::chimeSourceName(), st, false, true);
+	obs_data_release(st);
+	if (!e.empty())
+		return e;
+	obs_source_t *src = obs_get_source_by_name(Config::chimeSourceName());
+	if (!src)
+		return "no chime source";
+	obs_source_set_volume(src, std::clamp(volumePct, 0, 100) / 100.0f);
+	obs_source_set_muted(src, false);
+	obs_source_set_monitoring_type(src, OBS_MONITORING_NONE);
+	obs_source_media_restart(src);
+	obs_source_release(src);
+	return "";
+}
+
 int64_t Switcher::mediaDurationMs() const
 {
 	obs_source_t *src = obs_get_source_by_name(Config::replaySourceName());

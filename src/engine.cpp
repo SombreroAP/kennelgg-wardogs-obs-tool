@@ -1688,6 +1688,17 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 			applyNow(false, "companion app");
 	} else if (type == "voice") {
 		onVoiceCommand(o.value("cmd").toString(), o.value("name").toString(), o.value("heard").toString());
+	} else if (type == "voice_chime") {
+		// the same chime into the stream: viewers hear that a command is coming
+		if (cfg.voiceEnabled && cfg.voiceChime) {
+			char *p = obs_module_file("sounds/chime.wav");
+			if (p) {
+				std::string e = sw.playSound(cfg, p, 60);
+				if (!e.empty())
+					log("Chime: " + QString::fromStdString(e));
+			}
+			bfree(p);
+		}
 	} else if (type == "voice_status") {
 		QString s = o.value("text").toString();
 		if (s != voiceStatus_) {

@@ -249,6 +249,7 @@ class Voice:
         goes to the default output, not into OBS) and not recorded."""
         if not self.chime:
             return
+        self.b.send({"type": "voice_chime"})   # the plugin plays it into the stream as well
         try:
             import winsound
         except ImportError:

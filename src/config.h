@@ -137,6 +137,7 @@ struct Config {
 	bool runCutGaps = false; // ...with the dead space between kills cut out
 	int runGapS = 12;        // a gap longer than this is dead space
 	static const char *replaySourceName() { return "Kennel.gg · Replay"; }
+	static const char *chimeSourceName() { return "Kennel.gg · Chime"; }
 	static const char *replayFrameName() { return "Kennel.gg · Replay frame"; }
 	static const char *replayFrameNameV() { return "Kennel.gg · Replay frame (vertical)"; }
 	int vdoBitrateKbps = 12000; // VDO.Ninja video bitrate asked for on both ends (wired or fibre: 12-20 Mbit/s)
