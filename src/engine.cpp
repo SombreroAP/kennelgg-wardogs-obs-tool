@@ -1709,9 +1709,14 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 	} else if (type == "voice") {
 		onVoiceCommand(o.value("cmd").toString(), o.value("name").toString(), o.value("heard").toString());
 	} else if (type == "voice_chime") {
-		// the same chime into the stream: viewers hear that a command is coming
-		if (cfg.voiceEnabled && cfg.voiceChime && cfg.voiceChimeWhere != "pc") {
-			char *p = obs_module_file("sounds/chime.wav");
+		// the same sound into the stream: the wake chime, or the taken / not-understood tones
+		QString kind = o.value("kind").toString("wake");
+		bool want = kind == "wake" ? cfg.voiceChime : cfg.voiceTones;
+		if (cfg.voiceEnabled && want && cfg.voiceChimeWhere != "pc") {
+			const char *file = kind == "ok"     ? "sounds/ok.wav"
+					   : kind == "fail" ? "sounds/fail.wav"
+							    : "sounds/chime.wav";
+			char *p = obs_module_file(file);
 			if (p) {
 				std::string e = sw.playSound(cfg, p, cfg.voiceChimeVol);
 				if (!e.empty())
@@ -1790,6 +1795,7 @@ void Engine::applyVoice()
 	o["commands"] = cfg.voiceCommands;
 	o["names"] = cfg.voiceNames;
 	o["chime"] = cfg.voiceChime;
+	o["tones"] = cfg.voiceTones;
 	o["chime_volume"] = cfg.voiceChimeVol;
 	o["chime_local"] = cfg.voiceChimeWhere != "obs"; // ClipHound plays it on the PC's speakers
 	QJsonArray allow;

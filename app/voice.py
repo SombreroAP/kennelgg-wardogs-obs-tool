@@ -88,6 +88,9 @@ class Voice:
         self._chimed_at = 0.0
         self._chime_path = ""
         self._chime_vol = 60
+        self.tones = True
+        self._tone_paths = {}
+        self._armed_said = False      # words came after a bare wake but made no command
         self._wake_ok_until = 0.0     # Whisper agreed the wake phrase was said, until
         self._wake_no_until = 0.0     # ... or disagreed: do not ask again for a moment
         self._ring = np.zeros(RATE * RING_S, np.int16)
@@ -121,9 +124,10 @@ class Voice:
         self.allow = [str(c) for c in (o.get("allow") or [])]
         self.chime = bool(o.get("chime", True))
         self.chime_local = bool(o.get("chime_local", True))
+        self.tones = bool(o.get("tones", True))
         vol = int(o.get("chime_volume", 60) or 60)
         if vol != self._chime_vol:
-            self._chime_vol, self._chime_path = vol, ""   # a new file at the new level
+            self._chime_vol, self._chime_path, self._tone_paths = vol, "", {}   # new files at the new level
         if self.enabled and self._loader is None:
             self._loader = threading.Thread(target=self._load_models, daemon=True)
             self._loader.start()
@@ -288,12 +292,15 @@ class Voice:
             print(f"[voice] wake check: {e}")
             return True
 
-    def _play_chime(self):
-        """A soft two-note chime through this PC's speakers: 'listening'. Not on the stream (it
-        goes to the default output, not into OBS) and not recorded."""
-        if not self.chime:
+    def _play_chime(self, kind: str = "wake"):
+        """Sounds for the streamer: "wake" (a soft two-note chime: listening), "ok" (a rising pair:
+        the command was taken), "fail" (a low falling pair: the words made no command). Through
+        this PC's speakers, the stream, or both, as the plugin says; never recorded."""
+        if kind == "wake" and not self.chime:
             return
-        self.b.send({"type": "voice_chime"})   # the plugin plays it into the stream, if that is where it goes
+        if kind != "wake" and not self.tones:
+            return
+        self.b.send({"type": "voice_chime", "kind": kind})   # the plugin plays it into the stream, if that is where it goes
         if not self.chime_local:
             return
         try:
@@ -301,8 +308,9 @@ class Voice:
         except ImportError:
             return
         try:
-            if not self._chime_path:
-                path = os.path.join(models_dir(), f"chime-{self._chime_vol}.wav")
+            path = self._tone_paths.get(kind)
+            if not path:
+                path = os.path.join(models_dir(), f"{kind}-{self._chime_vol}.wav")
                 if not os.path.exists(path):
                     import wave
                     sr = 22050
@@ -313,14 +321,19 @@ class Voice:
                         env = np.minimum(1.0, np.minimum(t / 0.01, (n / sr - t) / 0.06))
                         return np.sin(2 * np.pi * freq * t) * env * vol
                     k = max(0.05, min(1.0, self._chime_vol / 100.0)) * 0.3   # 100 % is still soft, -10 dBFS
-                    a = np.concatenate([tone(659.25, 110, k), tone(987.77, 160, k * 0.9), np.zeros(int(sr * 0.05))])
+                    if kind == "ok":
+                        a = np.concatenate([tone(880, 80, k), tone(1174.66, 140, k * 0.9), np.zeros(int(sr * 0.04))])
+                    elif kind == "fail":
+                        a = np.concatenate([tone(392, 120, k), tone(293.66, 200, k * 0.9), np.zeros(int(sr * 0.04))])
+                    else:
+                        a = np.concatenate([tone(659.25, 110, k), tone(987.77, 160, k * 0.9), np.zeros(int(sr * 0.05))])
                     with wave.open(path, "wb") as w:
                         w.setnchannels(1)
                         w.setsampwidth(2)
                         w.setframerate(sr)
                         w.writeframes((a * 32767).astype(np.int16).tobytes())
-                self._chime_path = path
-            winsound.PlaySound(self._chime_path, winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_NODEFAULT)
+                self._tone_paths[kind] = path
+            winsound.PlaySound(path, winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_NODEFAULT)
         except Exception as e:
             print(f"[voice] chime: {e}")
 
@@ -406,6 +419,13 @@ class Voice:
                     self._play_chime()
                 return False
         cmd, name, score = self.intent(after)
+        if not cmd and not partial and after not in ("show", "switch to", "change to", "clip that", "clip"):
+            # a whole sentence after the wake phrase, and it made no command: say so
+            if wi >= 0 or now <= self._armed_until:
+                print(f"[voice] not understood: {after!r}")
+                self._armed_until = 0.0
+                self._play_chime("fail")
+            return False
         if not cmd and not partial and after in ("show", "switch to", "change to", "clip that", "clip"):
             cmd, name, score = ("clip", "", 1.0) if after.startswith("clip") else ("change", "", 1.0)
             if cmd == "change":
@@ -432,6 +452,7 @@ class Voice:
             self._last_clip_cmd = now
         print(f"[voice] command: {cmd} {name!r} ({score:.2f})  <- {text!r}")
         self.b.send({"type": "voice", "cmd": cmd, "name": name, "heard": text})
+        self._play_chime("ok")
         return True
 
     @classmethod
@@ -456,7 +477,9 @@ class Voice:
                 # every word of the phrase present, in order, near the start
                 if all(w in words for w in pw):
                     idx = [words.index(w) for w in pw]
-                    if idx == sorted(idx) and idx[0] <= 1:
+                    # at the very start, or one word in and then most of what was said: "me" in
+                    # the middle of "mate me someone" is not "back to me"
+                    if idx == sorted(idx) and (idx[0] == 0 or (idx[0] == 1 and len(pw) * 2 >= len(words))):
                         # the phrase that explains the most words wins ("change squad mate point of
                         # view" over "squad mate point of view")
                         sc = 0.85 + 0.02 * len(pw)

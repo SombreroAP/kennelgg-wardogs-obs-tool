@@ -2424,8 +2424,8 @@ QWidget *SettingsDialog::buildVoiceTab()
 	voiceWake_->setPlaceholderText("hey kennel");
 	voiceWake_->setMaximumWidth(200);
 	voiceWake_->setToolTip(
-		"Say this first, then the command: \"hey kennel, replay\". Two words are clearer than one; "
-		"the last word on its own (\"kennel replay\") counts too.");
+		"Say this first, then the command: \"hey kennel, replay\". Both words are needed, so \"kennel\" in "
+		"conversation (\"the dog kennel\") does not wake it.");
 	f->addRow("Wake phrase", voiceWake_);
 	voiceChime_ = new QCheckBox("Chime when the wake phrase is heard", g);
 	voiceChime_->setChecked(e_->cfg.voiceChime);
@@ -2458,6 +2458,11 @@ QWidget *SettingsDialog::buildVoiceTab()
 		cr->addStretch(1);
 		f->addRow(cr);
 	}
+	voiceTones_ = new QCheckBox(
+		"Tones after a command: rising when it was taken, falling when the words were not understood", g);
+	voiceTones_->setChecked(e_->cfg.voiceTones);
+	voiceTones_->setToolTip("Through the same device and at the same volume as the chime.");
+	f->addRow(voiceTones_);
 	voiceStatus_ = new QLabel(e_->voiceStatus().isEmpty() ? "not listening" : e_->voiceStatus(), g);
 	voiceStatus_->setWordWrap(true);
 	f->addRow("Status", voiceStatus_);
@@ -2504,7 +2509,7 @@ QWidget *SettingsDialog::buildVoiceTab()
 	   "(needs ClipHound's NEARBY reading).");
 	v->addWidget(gc);
 	v->addStretch(1);
-	for (auto *c : {voiceOn_, voiceNames_, voiceCommands_, voiceChime_, voiceCmdReplay_, voiceCmdClip_,
+	for (auto *c : {voiceOn_, voiceNames_, voiceCommands_, voiceChime_, voiceTones_, voiceCmdReplay_, voiceCmdClip_,
 			voiceCmdDual_, voiceCmdForce_, voiceCmdChange_, voiceCmdClosest_})
 		connect(c, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(voiceMic_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
@@ -3003,6 +3008,7 @@ void SettingsDialog::collect()
 		c.voiceNames = voiceNames_->isChecked();
 		c.voiceCommands = voiceCommands_->isChecked();
 		c.voiceChime = voiceChime_->isChecked();
+		c.voiceTones = voiceTones_->isChecked();
 		c.voiceChimeVol = voiceChimeVol_->value();
 		c.voiceChimeWhere = voiceChimeWhere_->currentData().toString().toStdString();
 		c.voiceCmdReplay = voiceCmdReplay_->isChecked();

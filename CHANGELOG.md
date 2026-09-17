@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.2
+- **Tones after a command.** A short rising pair when a command was taken, a low falling pair when what followed "hey kennel" made no command, so you know without looking. Same device and volume as the chime; its own tick on the Voice tab.
+- A one-word ask has to lead: "me" buried in a misheard sentence no longer passes for "back to me"; the sentence gets the falling tone instead.
+
 ## 0.18.1
 - **"Dog kennel" no longer wakes it.** "Kennel" on its own used to count as the wake phrase; now both words are needed, "hey kennel", in what the listener hears and in Whisper's second look. Tested: "dog kennel", "the dog kennel is over there", "put it in the kennel" and a bare "kennel replay" all stay quiet; "hey kennel" and "hey kennel replay" fire.
 
