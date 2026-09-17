@@ -95,7 +95,10 @@ public:
 	/// Ask the Discord app on this PC who it is logged in as, off the UI thread, and take that as
 	/// the username when none was given (or always, byHand). Fires discordUserDetected either way.
 	void detectDiscordUser(bool byHand = false);
+	/// OBS's replay-buffer length is the user's: read it, never write it unasked.
 	void applyReplaySeconds();
+	/// The user changed the length in our settings: write it into OBS, restart the buffer if it runs.
+	void setReplaySecondsByUser(int seconds);
 	void syncAppPort();
 	QString appStatus() const { return appStatus_; }
 	bool appConnected() const { return bridge.clients() > 0; }

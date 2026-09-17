@@ -54,6 +54,8 @@ public:
 	enum class ReplayChange { None, Written, NeedsRestart };
 	/// Write the replay buffer length into OBS's profile (both output modes).
 	ReplayChange setReplaySeconds(int seconds);
+	/// OBS's own replay-buffer length for the output mode in use, or 0 when unknown.
+	static int readReplaySeconds();
 	const std::deque<Entry> &history() const { return history_; }
 	/// Give a saved clip a new title and/or tags: the file and sidecar are renamed to the title,
 	/// the sidecar gains the words that were said (`spoken`) and the tags. An empty title keeps the

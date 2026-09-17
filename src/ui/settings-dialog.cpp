@@ -1478,13 +1478,24 @@ QWidget *SettingsDialog::buildClipsTab()
 	replaySecs_->setValue(e_->cfg.replaySeconds);
 	auto *rsRow = new QHBoxLayout();
 	rsRow->addWidget(replaySecs_);
-	rsRow->addWidget(muted("how far back every clip reaches. Written into OBS's own replay-buffer setting "
-			       "(Settings -> Output) so the two never disagree; 45 s puts the moment and the "
-			       "run-up to it in every clip.",
+	rsRow->addWidget(muted("how far back every clip reaches: OBS's own replay-buffer length (Settings -> "
+			       "Output -> Replay Buffer). Yours to set, here or there; the plugin only reads it, "
+			       "and writes it into OBS when you change it here. Sombrero uses 45 s.",
 			       g1),
 			 1);
 	f1->addRow("Clip length", rsRow);
-	connect(replaySecs_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
+	connect(replaySecs_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int v) {
+		if (building_)
+			return;
+		e_->setReplaySecondsByUser(v);
+	});
+	connect(e_, &Engine::stateChanged, this, [this]() {
+		if (replaySecs_ && !building_ && replaySecs_->value() != e_->cfg.replaySeconds) {
+			replaySecs_->blockSignals(true);
+			replaySecs_->setValue(e_->cfg.replaySeconds);
+			replaySecs_->blockSignals(false);
+		}
+	});
 	autoReplay_->setChecked(e_->cfg.autoStartReplay);
 	f1->addRow(autoReplay_);
 	nameTpl_ = new QLineEdit(QString::fromStdString(e_->cfg.clipNameTemplate), g1);
@@ -2469,7 +2480,7 @@ QWidget *SettingsDialog::buildVoiceTab()
 	mk(voiceCmdReplay_, "Kennel - instant replay", e_->cfg.voiceCmdReplay,
 	   "\"replay\", \"instant replay\", \"play that back\", \"run it back\": plays the last highlight.");
 	mk(voiceCmdClip_, "Kennel - clip that", e_->cfg.voiceCmdClip,
-	   "\"clip that\", \"clip it\", \"save that\": saves a clip of the last 45 seconds.");
+	   "\"clip that\", \"clip it\", \"save that\": saves a clip of the replay buffer (as long as OBS keeps it).");
 	voiceNames_ = new QCheckBox("    ... and the sentence after \"clip that\" becomes the file name", gc);
 	voiceNames_->setChecked(e_->cfg.voiceNames);
 	fc->addRow(
@@ -2928,8 +2939,7 @@ void SettingsDialog::collect()
 	c.watchRevive = revive_->isChecked();
 	c.autoStartReplay = autoReplay_->isChecked();
 	if (replaySecs_)
-		c.replaySeconds = replaySecs_->value();
-	c.clipUseReplay = useReplay_ ? useReplay_->isChecked() : true;
+		c.clipUseReplay = useReplay_ ? useReplay_->isChecked() : true;
 	c.backtrackFolder = backtrackFolder_ ? backtrackFolder_->text().trimmed().toStdString() : c.backtrackFolder;
 	if (hotkeyList_) {
 		// keep ticked hotkeys that are filtered out of view

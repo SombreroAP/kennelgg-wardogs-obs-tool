@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.17.5
+- **Your replay buffer length is yours.** The plugin used to write its own 45 s into OBS's replay-buffer setting at every start, over whatever you had chosen. It now reads OBS's length and follows it. The Clip length box on the Clips tab shows OBS's value; change it there and it is written into OBS once, restarting the buffer if it is running. Change it in OBS and the plugin picks it up at the next start. 45 s is what Sombrero uses, not a rule.
+
 ## 0.17.4
 - **The chime plays through one device.** It was going out through the PC's speakers and into OBS's mix at the same time, and with desktop audio captured the recording got it twice, a beat apart. A choice next to the volume on the Voice tab: through this PC's speakers (the default: you hear it, and a captured desktop puts that one copy on the stream), into the stream through OBS (straight into the mix, heard by you only if you monitor OBS), or both, for a desktop that is not captured.
 

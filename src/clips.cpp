@@ -511,6 +511,16 @@ Clips::ReplayChange Clips::setReplaySeconds(int seconds)
 	return obs_frontend_replay_buffer_active() ? ReplayChange::NeedsRestart : ReplayChange::Written;
 }
 
+int Clips::readReplaySeconds()
+{
+	config_t *prof = obs_frontend_get_profile_config();
+	if (!prof)
+		return 0;
+	const char *mode = config_get_string(prof, "Output", "Mode");
+	const char *section = (mode && strcmp(mode, "Advanced") == 0) ? "AdvOut" : "SimpleOutput";
+	return (int)config_get_uint(prof, section, "RecRBTime");
+}
+
 void Clips::ensureReplayBuffer()
 {
 	if (obs_frontend_replay_buffer_active())

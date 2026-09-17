@@ -183,8 +183,20 @@ void Engine::syncAppPort()
 
 void Engine::applyReplaySeconds()
 {
-	if (!cfg.clipUseReplay)
-		return;
+	// OBS's setting is the user's: the plugin follows it. It used to write its own 45 s into OBS
+	// at every start, over whatever the user had chosen
+	int obsSecs = Clips::readReplaySeconds();
+	if (obsSecs > 0 && obsSecs != cfg.replaySeconds) {
+		cfg.replaySeconds = obsSecs;
+		cfg.save();
+		emit stateChanged();
+	}
+}
+
+void Engine::setReplaySecondsByUser(int seconds)
+{
+	cfg.replaySeconds = std::clamp(seconds, 5, 300);
+	cfg.save();
 	switch (clips.setReplaySeconds(cfg.replaySeconds)) {
 	case Clips::ReplayChange::None:
 		return;
