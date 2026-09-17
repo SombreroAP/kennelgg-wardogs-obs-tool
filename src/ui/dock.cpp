@@ -565,8 +565,8 @@ void Dock::refresh()
 	QList<int> idx;
 	for (size_t i = 0; i < e_->cfg.friends.size(); ++i) {
 		const Friend &f = e_->cfg.friends[i];
-		if (e_->feedState(f) == Engine::Feed::Off)
-			continue;
+		// in a Kennel.gg voice channel: the people live in it. Anywhere else: the whole squad,
+		// with a dot on the ones known to be streaming; an offline one is simply not dotted
 		if (live && e_->feedState(f) != Engine::Feed::Live)
 			continue;
 		QString label = QString::fromStdString(f.name);

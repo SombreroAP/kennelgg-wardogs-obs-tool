@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.17.3
+- **"Hey kennel" no longer fires on "get to the".** Told what can be said, the listener will hear the wake phrase in anything close to it. Now Whisper gets a second look at the last two seconds and has to hear "kennel" too before the chime or a command goes through. On a test set of look-alikes ("get to the", "hey can you", "take another", "he can help") none got through, and every real "hey kennel" did.
+- **Dual POV no longer forces itself on at start-up.** The Dual tab's tick used to follow the window being up, so a settings save while it was up (from the dock, a voice command or the vehicle detector) made it come back forced at every OBS start. The tick now means one thing, "up from the moment OBS starts", and it is cleared once for everyone; the window still comes up whenever you ask.
+- **The dock lists the whole squad when you are not in Kennel.gg voice.** Only in a Kennel.gg voice channel does it narrow to the people live there. Outside, everyone is listed, with a dot on the ones known to be streaming; "nobody streaming" is gone.
+
 ## 0.17.2
 - The "hey kennel" chime plays on the stream as well as on your PC: the plugin drops the same two notes into the mix through a small media source in your scene, so viewers hear that a command is coming. One tick on the Voice tab turns both off, and a volume next to it sets how loud, on the PC and the stream alike.
 

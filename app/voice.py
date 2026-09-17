@@ -86,6 +86,8 @@ class Voice:
         self._chimed_at = 0.0
         self._chime_path = ""
         self._chime_vol = 60
+        self._wake_ok_until = 0.0     # Whisper agreed the wake phrase was said, until
+        self._wake_no_until = 0.0     # ... or disagreed: do not ask again for a moment
         self._ring = np.zeros(RATE * RING_S, np.int16)
         self._ring_pos = 0
         self._ring_epoch = 0.0          # wall clock of the newest sample in the ring
@@ -248,6 +250,36 @@ class Voice:
                 print(f"[voice] recogniser: {e}")
                 rec = None
 
+    def _wake_confirmed(self, now: float) -> bool:
+        if now < self._wake_ok_until:
+            return True
+        if now < self._wake_no_until:
+            return False
+        if self._whisper is None:
+            return True
+        try:
+            audio = self._window(now - 2.5, now)
+            if len(audio) < RATE // 2:
+                return True
+            f = audio.astype(np.float32) / 32768.0
+            segs, _ = self._whisper.transcribe(f, language="en", beam_size=3, vad_filter=False,
+                                               condition_on_previous_text=False,
+                                               initial_prompt=self.wake.split()[-1].lower())   # one word: enough to
+                                               # spell it right, not enough to make Whisper hear it everywhere
+            text = " ".join(s.text.strip() for s in segs).lower()
+            last = self.wake.split()[-1]
+            words = re.sub(r"[^a-z0-9' ]", " ", text).split()
+            ok = any(w == last or (len(w) >= 4 and difflib.SequenceMatcher(None, w, last).ratio() >= 0.75) for w in words)
+            print(f"[voice] wake check: {'yes' if ok else 'no'}  <- {text!r}")
+            if ok:
+                self._wake_ok_until = now + 6.0
+            else:
+                self._wake_no_until = now + 1.5
+            return ok
+        except Exception as e:
+            print(f"[voice] wake check: {e}")
+            return True
+
     def _play_chime(self):
         """A soft two-note chime through this PC's speakers: 'listening'. Not on the stream (it
         goes to the default output, not into OBS) and not recorded."""
@@ -347,6 +379,10 @@ class Voice:
                 return False
             after = " ".join(ws).strip()
         else:
+            # the listener is told what can be said, so it will hear "hey kennel" in "hey can you"
+            # or "get to the". A second opinion: Whisper on the last two seconds has to hear it too
+            if not self._wake_confirmed(now):
+                return False
             after = " ".join(ws[wi + 1:]).strip()
             if not after:
                 # "hey kennel" on its own: chime, and take the next few seconds' words as the command

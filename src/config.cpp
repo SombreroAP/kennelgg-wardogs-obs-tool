@@ -218,6 +218,7 @@ void Config::load()
 	DEFS(gameLang);
 	DEFS(gameLangFound);
 	DEFB(langAskShown);
+	DEFB(dualStartV2);
 	DEFB(voiceEnabled);
 	DEFS(voiceMic);
 	DEFS(voiceWake);
@@ -376,6 +377,7 @@ void Config::load()
 	GETS(gameLang);
 	GETS(gameLangFound);
 	GETB(langAskShown);
+	GETB(dualStartV2);
 	GETB(voiceEnabled);
 	GETS(voiceMic);
 	GETS(voiceWake);
@@ -453,6 +455,12 @@ void Config::load()
 		verticalEnabled = !sceneV.empty(); // whoever had picked a vertical scene had opted in
 	}
 	rosterGuild.clear(); // the roster is the Kennel.gg server only now; nothing else to pick
+	if (!dualStartV2) {
+		// the Dual tab's tick used to follow the window being up, so a save while it was up made it
+		// come back at every start; nobody chose that
+		dualStartV2 = true;
+		dualEnabled = false;
+	}
 	if (voiceWake == "kennel")
 		voiceWake = "hey kennel"; // 0.16.5: what people actually say, and a clearer start
 	if (!thresholdV2) {
@@ -685,6 +693,7 @@ void Config::save() const
 	SETS(gameLang);
 	SETS(gameLangFound);
 	SETB(langAskShown);
+	SETB(dualStartV2);
 	SETB(voiceEnabled);
 	SETS(voiceMic);
 	SETS(voiceWake);

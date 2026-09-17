@@ -2016,7 +2016,11 @@ QWidget *SettingsDialog::buildDualTab()
 		w));
 	auto *g = new QGroupBox("Dual POV", w);
 	auto *f = new QFormLayout(g);
-	dualOn_ = new QCheckBox("Show the dual POV window", g);
+	dualOn_ = new QCheckBox("Dual POV window up from the moment OBS starts (forced, until you turn it off)", g);
+	dualOn_->setToolTip(
+		"Off: the window comes up only when you ask - the dock button, a voice command, or the "
+		"vehicle detector below. It used to tick itself whenever the window happened to be up while "
+		"settings were saved, which forced it on at every start.");
 	f->addRow(dualOn_);
 	dualFriend_ = new QComboBox(g);
 	f->addRow("Crew mate to show", dualFriend_);
@@ -2199,7 +2203,7 @@ void SettingsDialog::dualToUi()
 	const Config &c = e_->cfg;
 	bool was = building_;
 	building_ = true;
-	dualOn_->setChecked(e_->dualOn() || c.dualEnabled);
+	dualOn_->setChecked(c.dualEnabled);
 	dualFriend_->clear();
 	dualFriend_->addItem("(none)", -1);
 	for (size_t i = 0; i < c.friends.size(); i++)
