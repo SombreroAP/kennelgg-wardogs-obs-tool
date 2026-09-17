@@ -270,9 +270,14 @@ class Voice:
                                                initial_prompt=self.wake.split()[-1].lower())   # one word: enough to
                                                # spell it right, not enough to make Whisper hear it everywhere
             text = " ".join(s.text.strip() for s in segs).lower()
-            last = self.wake.split()[-1]
+            wake_words = self.wake.split()
+            last, lead = wake_words[-1], (wake_words[-2] if len(wake_words) > 1 else "")
             words = re.sub(r"[^a-z0-9' ]", " ", text).split()
-            ok = any(w == last or (len(w) >= 4 and difflib.SequenceMatcher(None, w, last).ratio() >= 0.75) for w in words)
+            ok = False
+            for k, w in enumerate(words):
+                if w == last or (len(w) >= 4 and difflib.SequenceMatcher(None, w, last).ratio() >= 0.75):
+                    if not lead or (k > 0 and self._lead_ok(words[k - 1], lead)):
+                        ok = True
             print(f"[voice] wake check: {'yes' if ok else 'no'}  <- {text!r}")
             if ok:
                 self._wake_ok_until = now + 6.0
@@ -373,9 +378,13 @@ class Voice:
         # the wake phrase as the model heard it: "hey kennel", or just "kennel", or "kennels" / "kenel"
         ws = t.split()
         wi = -1
-        last = self.wake.split()[-1]
+        wake_words = self.wake.split()
+        last, lead = wake_words[-1], (wake_words[-2] if len(wake_words) > 1 else "")
         for k, w in enumerate(ws):
             if w == last or (len(w) >= 4 and difflib.SequenceMatcher(None, w, last).ratio() >= 0.8):
+                # a wake phrase of two words needs both: "dog kennel" is not "hey kennel"
+                if lead and not (k > 0 and self._lead_ok(ws[k - 1], lead)):
+                    continue
                 wi = k
         now = time.time()
         if wi < 0:
@@ -509,12 +518,19 @@ class Voice:
         self.b.send({"type": "clip_name", "path": path, "title": title, "text": text})
 
     def wakes(self) -> list[str]:
-        """The wake phrase and, when it has more than one word, its last word alone: "hey kennel"
-        is what people say, "kennel" on its own still counts."""
-        out = [self.wake]
-        if " " in self.wake:
-            out.append(self.wake.split()[-1])
-        return out
+        """The wake phrase, whole. "Kennel" on its own used to count too, and "dog kennel" in
+        conversation woke it; now it takes "hey kennel", both words."""
+        return [self.wake]
+
+    @staticmethod
+    def _lead_ok(w: str, lead: str) -> bool:
+        """The word before "kennel" has to be the "hey": as said, or as the listeners tend to
+        write it ("hay", "hi", "a")."""
+        if w == lead:
+            return True
+        if lead == "hey":
+            return w in ("hay", "hi", "a", "hey")
+        return len(w) >= 3 and difflib.SequenceMatcher(None, w, lead).ratio() >= 0.75
 
     @staticmethod
     def digits(name: str) -> str:

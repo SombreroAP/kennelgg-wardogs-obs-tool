@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.1
+- **"Dog kennel" no longer wakes it.** "Kennel" on its own used to count as the wake phrase; now both words are needed, "hey kennel", in what the listener hears and in Whisper's second look. Tested: "dog kennel", "the dog kennel is over there", "put it in the kennel" and a bare "kennel replay" all stay quiet; "hey kennel" and "hey kennel replay" fire.
+
 ## 0.18.0
 - **Much less CPU.** The plugin was rendering the whole game frame at its native size, reading it back from the GPU, JPEG-encoding it and handing it to ClipHound, which decoded it, ten times a second - fourteen megabytes a frame at 1440p - and ClipHound then cut the kill feed out of it. Now the plugin renders and sends only the kill-feed crop at the reading rate, a few hundred kilobytes a second, and the whole frame once a second for the minimap team check, the NEARBY panel and the vehicle list, which are read once per frame instead of ten times. On the PC that reported 20 %, most of that was this.
 - **The encodes are off unless chosen.** The end-of-stream compilation (segments cut and encoded after every clip while you play) and run merging (clips re-encoded into one) were on for everyone. They are now off by default and switched off once for existing installs; tick them on the Clips tab if you want them. Clip trimming stays on: it is a straight cut, no encode.
