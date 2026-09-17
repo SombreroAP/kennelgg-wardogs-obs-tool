@@ -105,6 +105,7 @@ private:
 	QWidget *buildLogsTab();
 	QWidget *buildDualTab();
 	QWidget *buildVoiceTab();
+	void showVoicePhrases();
 	QComboBox *dualFriend_ = nullptr, *dualPreset_ = nullptr;
 	QCheckBox *dualOn_ = nullptr, *dualAuto_ = nullptr, *dualKeep_ = nullptr;
 	QCheckBox *dualLook_ = nullptr;

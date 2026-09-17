@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.3
+- **Every voice command, and every way to say it,** in a window from the Voice tab ("All voice commands and the ways to say them..."): ten commands, each with its phrasings, what it does and which switch it lives under. The list is taken from the listener itself, so it is what actually works.
+
 ## 0.18.2
 - **Tones after a command.** A short rising pair when a command was taken, a low falling pair when what followed "hey kennel" made no command, so you know without looking. Same device and volume as the chime; its own tick on the Voice tab.
 - A one-word ask has to lead: "me" buried in a misheard sentence no longer passes for "back to me"; the sentence gets the falling tone instead.

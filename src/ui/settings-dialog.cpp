@@ -1,4 +1,6 @@
 #include "ui/settings-dialog.h"
+#include "voice-phrases.h"
+#include <QTextBrowser>
 #include <QListView>
 #include <algorithm>
 #include <QEventLoop>
@@ -2466,6 +2468,9 @@ QWidget *SettingsDialog::buildVoiceTab()
 	voiceStatus_ = new QLabel(e_->voiceStatus().isEmpty() ? "not listening" : e_->voiceStatus(), g);
 	voiceStatus_->setWordWrap(true);
 	f->addRow("Status", voiceStatus_);
+	auto *allCmds = new QPushButton("All voice commands and the ways to say them...", g);
+	f->addRow(allCmds);
+	connect(allCmds, &QPushButton::clicked, this, [this]() { showVoicePhrases(); });
 	v->addWidget(g);
 
 	auto *gc = new QGroupBox("Commands - each can be switched off", w);
@@ -2524,6 +2529,50 @@ QWidget *SettingsDialog::buildVoiceTab()
 					: e_->voiceStatus());
 	});
 	return w;
+}
+
+void SettingsDialog::showVoicePhrases()
+{
+	auto *d = new QDialog(this);
+	d->setAttribute(Qt::WA_DeleteOnClose);
+	d->setWindowTitle("Kennel.gg Wardogs - voice commands");
+	d->setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowMinMaxButtonsHint);
+	d->resize(760, 640);
+	auto *v = new QVBoxLayout(d);
+	QString wake = QString::fromStdString(e_->cfg.voiceWake).toHtmlEscaped();
+	QString html = "<p>Say <b>" + wake +
+		       "</b>, then any of these. The words do not have to be exact: what you say is scored against "
+		       "every phrasing below and the closest wins. You can pause after <b>" +
+		       wake + "</b> (a chime says it is listening) or say it all in one breath. English only.</p>";
+	for (const auto &g : kVoicePhrases) {
+		html += "<h3 style=\"margin-bottom:2px\">" + QString(g.title).toHtmlEscaped() + "</h3>";
+		QString what = QString(g.what);
+		if (!what.isEmpty())
+			html += "<p style=\"margin-top:0;color:#7c8076\">" + what.toHtmlEscaped() +
+				" &nbsp;<i>(switch: " + QString(g.gate).toHtmlEscaped() + ")</i></p>";
+		else
+			html += "<p style=\"margin-top:0;color:#7c8076\"><i>(switch: " +
+				QString(g.gate).toHtmlEscaped() + ")</i></p>";
+		html += "<p style=\"margin-top:0\">";
+		QStringList parts = QString(g.phrases).split('|', Qt::SkipEmptyParts);
+		for (int i = 0; i < parts.size(); i++)
+			html += (i ? " &middot; " : "") + QString("<b>") + wake + " " + parts[i].toHtmlEscaped() +
+				"</b>";
+		html += "</p>";
+	}
+	html += "<p style=\"color:#7c8076\">Names are matched loosely (\"show bouga\" finds bouga34) and spoken numbers "
+		"become digits. After \"clip that\", whatever you say next becomes the clip's title.</p>";
+	auto *t = new QTextBrowser(d);
+	t->setOpenExternalLinks(false);
+	t->setHtml(html);
+	v->addWidget(t, 1);
+	auto *close = new QPushButton("Close", d);
+	connect(close, &QPushButton::clicked, d, &QDialog::close);
+	auto *row = new QHBoxLayout();
+	row->addStretch(1);
+	row->addWidget(close);
+	v->addLayout(row);
+	d->show();
 }
 
 QWidget *SettingsDialog::buildAboutTab()
