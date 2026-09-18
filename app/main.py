@@ -251,6 +251,8 @@ def main():
         watcher = Watcher(bridge)
         from vehicle import Watcher as VehicleWatcher
         vehicle = VehicleWatcher(bridge)
+        from inventory import Watcher as InventoryWatcher
+        inventory = InventoryWatcher(bridge)
     last_team_check = 0.0
     last_full_ts = -1.0
     while True:
@@ -276,6 +278,7 @@ def main():
                 last_full_ts = fts
                 watcher.maybe_read(cap.full_frame(), t0, force=test)
                 vehicle.maybe_read(cap.full_frame(), t0)
+                inventory.maybe_read(cap.full_frame(), t0)
         roi = cap.grab()
         if cfg["capture"].get("debug_dump"):
             cv2.imwrite("debug/roi.png", roi)

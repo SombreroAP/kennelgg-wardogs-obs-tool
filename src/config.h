@@ -209,6 +209,7 @@ struct Config {
 	std::string clipNameTemplate = "{title} - {date} {time}"; // the same words as the Twitch clip, then when
 	bool autoStartReplay = true;
 	int replaySeconds = 45;               // how far back a clip reaches; written into OBS's replay-buffer setting
+	bool invSwitch = true;                // magazine packing: a squad mate's POV while the inventory screen is open
 	bool clipOnDowned = false;            // also clip when you get downed (the moment before is in the buffer)
 	bool clipUseReplay = true;            // save OBS's own replay buffer on a clip
 	std::vector<std::string> clipHotkeys; // OBS hotkey names fired on every clip (e.g. Aitum Backtrack "save")

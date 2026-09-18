@@ -133,6 +133,7 @@ void Config::load()
 	DEFB(verticalEnabled);
 	DEFB(verticalV2);
 	DEFB(onTopVSeeded);
+	DEFB(invSwitch);
 	DEFI(lookTopV);
 	DEFI(vdoBitrateKbps);
 	DEFB(dualEnabled);
@@ -297,6 +298,7 @@ void Config::load()
 	GETB(verticalEnabled);
 	GETB(verticalV2);
 	GETB(onTopVSeeded);
+	GETB(invSwitch);
 	GETI(lookTopV);
 	GETI(vdoBitrateKbps);
 	GETB(dualEnabled);
@@ -626,6 +628,7 @@ void Config::save() const
 	SETB(verticalEnabled);
 	SETB(verticalV2);
 	SETB(onTopVSeeded);
+	SETB(invSwitch);
 	SETI(lookTopV);
 	SETI(vdoBitrateKbps);
 	SETB(dualEnabled);

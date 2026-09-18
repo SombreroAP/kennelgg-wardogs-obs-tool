@@ -1045,6 +1045,16 @@ QWidget *SettingsDialog::buildSwitchTab()
 	auto *g4 = new QGroupBox("Extras", w);
 	auto *v4 = new QVBoxLayout(g4);
 	bringFront_ = new QCheckBox("Move the friend source to the top of the scene when shown", g4);
+	invSwitch_ = new QCheckBox("Magazine packing / inventory POV switching: show a squad mate while your inventory "
+				   "screen is open (needs ClipHound)",
+				   g4);
+	invSwitch_->setChecked(e_->cfg.invSwitch);
+	invSwitch_->setToolTip(
+		"Repacking magazines means standing still with the inventory open. ClipHound reads the "
+		"\"COMBINE AMMO\" hint on that screen; after two seconds of it a squad mate's POV goes on "
+		"stream, and yours comes back when it closes.");
+	v4->addWidget(invSwitch_);
+	connect(invSwitch_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	keepWarm_ = new QCheckBox(
 		"Keep the friend feed warm: leave the source on but invisible and muted, so the player never reconnects (instant switch)",
 		g4);
@@ -3038,6 +3048,8 @@ void SettingsDialog::collect()
 	c.rosterChannel.clear(); // whichever channel you are in
 	c.rosterAddSources = rosterSources_->isChecked();
 	c.keepWarm = keepWarm_->isChecked();
+	if (invSwitch_)
+		c.invSwitch = invSwitch_->isChecked();
 	c.preloadFeeds = preload_ ? preload_->isChecked() : c.preloadFeeds;
 	c.friendAudio = friendAudio_ ? friendAudio_->isChecked() : c.friendAudio;
 	c.lookName = lookName_->isChecked();

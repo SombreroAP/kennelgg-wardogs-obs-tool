@@ -67,7 +67,7 @@ private:
 	QSpinBox *lookTopV_ = nullptr;
 	QListWidget *mute_ = nullptr;
 	QSpinBox *replaySecs_ = nullptr;
-	QCheckBox *keepWarm_, *bringFront_;
+	QCheckBox *keepWarm_, *bringFront_, *invSwitch_ = nullptr;
 	QCheckBox *preload_ = nullptr, *friendAudio_ = nullptr;
 	QCheckBox *rosterOn_ = nullptr, *rosterSources_ = nullptr;
 	QLineEdit *rosterUrl_ = nullptr, *rosterChannel_ = nullptr;

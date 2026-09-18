@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.8
+- **Magazine packing / inventory POV switching.** Repacking magazines means standing still with the inventory screen open, and a stream of that is a stream of nothing. ClipHound now reads the "COMBINE AMMO" hint on that screen (and the INVENTORY tab as a second sign) once a second; after two seconds of it a squad mate's POV goes on stream, the chosen one or any live one, and yours comes back the moment the screen closes. Going down while it is open hands over to the downed swap as usual. On by default; the tick is on Settings, Switch, under the extras. Needs ClipHound running.
+
 ## 0.18.7
 - **Vertical canvas (beta): your camera and alerts stay on top there too.** The vertical scene has its own "Always on top here" list under the vertical settings, guessed from that scene's camera and alert sources once and yours to tick; they are lifted back over the squad mate, the overlay and the replay every time, as on the main scene. With nothing ticked, the main list's names are used if the vertical scene has them.
 - **The portrait POV tag can sit lower.** "POV tag height" next to it, a share of the canvas from the top; 22 % by default, down from the old spot near the top edge, so it clears a camera or a title up there.

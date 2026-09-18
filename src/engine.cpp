@@ -713,6 +713,7 @@ void Engine::pushAppConfig()
 	vh["enabled"] = cfg.dual() != nullptr && (cfg.dualAuto || (dualOn_ && !cfg.dualKeep));
 	vh["roi"] = QJsonArray{cfg.vehX, cfg.vehY, cfg.vehW, cfg.vehH};
 	set["vehicle"] = vh;
+	set["inventory"] = QJsonObject{{"enabled", cfg.invSwitch && cfg.enabled && !cfg.friends.empty()}};
 	QJsonObject o;
 	o["type"] = "app_config";
 	o["set"] = set;
@@ -1695,6 +1696,8 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 		onNearby(o);
 	} else if (type == "vehicle") {
 		onVehicle(o.value("seat").toString());
+	} else if (type == "inventory") {
+		onInventory(o.value("open").toBool());
 	} else if (type == "nearby_test_result") {
 		QStringList texts;
 		for (auto v : o.value("texts").toArray())
@@ -3238,6 +3241,31 @@ void Engine::setDual(bool on, const QString &why)
 }
 
 /// ClipHound read the vehicle keybind list: a seat name, "vehicle" (in one, seat unclear) or "none".
+void Engine::onInventory(bool open)
+{
+	if (!open) {
+		if (!invApplied_)
+			return;
+		invApplied_ = false;
+		// back to your own POV, unless you went down meanwhile: then the downed swap owns it
+		if (applied_ && !detected_)
+			applyNow(false, "inventory closed");
+		return;
+	}
+	if (!cfg.invSwitch || !cfg.enabled || applied_ || detected_ || !cfg.active())
+		return;
+	if (feedState(*cfg.active()) == Feed::Off) {
+		int alt = anyLiveFriend();
+		if (alt < 0) {
+			log("Inventory open, but none of the squad is streaming - staying on your own POV.");
+			return;
+		}
+		setActive(alt);
+	}
+	invApplied_ = true;
+	applyNow(true, "inventory open (magazine packing)");
+}
+
 void Engine::onVehicle(const QString &seat)
 {
 	vehicleSeat_ = seat;

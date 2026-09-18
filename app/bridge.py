@@ -69,6 +69,7 @@ class Bridge:
         self.nearby_burst = 0.0
         self.nearby_test = False     # the plugin's Test read button: read once and report back
         self.vehicle_cfg = {"enabled": False, "roi": [0.86, 0.60, 0.14, 0.25]}   # automatic Dual POV
+        self.inventory_cfg = {"enabled": False}   # squad mate POV while the inventory is open
         threading.Thread(target=self._run, daemon=True).start()
 
     def _on_error(self, _ws, err):
@@ -189,6 +190,8 @@ class Bridge:
                 roi = _roi_list(vc.get("roi"))
                 if roi and roi[2] > 0.01:
                     self.vehicle_cfg["roi"] = roi
+            if isinstance(v.get("inventory"), dict):
+                self.inventory_cfg["enabled"] = bool(v["inventory"].get("enabled"))
             if isinstance(v.get("nearby"), dict):
                 nb = v["nearby"]
                 self.nearby_cfg["enabled"] = bool(nb.get("enabled"))

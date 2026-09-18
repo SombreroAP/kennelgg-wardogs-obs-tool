@@ -243,6 +243,9 @@ private:
 	void onBridgeMessage(const QJsonObject &o);
 	void onNearby(const QJsonObject &o);
 	void onVehicle(const QString &seat);
+	/// ClipHound saw the inventory screen open (for two seconds) or close.
+	void onInventory(bool open);
+	bool invApplied_ = false; // the swap on screen is the inventory's to undo
 	void clearNearby();
 	void pickClosest(const QString &why, bool decisive = false);
 	void switchTo(int idx, const QString &why);
