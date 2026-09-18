@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.5
+- **No more crash when OBS closes.** OBS destroys its main window, and the plugin's engine with it, before it unloads plugins; the unload then told the dead engine to stop and OBS fell over inside Qt (crash logs ended in Engine::stop under obs_module_unload). The unload now only stops an engine that is still alive, stopping twice is a no-op, and shutdown also waits for the frame worker thread, so a poll in flight cannot touch the engine after it is gone.
+
 ## 0.18.4
 - **Stream Deck plugin.** A separate download, `com.kennelgg.wardogs.streamDeckPlugin` (double-click to install, Stream Deck 6.4 or newer), with eight keys: squad mate POV (a chosen squad mate, or "whoever is live" in Kennel.gg voice; press again to come back), next squad mate, clip, instant replay, clip + replay, voice control on/off, Dual POV on/off, and my POV. The keys follow the OBS plugin: a dot marks who is live, on/off keys light up, and they say "OBS?" when the plugin is not running. It talks to the plugin over the same local bridge ClipHound uses; nothing leaves the PC.
 - The bridge tells a controller apart from ClipHound, so a Stream Deck connecting or leaving never stops the kill-feed frames or the microphone.

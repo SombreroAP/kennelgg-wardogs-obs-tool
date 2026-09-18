@@ -295,7 +295,7 @@ private:
 	Access lastAccess_ = Access::Unknown;
 	QString lastRosterStatus_;
 	void checkAccess(); // say it once when the roster locks or unlocks
-	std::atomic<bool> busy_{false}, stopping_{false}, frameBusy_{false};
+	std::atomic<bool> busy_{false}, stopping_{false}, frameBusy_{false}, stopped_{false};
 	Capture capGame_, capFriend_, capRoi_;
 	QString appStatus_;
 	QJsonObject twitch_;

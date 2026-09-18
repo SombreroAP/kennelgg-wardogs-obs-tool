@@ -891,6 +891,10 @@ void Engine::closeApp()
 
 void Engine::stop()
 {
+	// called at OBS's exit event, again from the destructor, and possibly from the module unload:
+	// everything after the first call is a no-op
+	if (stopped_.exchange(true))
+		return;
 	stopping_ = true;
 	voice.detach();
 	closeApp();
@@ -902,7 +906,8 @@ void Engine::stop()
 	bridge.close();
 	stopReplay("OBS closing");
 	sw.shutdown(); // the dual-POV scene and its browser page, before obs-browser unloads
-	for (int i = 0; i < 50 && busy_; i++)
+	// the poll and frame workers capture `this`: let them finish before the object can go
+	for (int i = 0; i < 100 && (busy_ || frameBusy_); i++)
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 

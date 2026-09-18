@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include <plugin-support.h>
 #include <QMainWindow>
 #include <QTimer>
+#include <QPointer>
 #include <QFontDatabase>
 #include "engine.h"
 #include "ui/dock.h"
@@ -26,8 +27,11 @@ GNU General Public License for more details.
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
-static Engine *g_engine = nullptr;
-static Dock *g_dock = nullptr;
+// Both are owned by OBS's main window (the Engine as a child QObject, the Dock through the dock
+// system) and die with it, which happens BEFORE obs_module_unload runs. QPointer goes null the
+// moment they do, so the unload never touches a dead object (the 0.18.x shutdown crash).
+static QPointer<Engine> g_engine;
+static QPointer<Dock> g_dock;
 static obs_hotkey_id g_hkToggle = OBS_INVALID_HOTKEY_ID, g_hkCapture = OBS_INVALID_HOTKEY_ID,
 		     g_hkClip = OBS_INVALID_HOTKEY_ID, g_hkDual = OBS_INVALID_HOTKEY_ID,
 		     g_hkReplay = OBS_INVALID_HOTKEY_ID, g_hkHighlights = OBS_INVALID_HOTKEY_ID;
@@ -248,9 +252,9 @@ void obs_module_unload(void)
 		obs_hotkey_unregister(g_hkReplay);
 	if (g_hkHighlights != OBS_INVALID_HOTKEY_ID)
 		obs_hotkey_unregister(g_hkHighlights);
-	if (g_engine)
+	if (g_engine) // still alive only when the main window is (an unload without an exit)
 		g_engine->stop();
-	g_engine = nullptr; // owned by the main window
-	g_dock = nullptr;
+	g_engine.clear();
+	g_dock.clear();
 	obs_log(LOG_INFO, "Kennel.gg Wardogs Streaming Tool unloaded");
 }
