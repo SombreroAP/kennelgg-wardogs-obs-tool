@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.10
+- The dock's events list says why a squad mate went on: INVENTORY, DOWNED, VOICE, STREAM DECK, CLOSEST or SHOWING, and "back up" names what ended it. It said DOWNED for all of them.
+
 ## 0.18.9
 - **Inventory switching comes back quicker.** The reader looked once a second and needed two misses, so closing the inventory took two to three seconds to reach the stream, and any stray read stretched it further. It now gets its own two small crops three times a second (the hint and the tab, a few kilobytes), swaps after the screen has been up for two seconds, and comes back to your POV on the first crop without it, a third of a second after it closes. The log says what it read at each open and close.
 

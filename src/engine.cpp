@@ -2914,8 +2914,19 @@ void Engine::applyNow(bool on, const QString &why)
 		// down: the swap has just shown that capture, and warm would make it transparent again.
 		sw.applyDual(cfg, !on, false);
 	sendPov(on ? "downed" : "up");
-	events_ << QDateTime::currentDateTime().toString("HH:mm:ss") +
-			   (on ? "  DOWNED - showing " + QString::fromStdString(cfg.active()->name) : "  back up");
+	// the events list names why: downed, the inventory, a voice or Stream Deck command, a button
+	{
+		QString w = why.toLower();
+		QString label = w.startsWith("inventory")    ? "INVENTORY"
+				: w.startsWith("downed")     ? "DOWNED"
+				: w.startsWith("voice")      ? "VOICE"
+				: w.startsWith("controller") ? "STREAM DECK"
+				: w.startsWith("closest")    ? "CLOSEST"
+							     : "SHOWING";
+		events_ << QDateTime::currentDateTime().toString("HH:mm:ss") +
+				   (on ? "  " + label + " - showing " + QString::fromStdString(cfg.active()->name)
+				       : "  back up - " + why);
+	}
 	while (events_.size() > 30)
 		events_.removeFirst();
 	if (on && cfg.clipOnDowned)
