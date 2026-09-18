@@ -440,6 +440,10 @@ class Voice:
             # word for word, fires early; anything with a name or a fuzzy fit waits for the end
             if score < 0.87 or name or after.split()[0] in ("show", "switch", "change", "swap", "go", "put", "watch"):
                 return False
+            # ...and not a phrase that a longer one begins with: "clip" is the start of "clip and
+            # replay", so acting on it mid-sentence turned "clip and replay" into a plain clip
+            if self._starts_longer(after):
+                return False
         if cmd == "clip_replay" and self.allow and not ("clip" in self.allow and "replay" in self.allow):
             return True                # one of the two halves is switched off
         if self.allow and cmd not in self.allow and cmd not in ("me", "highlights", "clip_replay"):
@@ -455,6 +459,15 @@ class Voice:
         self.b.send({"type": "voice", "cmd": cmd, "name": name, "heard": text})
         self._play_chime("ok")
         return True
+
+    @staticmethod
+    def _starts_longer(after: str) -> bool:
+        a = after.strip() + " "
+        for ps in INTENTS.values():
+            for p in ps:
+                if p != after.strip() and p.startswith(a):
+                    return True
+        return False
 
     @classmethod
     def intent(cls, after: str) -> tuple[str, str, float]:

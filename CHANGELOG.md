@@ -2,6 +2,9 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.6
+- **"Clip and replay" no longer turns into a plain clip.** The listener acts on what it has heard so far, and "clip" on its own is a complete command, so it fired before "and replay" arrived. A command that is the start of a longer one ("clip", "dual", "replay") now waits for the end of the sentence; commands that no longer phrase begins with still fire the moment they are said.
+
 ## 0.18.5
 - **No more crash when OBS closes.** OBS destroys its main window, and the plugin's engine with it, before it unloads plugins; the unload then told the dead engine to stop and OBS fell over inside Qt (crash logs ended in Engine::stop under obs_module_unload). The unload now only stops an engine that is still alive, stopping twice is a no-op, and shutdown also waits for the frame worker thread, so a poll in flight cannot touch the engine after it is gone.
 
