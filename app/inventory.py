@@ -52,36 +52,67 @@ def is_open(frame: np.ndarray) -> tuple[bool, str]:
     return False, (a + " | " + b).strip(" |")
 
 
+OPEN_AFTER_S = 2.0     # the screen has to be up this long before the swap
+CLOSE_MISSES = 2       # crops in a row without it (about 0.7 s at 3 a second) and it is closed
+
+
+def read_crops(combine_bgr, tab_bgr) -> tuple[bool, str]:
+    """(open, what was read) from the two crops the plugin sends."""
+    a = _read(combine_bgr) if combine_bgr is not None else ""
+    if _close(a, "COMBINE AMMO", 0.6) or "COMBINE" in a.upper():
+        return True, a
+    b = _read(tab_bgr) if tab_bgr is not None else ""
+    if _close(b, "INVENTORY", 0.7):
+        return True, b
+    return False, (a + " | " + b).strip(" |")
+
+
 class Watcher:
     def __init__(self, bridge):
         self.b = bridge
-        self.hits = 0
+        self.first_hit = 0.0     # when the current run of hits began
         self.misses = 0
         self.open = False
+        self.last_ts = 0.0
+        self.last_text = ""
 
-    def maybe_read(self, frame, now: float):
+    def tick(self, now: float):
         c = self.b.inventory_cfg
-        if frame is None or not c.get("enabled"):
+        if not c.get("enabled"):
             if self.open:
                 self.open = False
-                self.hits = self.misses = 0
+            self.first_hit, self.misses = 0.0, 0
             return
+        crops = self.b.latest_inv()
+        cb = crops.get(2)
+        tb = crops.get(3)
+        ts = max((cb[1] if cb else 0.0), (tb[1] if tb else 0.0))
+        if ts <= self.last_ts or now - ts > 5:
+            return                      # nothing new (or the plugin stopped sending)
+        self.last_ts = ts
         try:
-            hit, text = is_open(frame)
+            hit, text = read_crops(cb[0] if cb else None, tb[0] if tb else None)
         except Exception as e:
             print(f"[inventory] cannot read: {e}")
             return
+        self.last_text = text
         if hit:
-            self.hits += 1
             self.misses = 0
+            if not self.first_hit:
+                self.first_hit = now
+            if not self.open and now - self.first_hit >= OPEN_AFTER_S:
+                self.open = True
+                print(f"[inventory] open  ({text})")
+                self.b.send({"type": "inventory", "open": True, "text": text})
         else:
             self.misses += 1
-            self.hits = 0
-        if not self.open and self.hits >= 2:
-            self.open = True
-            print(f"[inventory] open  ({text})")
-            self.b.send({"type": "inventory", "open": True, "text": text})
-        elif self.open and self.misses >= 2:
-            self.open = False
-            print("[inventory] closed")
-            self.b.send({"type": "inventory", "open": False})
+            if self.misses >= CLOSE_MISSES:
+                self.first_hit = 0.0
+                if self.open:
+                    self.open = False
+                    print(f"[inventory] closed  (read: {text!r})")
+                    self.b.send({"type": "inventory", "open": False})
+
+    def maybe_read(self, frame, now: float):
+        """Kept for the once-a-second whole frame: no longer used, the crops are quicker."""
+        return

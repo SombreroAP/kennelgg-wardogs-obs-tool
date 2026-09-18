@@ -278,7 +278,8 @@ def main():
                 last_full_ts = fts
                 watcher.maybe_read(cap.full_frame(), t0, force=test)
                 vehicle.maybe_read(cap.full_frame(), t0)
-                inventory.maybe_read(cap.full_frame(), t0)
+        if bridge is not None:
+            inventory.tick(t0)   # its own crops, three a second; nothing when the switch is off
         roi = cap.grab()
         if cfg["capture"].get("debug_dump"):
             cv2.imwrite("debug/roi.png", roi)

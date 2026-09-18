@@ -47,6 +47,7 @@ class Bridge:
         self._frame_ts = 0.0
         self._feed = None             # latest kill-feed crop (BGR), at the reading rate
         self._feed_ts = 0.0
+        self._inv = {}                # stream id -> (crop, ts): the inventory screen's two tell-tales
         self.feed_roi = _roi_list(cfg.get("roi")) or [0.0, 0.5, 0.25, 0.25]   # fractions of the frame
         self._lock = threading.Lock()
         self._pending = {}            # clip id -> callback(path)
@@ -145,6 +146,8 @@ class Bridge:
                     with self._lock:
                         if sid == 0:
                             self._feed, self._feed_ts = frame, ts / 1000.0
+                        elif sid in (2, 3):
+                            self._inv[sid] = (frame, ts / 1000.0)   # the inventory reader's two crops
                         else:
                             self._frame, self._frame_ts = frame, ts / 1000.0
                 return
@@ -191,7 +194,10 @@ class Bridge:
                 if roi and roi[2] > 0.01:
                     self.vehicle_cfg["roi"] = roi
             if isinstance(v.get("inventory"), dict):
-                self.inventory_cfg["enabled"] = bool(v["inventory"].get("enabled"))
+                on = bool(v["inventory"].get("enabled"))
+                if on != self.inventory_cfg.get("enabled"):
+                    self.inventory_cfg["enabled"] = on
+                    self._subscribe()          # the crop streams come and go with the switch
             if isinstance(v.get("nearby"), dict):
                 nb = v["nearby"]
                 self.nearby_cfg["enabled"] = bool(nb.get("enabled"))
@@ -287,9 +293,16 @@ class Bridge:
         vehicle list. The whole frame at the reading rate was fourteen megabytes ten times a
         second, rendered, read back, JPEG-encoded and decoded: most of the CPU the app used."""
         r = self.feed_roi
+        streams = [{"id": 0, "fps": self.fps, "roi": [r[0], r[1], r[2], r[3]], "width": 0},
+                   {"id": 1, "fps": 1.0, "roi": [0, 0, 1, 1], "width": 0}]
+        if self.inventory_cfg.get("enabled"):
+            # two tiny crops, three times a second: the "COMBINE AMMO" hint and the INVENTORY tab, so
+            # the screen closing is seen within a second
+            import inventory
+            streams += [{"id": 2, "fps": 3.0, "roi": list(inventory.COMBINE_ROI), "width": 0},
+                        {"id": 3, "fps": 3.0, "roi": list(inventory.TAB_ROI), "width": 0}]
         self.send({"type": "subscribe", "frames": True, "fps": self.fps, "roi": [0, 0, 1, 1], "width": 0,
-                   "streams": [{"id": 0, "fps": self.fps, "roi": [r[0], r[1], r[2], r[3]], "width": 0},
-                               {"id": 1, "fps": 1.0, "roi": [0, 0, 1, 1], "width": 0}]})
+                   "streams": streams})
 
     def set_feed_roi(self, r):
         rl = _roi_list(r)
@@ -321,6 +334,11 @@ class Bridge:
     def latest_feed(self):
         with self._lock:
             return self._feed, self._feed_ts
+
+    def latest_inv(self):
+        """{2: (crop, ts), 3: (crop, ts)} - whatever has arrived."""
+        with self._lock:
+            return dict(self._inv)
 
     # ---- clips ----
     def clip(self, title: str, tags: list, source: str = "cliphound", on_saved=None, info: dict | None = None) -> bool:
