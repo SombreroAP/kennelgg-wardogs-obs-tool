@@ -75,6 +75,10 @@ public:
 	std::string trimToContent(const Config &cfg, const Friend &f);
 	/// Put the streamer's own camera and alerts back over the top of everything we add.
 	void raiseOnTop(const Config &cfg);
+	/// The same for the vertical scene: its own list, or the main list's names when it has none.
+	void raiseOnTopV(const Config &cfg);
+	std::vector<std::pair<std::string, std::string>> sceneItemsV(const Config &cfg);
+	std::vector<std::string> guessOnTopV(const Config &cfg);
 	/// A first guess at what belongs on top: cameras, and anything that looks like alerts.
 	std::vector<std::string> guessOnTop(const Config &cfg);
 	/// Hide every scene item of this source in every scene (belt and braces for the way back).

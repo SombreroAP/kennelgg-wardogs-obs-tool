@@ -63,7 +63,8 @@ private:
 	QTableWidget *friends_;
 	QComboBox *sceneV_ = nullptr;
 	QComboBox *lookPos_ = nullptr;
-	QListWidget *onTop_ = nullptr;
+	QListWidget *onTop_ = nullptr, *onTopV_ = nullptr;
+	QSpinBox *lookTopV_ = nullptr;
 	QListWidget *mute_ = nullptr;
 	QSpinBox *replaySecs_ = nullptr;
 	QCheckBox *keepWarm_, *bringFront_;

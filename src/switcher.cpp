@@ -1061,8 +1061,10 @@ std::string Switcher::applyVertical(const Config &cfg, bool on)
 	// the look overlay, portrait
 	const char *lookName = Config::overlaySourceNameV();
 	if (on && (cfg.lookName || cfg.lookCam || cfg.lookGrain || cfg.lookVignette)) {
-		std::string e = ensureBrowserSource(scene, lookName, overlayUrl(cfg, f ? f->name : "") + "&v=1", false,
-						    (int)cw, (int)ch);
+		std::string e = ensureBrowserSource(scene, lookName,
+						    overlayUrl(cfg, f ? f->name : "") + "&v=1&vtop=" +
+							    std::to_string(std::clamp(cfg.lookTopV, 0, 90)),
+						    false, (int)cw, (int)ch);
 		if (!e.empty() && err.empty())
 			err = e;
 		if (obs_sceneitem_t *it = obs_scene_find_source(scene, lookName)) {
@@ -1072,6 +1074,7 @@ std::string Switcher::applyVertical(const Config &cfg, bool on)
 	} else
 		hideEverywhere(lookName);
 	obs_source_release(ss);
+	raiseOnTopV(cfg); // the streamer's camera and alerts over whatever we just showed, here too
 	return err;
 }
 
@@ -1112,6 +1115,66 @@ void Switcher::raiseOnTop(const Config &cfg)
 		if (obs_sceneitem_t *item = obs_scene_find_source(scene, it->c_str()))
 			moveToTop(item);
 	obs_source_release(ss);
+}
+
+void Switcher::raiseOnTopV(const Config &cfg)
+{
+	if (!cfg.verticalOn())
+		return;
+	obs_source_t *ss = verticalSceneSource(cfg);
+	if (!ss)
+		return;
+	obs_scene_t *scene = obs_scene_from_source(ss);
+	const auto &names = cfg.onTopV.empty() ? cfg.onTop : cfg.onTopV;
+	for (auto it = names.rbegin(); it != names.rend(); ++it)
+		if (obs_sceneitem_t *item = obs_scene_find_source(scene, it->c_str()))
+			moveToTop(item);
+	obs_source_release(ss);
+}
+
+std::vector<std::pair<std::string, std::string>> Switcher::sceneItemsV(const Config &cfg)
+{
+	std::vector<std::pair<std::string, std::string>> out;
+	obs_source_t *ss = verticalSceneSource(cfg);
+	if (!ss)
+		return out;
+	obs_scene_enum_items(
+		obs_scene_from_source(ss),
+		[](obs_scene_t *, obs_sceneitem_t *item, void *param) {
+			auto *o = (std::vector<std::pair<std::string, std::string>> *)param;
+			obs_source_t *src = obs_sceneitem_get_source(item);
+			if (src && obs_source_get_name(src)) {
+				const char *id = obs_source_get_unversioned_id(src);
+				o->emplace_back(obs_source_get_name(src), id ? id : "");
+			}
+			return true;
+		},
+		&out);
+	obs_source_release(ss);
+	std::reverse(out.begin(), out.end()); // top of the scene first, as the main list is
+	return out;
+}
+
+static bool looksOnTop(const std::string &name, const std::string &id)
+{
+	if (name.rfind("Kennel", 0) == 0)
+		return false;
+	std::string n = name;
+	std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+	bool cam = id == "dshow_input" || id == "av_capture_input" || id == "av_capture_input_v2" ||
+		   id == "macos-avcapture" || id == "v4l2_input";
+	bool alert = n.find("alert") != std::string::npos || n.find("streamlabs") != std::string::npos ||
+		     n.find("streamelement") != std::string::npos || n.find("stream element") != std::string::npos;
+	return cam || alert;
+}
+
+std::vector<std::string> Switcher::guessOnTopV(const Config &cfg)
+{
+	std::vector<std::string> out;
+	for (const auto &[name, id] : sceneItemsV(cfg))
+		if (looksOnTop(name, id))
+			out.push_back(name);
+	return out;
 }
 
 /// A first guess at what the streamer would want kept on top: their camera, and alert overlays.
@@ -1381,6 +1444,7 @@ std::string Switcher::playMediaVertical(const Config &cfg, int scalePct, bool fr
 		}
 	} else
 		hideEverywhere(Config::replayFrameNameV());
+	raiseOnTopV(cfg);
 	obs_source_release(src);
 	obs_source_release(ss);
 	return "";

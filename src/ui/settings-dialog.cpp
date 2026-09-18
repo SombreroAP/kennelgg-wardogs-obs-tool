@@ -779,6 +779,31 @@ QWidget *SettingsDialog::buildSwitchTab()
 		"there too, full width and centred. Same sources, so nothing is decoded twice. Beta: tell us what "
 		"you see.",
 		gv));
+	{
+		auto *tr = new QHBoxLayout();
+		lookTopV_ = new QSpinBox(gv);
+		lookTopV_->setRange(0, 90);
+		lookTopV_->setSuffix(" %");
+		lookTopV_->setValue(e_->cfg.lookTopV);
+		lookTopV_->setToolTip(
+			"Where the POV tag sits on the portrait canvas, as a share of its height from the top. "
+			"Lower it to clear a camera or a title at the top.");
+		tr->addWidget(new QLabel("POV tag height", gv));
+		tr->addWidget(lookTopV_);
+		tr->addWidget(muted("of the way down the portrait canvas", gv), 1);
+		fv->addRow(tr);
+		connect(lookTopV_, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int) { saveAndApply(); });
+	}
+	onTopV_ = new QListWidget(gv);
+	onTopV_->setMaximumHeight(140);
+	onTopV_->setDragDropMode(QAbstractItemView::InternalMove);
+	fv->addRow("Always on top here", onTopV_);
+	fv->addRow(muted("The vertical scene's own camera and alerts: they are lifted back over the squad mate, the "
+			 "overlay and the replay every time, like the main scene's list above. Guessed once; tick what "
+			 "is missing. Empty, and the main list's names are used if the scene has them.",
+			 gv));
+	connect(onTopV_, &QListWidget::itemChanged, this, [this](QListWidgetItem *) { saveAndApply(); });
+	connect(onTopV_->model(), &QAbstractItemModel::rowsMoved, this, [this]() { saveAndApply(); });
 	v->addWidget(gv);
 	connect(verticalOn_, &QCheckBox::toggled, this, [this](bool) { saveAndApply(); });
 	connect(sceneV_, &QComboBox::currentIndexChanged, this, [this](int) { saveAndApply(); });
@@ -2831,6 +2856,40 @@ void SettingsDialog::fillSources()
 		}
 		onTop_->blockSignals(false);
 	}
+	if (onTopV_) {
+		onTopV_->blockSignals(true);
+		onTopV_->clear();
+		if (e_->cfg.verticalOn() && !e_->cfg.onTopVSeeded) {
+			std::vector<std::string> g = e_->sw.guessOnTopV(e_->cfg);
+			if (!g.empty()) { // an empty guess is not a decision: try again next time the scene has items
+				e_->cfg.onTopV = g;
+				e_->cfg.onTopVSeeded = true;
+				e_->cfg.save();
+			}
+		}
+		std::vector<std::pair<std::string, std::string>> items = e_->sw.sceneItemsV(e_->cfg);
+		auto add = [&](const std::string &name, const std::string &id, bool on) {
+			QString label = QString::fromStdString(name);
+			if (!id.empty())
+				label += "   ·  " + QString::fromStdString(id);
+			auto *it = new QListWidgetItem(label, onTopV_);
+			it->setData(Qt::UserRole, QString::fromStdString(name));
+			it->setFlags(it->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsDragEnabled);
+			it->setCheckState(on ? Qt::Checked : Qt::Unchecked);
+		};
+		for (const auto &n : e_->cfg.onTopV) {
+			auto f = std::find_if(items.begin(), items.end(), [&](const auto &p) { return p.first == n; });
+			add(n, f != items.end() ? f->second : std::string("not in this scene"), true);
+		}
+		for (const auto &[name, id] : items) {
+			if (std::find(e_->cfg.onTopV.begin(), e_->cfg.onTopV.end(), name) != e_->cfg.onTopV.end())
+				continue;
+			if (name.rfind("Kennel", 0) == 0)
+				continue;
+			add(name, id, false);
+		}
+		onTopV_->blockSignals(false);
+	}
 	game_->blockSignals(false);
 	scene_->blockSignals(false);
 	mute_->blockSignals(false);
@@ -2966,6 +3025,14 @@ void SettingsDialog::collect()
 	}
 	if (verticalOn_)
 		c.verticalEnabled = verticalOn_->isChecked();
+	if (lookTopV_)
+		c.lookTopV = lookTopV_->value();
+	if (onTopV_) {
+		c.onTopV.clear();
+		for (int i = 0; i < onTopV_->count(); i++)
+			if (onTopV_->item(i)->checkState() == Qt::Checked)
+				c.onTopV.push_back(onTopV_->item(i)->data(Qt::UserRole).toString().toStdString());
+	}
 	c.rosterEnabled = rosterOn_->isChecked();
 	c.rosterUrl = Config::kennelRosterUrl();
 	c.rosterChannel.clear(); // whichever channel you are in

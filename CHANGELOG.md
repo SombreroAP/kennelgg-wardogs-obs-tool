@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.7
+- **Vertical canvas (beta): your camera and alerts stay on top there too.** The vertical scene has its own "Always on top here" list under the vertical settings, guessed from that scene's camera and alert sources once and yours to tick; they are lifted back over the squad mate, the overlay and the replay every time, as on the main scene. With nothing ticked, the main list's names are used if the vertical scene has them.
+- **The portrait POV tag can sit lower.** "POV tag height" next to it, a share of the canvas from the top; 22 % by default, down from the old spot near the top edge, so it clears a camera or a title up there.
+
 ## 0.18.6
 - **"Clip and replay" no longer turns into a plain clip.** The listener acts on what it has heard so far, and "clip" on its own is a complete command, so it fired before "and replay" arrived. A command that is the start of a longer one ("clip", "dual", "replay") now waits for the end of the sentence; commands that no longer phrase begins with still fire the moment they are said.
 

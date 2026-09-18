@@ -132,6 +132,8 @@ void Config::load()
 	DEFS(canvasV);
 	DEFB(verticalEnabled);
 	DEFB(verticalV2);
+	DEFB(onTopVSeeded);
+	DEFI(lookTopV);
 	DEFI(vdoBitrateKbps);
 	DEFB(dualEnabled);
 	DEFI(dualFriend);
@@ -294,6 +296,8 @@ void Config::load()
 	GETS(canvasV);
 	GETB(verticalEnabled);
 	GETB(verticalV2);
+	GETB(onTopVSeeded);
+	GETI(lookTopV);
 	GETI(vdoBitrateKbps);
 	GETB(dualEnabled);
 	GETI(dualFriend);
@@ -405,6 +409,7 @@ void Config::load()
 	GETD(boxH);
 	muteWhileDowned = getStrings(d, "muteWhileDowned");
 	onTop = getStrings(d, "onTop");
+	onTopV = getStrings(d, "onTopV");
 	clipHotkeys = getStrings(d, "clipHotkeys");
 
 	friends.clear();
@@ -620,6 +625,8 @@ void Config::save() const
 	SETS(canvasV);
 	SETB(verticalEnabled);
 	SETB(verticalV2);
+	SETB(onTopVSeeded);
+	SETI(lookTopV);
 	SETI(vdoBitrateKbps);
 	SETB(dualEnabled);
 	SETI(dualFriend);
@@ -731,6 +738,7 @@ void Config::save() const
 	SETD(boxH);
 	setStrings(d, "muteWhileDowned", muteWhileDowned);
 	setStrings(d, "onTop", onTop);
+	setStrings(d, "onTopV", onTopV);
 	setStrings(d, "clipHotkeys", clipHotkeys);
 	obs_data_array_t *arr = obs_data_array_create();
 	for (auto &f : friends) {
