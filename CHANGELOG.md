@@ -3,7 +3,7 @@
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
 ## 0.18.9
-- **Inventory switching comes back quicker.** The reader looked once a second and needed two misses, so closing the inventory took two to three seconds to reach the stream, and any stray read stretched it further. It now gets its own two small crops three times a second (the hint and the tab, a few kilobytes), swaps after the screen has been up for two seconds, and comes back to your POV within about a second of it closing. The log says what it read at each open and close.
+- **Inventory switching comes back quicker.** The reader looked once a second and needed two misses, so closing the inventory took two to three seconds to reach the stream, and any stray read stretched it further. It now gets its own two small crops three times a second (the hint and the tab, a few kilobytes), swaps after the screen has been up for two seconds, and comes back to your POV on the first crop without it, a third of a second after it closes. The log says what it read at each open and close.
 
 ## 0.18.8
 - **Magazine packing / inventory POV switching.** Repacking magazines means standing still with the inventory screen open, and a stream of that is a stream of nothing. ClipHound now reads the "COMBINE AMMO" hint on that screen (and the INVENTORY tab as a second sign) once a second; after two seconds of it a squad mate's POV goes on stream, the chosen one or any live one, and yours comes back the moment the screen closes. Going down while it is open hands over to the downed swap as usual. On by default; the tick is on Settings, Switch, under the extras. Needs ClipHound running.

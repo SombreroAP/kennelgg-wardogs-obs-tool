@@ -53,7 +53,7 @@ def is_open(frame: np.ndarray) -> tuple[bool, str]:
 
 
 OPEN_AFTER_S = 2.0     # the screen has to be up this long before the swap
-CLOSE_MISSES = 2       # crops in a row without it (about 0.7 s at 3 a second) and it is closed
+CLOSE_MISSES = 1       # the first crop without it and it is closed: back to your POV at once
 
 
 def read_crops(combine_bgr, tab_bgr) -> tuple[bool, str]:
