@@ -35,6 +35,9 @@ public:
 	VoiceTap voice; // the microphone, on its way to ClipHound
 	/// Start or stop the microphone tap to match the settings and whether ClipHound is connected.
 	void applyVoice();
+	void sendVoiceConfig();   // the voice settings to ClipHound, on its own
+	QString appVersion_;      // what the connected ClipHound said it is
+	QDateTime appLaunchedAt_; // when we last started ClipHound ourselves
 	/// A command from a controller on the bridge (the Stream Deck plugin): the same verbs as
 	/// voice, plus toggles, with none of the voice gates.
 	void onControl(const QJsonObject &o);

@@ -75,7 +75,12 @@ Engine::Engine(QObject *parent) : QObject(parent)
 	connect(&bridge, &Bridge::message, this, &Engine::onBridgeMessage);
 	connect(&bridge, &Bridge::clientConnected, this, [this]() {
 		appStatus_ = "connected";
-		log("Companion app connected.");
+		if (appLaunchedAt_.isValid() && appLaunchedAt_.msecsTo(QDateTime::currentDateTime()) < 1200)
+			log("Companion app connected - too soon to be the ClipHound just started: a copy was already "
+			    "running. If voice or clips misbehave, close every ClipHound.exe in Task Manager and press "
+			    "Start ClipHound on the dock.");
+		else
+			log("Companion app connected.");
 		QJsonObject o;
 		o["type"] = "config";
 		o["gameSource"] = QString::fromStdString(cfg.gameSource);
@@ -270,6 +275,7 @@ void Engine::launchApp()
 	env.insert("KENNEL_FROM_OBS", "1");
 	proc.setProcessEnvironment(env);
 	if (proc.startDetached(&pid)) {
+		appLaunchedAt_ = QDateTime::currentDateTime();
 		appPid_ = pid;
 		appStartedAt_ = QDateTime::currentDateTime();
 		appCrashReported_ = false;
@@ -1654,6 +1660,19 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 			log("Chat replay from " + who + " not played: " + err + ".");
 	} else if (type == "app_config" && o.contains("values")) {
 		QJsonObject v = o.value("values").toObject();
+		QString av = v.value("app_version").toString();
+		if (av != appVersion_) {
+			appVersion_ = av;
+			if (av.isEmpty())
+				log("Companion app: ClipHound with no version file (a copy older than 0.18.11, or run from source).");
+			else if (av != PLUGIN_VERSION)
+				log("Companion app: ClipHound " + av +
+				    " but this plugin is " PLUGIN_VERSION
+				    ". Another copy of ClipHound is running from somewhere else: close it (Task Manager, "
+				    "ClipHound.exe) and press Start ClipHound on the dock.");
+			else
+				log("Companion app: ClipHound " + av + ".");
+		}
 		if (cfg.appConfigDirty) {
 			pushAppConfig(); // ours wins: the user edited while the app was away
 		} else {
@@ -1743,6 +1762,10 @@ void Engine::onBridgeMessage(const QJsonObject &o)
 			}
 			bfree(p);
 		}
+	} else if (type == "voice_ready") {
+		// the app's voice module is up: the settings sent at connect may have come too early
+		if (cfg.voiceEnabled)
+			applyVoice();
 	} else if (type == "voice_status") {
 		QString s = o.value("text").toString();
 		if (s != voiceStatus_) {
@@ -1891,34 +1914,10 @@ void Engine::onControl(const QJsonObject &o)
 	emit stateChanged();
 }
 
-void Engine::applyVoice()
+void Engine::sendVoiceConfig()
 {
-	if (!cfg.voiceEnabled || bridge.clients() == 0) {
-		if (voice.attached()) {
-			voice.detach();
-			log("Voice: microphone released.");
-		}
+	if (bridge.clients() == 0)
 		return;
-	}
-	QString mic = QString::fromStdString(cfg.voiceMic);
-	if (mic.isEmpty())
-		mic = VoiceTap::pickMic();
-	if (mic.isEmpty()) {
-		if (voiceStatus_ != "no microphone source in OBS") {
-			voiceStatus_ = "no microphone source in OBS";
-			log("Voice: no microphone source found in OBS; add a Mic/Aux input or pick one in Settings.");
-		}
-		return;
-	}
-	if (voice.attached() && voice.sourceName() == mic)
-		return;
-	voiceFlowing_ = false;
-	QString err = voice.attach(mic);
-	if (!err.isEmpty()) {
-		log("Voice: " + err);
-		return;
-	}
-	log("Voice: listening to '" + mic + "' (16 kHz mono goes to ClipHound, nothing is recorded).");
 	QJsonObject o;
 	o["type"] = "voice_config";
 	o["enabled"] = true;
@@ -1949,6 +1948,39 @@ void Engine::applyVoice()
 		names.append(QString::fromStdString(f.name));
 	o["squad"] = names;
 	bridge.sendJson(o);
+}
+
+void Engine::applyVoice()
+{
+	if (!cfg.voiceEnabled || bridge.clients() == 0) {
+		if (voice.attached()) {
+			voice.detach();
+			log("Voice: microphone released.");
+		}
+		return;
+	}
+	QString mic = QString::fromStdString(cfg.voiceMic);
+	if (mic.isEmpty())
+		mic = VoiceTap::pickMic();
+	if (mic.isEmpty()) {
+		if (voiceStatus_ != "no microphone source in OBS") {
+			voiceStatus_ = "no microphone source in OBS";
+			log("Voice: no microphone source found in OBS; add a Mic/Aux input or pick one in Settings.");
+		}
+		return;
+	}
+	if (voice.attached() && voice.sourceName() == mic) {
+		sendVoiceConfig(); // asked again (the app just came up): the same settings, again
+		return;
+	}
+	voiceFlowing_ = false;
+	QString err = voice.attach(mic);
+	if (!err.isEmpty()) {
+		log("Voice: " + err);
+		return;
+	}
+	log("Voice: listening to '" + mic + "' (16 kHz mono goes to ClipHound, nothing is recorded).");
+	sendVoiceConfig();
 }
 
 void Engine::onVoiceCommand(const QString &cmd, const QString &name, const QString &heard)

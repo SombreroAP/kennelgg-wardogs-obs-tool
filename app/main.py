@@ -1,6 +1,7 @@
 """ClipHound: OCR the WARDOGS kill feed -> Twitch clip + tagged OBS replay."""
 import os
 import sys
+import time
 
 # Frozen (installer) build: work from the exe's folder so config.yaml, debug/ and the library
 # paths resolve, and use the bundled Tesseract.
@@ -42,6 +43,13 @@ if getattr(sys, "frozen", False):
         import ctypes
         _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\KennelClipHound")
         if ctypes.windll.kernel32.GetLastError() == 183:
+            try:
+                with open("cliphound.log", "a", encoding="utf-8") as fh:
+                    fh.write(time.strftime("%H:%M:%S") + " [app] another ClipHound is already running on this PC - "
+                             "this one exits. If the plugin says it is connected but nothing works, close the "
+                             "other copy (Task Manager, ClipHound.exe) and press Start ClipHound on the dock.\n")
+            except Exception:
+                pass
             raise SystemExit(0)
     except SystemExit:
         raise
@@ -207,6 +215,10 @@ def main():
             bridge.on_audio = vo.feed
             bridge.on_voice_config = vo.configure
             bridge.on_voice_name = vo.name_clip
+            if bridge.pending_voice_cfg:         # the plugin's settings came before this module was up
+                vo.configure(bridge.pending_voice_cfg)
+                bridge.pending_voice_cfg = None
+            bridge.send({"type": "voice_ready"})  # ...and ask for them again either way
         except Exception as e:
             print(f"[voice] not available: {e}")
 

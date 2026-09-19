@@ -2,6 +2,11 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.11
+- **Voice (beta) tuned on a real streamer's clip.** Of four asks in the clip only "replay" got through; all four do now. Whisper's second look accepts the ways it spells "kennel" in different accents ("kettle", "kernel", "kendall"...) as long as the listener heard the wake phrase and a "hey" came first, so "dog kennel" still stays quiet. "P O V" said as letters counts as "POV". "Both POV" and "picture in picture" mean Dual POV; "switch POV", "swap POV" and a bare "switch" or "next" mean the next squad mate. A different command straight after another is no longer swallowed as a repeat.
+- **Voice settings could be lost at start-up.** The plugin sent them 1.5 s after ClipHound connected, and on a slow start ClipHound's voice module was not up yet, so they were dropped: the microphone flowed and nothing listened. ClipHound now keeps settings that arrive early and asks for them again when it is ready.
+- **A second ClipHound is called out.** The plugin only ever knew about the copy it started; one started another way, or an old copy left running, answered instead and nothing matched the logs. Now ClipHound reports its version on connect (the plugin logs a mismatch and what to do), a copy that finds another already running writes why it exits, and a connect that comes too soon after the plugin's own launch is flagged as a copy that was already there.
+
 ## 0.18.10
 - The dock's events list says why a squad mate went on: INVENTORY, DOWNED, VOICE, STREAM DECK, CLOSEST or SHOWING, and "back up" names what ended it. It said DOWNED for all of them.
 

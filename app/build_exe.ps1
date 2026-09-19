@@ -26,6 +26,7 @@ if (Test-Path "../data/overlay/SairaCondensed-Bold.ttf") {
   New-Item -ItemType Directory -Force "dist/ClipHound/fonts" | Out-Null
   Copy-Item "../data/overlay/SairaCondensed-Bold.ttf" "dist/ClipHound/fonts/"
 }
+(Get-Content ../buildspec.json -Raw | ConvertFrom-Json).version | Set-Content dist/ClipHound/version.txt
 Copy-Item config.yaml dist/ClipHound/config.default.yaml
 Remove-Item dist/ClipHound/config.yaml -ErrorAction SilentlyContinue
 Copy-Item README.md dist/ClipHound/README.md

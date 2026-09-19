@@ -22,6 +22,16 @@ except ImportError as e:  # pragma: no cover
     raise SystemExit("pip install websocket-client") from e
 
 
+def _app_version() -> str:
+    """version.txt next to the exe, written at build time; '' from a source checkout."""
+    try:
+        import sys
+        with open(os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "version.txt"), encoding="utf-8") as fh:
+            return fh.read().strip()
+    except Exception:
+        return ""
+
+
 def _roi_list(r) -> list:
     """ROI as [x, y, w, h] floats, from either a list or a {x,y,w,h} mapping. [] if unusable."""
     try:
@@ -63,6 +73,7 @@ class Bridge:
         self.on_obs_health = None    # callable(msg): OBS's dropped-frame counters
         self.on_audio = None          # 16 kHz mono int16 microphone PCM (voice.py)
         self.on_voice_config = None
+        self.pending_voice_cfg = None
         self.on_voice_name = None
         # the game's NEARBY panel: the plugin says whether to read it, where it is and whose names
         # to look for; nearby_burst is a deadline until which we read it every quarter second
@@ -104,6 +115,7 @@ class Bridge:
             return
         c = self.cfg
         self.send({"type": "app_config", "values": {
+            "app_version": _app_version(),
             "player_name": c["detection"].get("player_name", ""),
             "library": (c.get("obs") or {}).get("library", ""),
             "broadcaster": (c.get("twitch") or {}).get("broadcaster_login", ""),
@@ -270,6 +282,8 @@ class Bridge:
         elif t == "voice_config":
             if self.on_voice_config:
                 self.on_voice_config(o)
+            else:
+                self.pending_voice_cfg = o   # the voice module is not up yet: kept for it
         elif t == "voice_name":
             if self.on_voice_name:
                 self.on_voice_name(o.get("path", ""), float(o.get("epoch") or time.time()))

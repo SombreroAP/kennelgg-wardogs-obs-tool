@@ -45,7 +45,7 @@ INTENTS = {
                  "record that", "clip him", "clip the last bit"],
     "dual_off": ["dual off", "dual pov off", "stop dual", "single pov", "end dual", "turn off dual"],
     "dual":     ["dual", "dual pov", "dual point of view", "force dual", "split screen", "both povs",
-                 "two povs", "dual on", "go dual"],
+                 "two povs", "dual on", "go dual", "both pov", "both", "both of us", "picture in picture", "two pov"],
     "force":    ["force squad mate", "force squad mate pov", "squad mate pov", "show squad mate", "show my squad mate",
                  "show his pov", "show her pov", "show their pov", "teammate pov", "switch to squad mate",
                  "squad mate point of view", "show squad mate point of view", "go to squad mate"],
@@ -54,7 +54,8 @@ INTENTS = {
                  "show closest squad mate point of view"],
     "change":   ["change squad mate", "next squad mate", "switch squad mate", "other squad mate", "next pov",
                  "change pov", "change point of view", "swap squad mate", "next one", "someone else",
-                 "change squad mate point of view"],
+                 "change squad mate point of view", "switch pov", "switch povs", "swap pov", "switch the pov",
+                 "switch point of view", "next point of view", "other pov"],
     "me":       ["back", "my pov", "me", "back to me", "my point of view", "show me", "stop", "my screen",
                  "go back", "back to my pov"],
     "highlights": ["highlights", "play highlights", "compilation", "montage", "play the compilation"],
@@ -107,6 +108,7 @@ class Voice:
         self._loader = None
         self._last_cmd = 0.0
         self._last_clip_cmd = 0.0   # when "kennel clip" was last heard: the name comes after it
+        self._last_cmd_name = ""
         self._got = 0               # samples received since the last level report
         self._sq = 0.0              # their energy
         self._first = True
@@ -277,9 +279,13 @@ class Voice:
             wake_words = self.wake.split()
             last, lead = wake_words[-1], (wake_words[-2] if len(wake_words) > 1 else "")
             words = re.sub(r"[^a-z0-9' ]", " ", text).split()
+            # how Whisper tends to spell "kennel" in different accents; the listener has already
+            # heard the wake phrase, this is the second opinion, so near-homophones count
+            alike = {"kennel", "kennels", "kenel", "kettle", "kernel", "kendall", "cannel", "canal", "kenneth",
+                     "kenna", "kenno", "kennell", "kenle"} if last == "kennel" else set()
             ok = False
             for k, w in enumerate(words):
-                if w == last or (len(w) >= 4 and difflib.SequenceMatcher(None, w, last).ratio() >= 0.75):
+                if w == last or w in alike or (len(w) >= 4 and difflib.SequenceMatcher(None, w, last).ratio() >= 0.7):
                     if not lead or (k > 0 and self._lead_ok(words[k - 1], lead)):
                         ok = True
             print(f"[voice] wake check: {'yes' if ok else 'no'}  <- {text!r}")
@@ -347,11 +353,13 @@ class Voice:
         phrases = {"[unk]", "show [unk]", "switch to [unk]", "clip that [unk]"}
         for wk in self.wakes():
             phrases |= {wk, f"{wk} show [unk]", f"{wk} switch to [unk]", f"{wk} change to [unk]", f"{wk} clip that [unk]",
-                        f"{wk} clip [unk]"}
+                        f"{wk} clip [unk]", f"{wk} switch", f"{wk} change", f"{wk} swap", f"{wk} next", "switch", "change",
+                        "swap", "next"}
             for ps in INTENTS.values():
                 for p in ps:
-                    phrases.add(f"{wk} {p}")
-                    phrases.add(p)   # on its own: counts only in the moment after the wake phrase
+                    for q in (p, p.replace("povs", "p o v s").replace("pov", "p o v")):
+                        phrases.add(f"{wk} {q}")
+                        phrases.add(q)   # on its own: counts only in the moment after the wake phrase
         try:
             rec = KaldiRecognizer(self._vosk, RATE, json.dumps(sorted(phrases)))
             print(f"[voice] listening for {len(phrases)} phrases after '{self.wake}'")
@@ -388,6 +396,7 @@ class Voice:
     def _heard(self, text: str, partial: bool = False) -> bool:
         t = " " + re.sub(r"[^a-z0-9' ]", " ", text.lower()) + " "
         t = re.sub(r"\s+", " ", t)
+        t = t.replace(" p o v s ", " povs ").replace(" p o v ", " pov ").replace(" pee oh vee ", " pov ")
         # the wake phrase as the model heard it: "hey kennel", or just "kennel", or "kennels" / "kenel"
         ws = t.split()
         wi = -1
@@ -420,6 +429,8 @@ class Voice:
                     self._play_chime()
                 return False
         cmd, name, score = self.intent(after)
+        if not cmd and not partial and after in ("switch", "change", "swap", "next", "swap to", "switch to", "change to"):
+            cmd, name, score = "change", "", 1.0   # no name said: the next squad mate with a picture
         if not cmd and not partial and after not in ("show", "switch to", "change to", "clip that", "clip"):
             # a whole sentence after the wake phrase, and it made no command: say so
             if wi >= 0 or now <= self._armed_until:
@@ -449,9 +460,10 @@ class Voice:
         if self.allow and cmd not in self.allow and cmd not in ("me", "highlights", "clip_replay"):
             return True                # switched off in the plugin: swallow it, say nothing
         now = time.time()
-        if now - self._last_cmd < 2.0:
+        if now - self._last_cmd < 2.0 and cmd == self._last_cmd_name:
             return True                # the same command, heard twice (partial then final)
         self._last_cmd = now
+        self._last_cmd_name = cmd
         self._armed_until = 0.0
         if cmd in ("clip", "clip_replay"):
             self._last_clip_cmd = now
