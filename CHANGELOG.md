@@ -2,6 +2,10 @@
 
 All notable changes to Kennel.gg Wardogs Streaming Tool. Release notes on GitHub are taken from here.
 
+## 0.18.12
+- **Voice (beta): quicker again, without the old jump.** The hold on a command that a longer phrase begins with ("clip", "replay", "dual") is 1.1 s and now starts from the first partial result instead of after the listener's own wait for silence, so it lands about 1.2 s after the last word instead of 1.8 s; a command nothing longer begins with lands in under a second, and "clip and replay" said in one breath fires before the sentence is over. A pause of up to about half a second between "clip" and "and replay" is bridged; a longer one is two asks.
+- Whisper's second look at the wake phrase is re-taken at the end of the sentence when its first look at a half-sentence said no, so a command is not lost to one bad glance.
+
 ## 0.18.11
 - **Voice (beta) tuned on a real streamer's clip.** Of four asks in the clip only "replay" got through; all four do now. Whisper's second look accepts the ways it spells "kennel" in different accents ("kettle", "kernel", "kendall"...) as long as the listener heard the wake phrase and a "hey" came first, so "dog kennel" still stays quiet. "P O V" said as letters counts as "POV". "Both POV" and "picture in picture" mean Dual POV; "switch POV", "swap POV" and a bare "switch" or "next" mean the next squad mate. A different command straight after another is no longer swallowed as a repeat.
 - **A breath in the middle of an ask.** "Hey kennel, clip ... and replay" used to save a plain clip the moment "clip" was heard. A command that a longer phrase begins with (clip, dual, replay) is now held for about a second and a half, and words that follow complete it: the hold stretches while you are still talking and "and replay" turns it into clip + replay. Said in one breath it is as quick as before; said alone it fires when the hold ends.

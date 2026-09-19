@@ -28,7 +28,7 @@ RING_S = 30                       # seconds of microphone kept for naming
 BEFORE_S, AFTER_S = 8.0, 4.0      # the window around a manual clip that names it
 VOICE_AFTER_S = 7.0               # "kennel clip that" ... then the sentence that names it
 MAX_TITLE_WORDS = 7
-GRACE_S = 1.5          # a command that a longer phrase begins with waits this long for the rest
+GRACE_S = 1.1          # a command that a longer phrase begins with waits this long for the rest
 
 VOSK_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
 VOSK_DIR = "vosk-model-small-en-us-0.15"
@@ -270,7 +270,7 @@ class Voice:
         if self._whisper is None:
             return True
         try:
-            audio = self._window(now - 2.5, now)
+            audio = self._window(now - 3.0, now)
             if len(audio) < RATE // 2:
                 return True
             f = audio.astype(np.float32) / 32768.0
@@ -295,7 +295,7 @@ class Voice:
             if ok:
                 self._wake_ok_until = now + 6.0
             else:
-                self._wake_no_until = now + 1.5
+                self._wake_no_until = now + 0.6   # a "no" on a partial is looked at again at the final
             return ok
         except Exception as e:
             print(f"[voice] wake check: {e}")
@@ -413,20 +413,37 @@ class Voice:
                 wi = k
         now = time.time()
         if self._pending:
-            # a command is held for a moment: more words without a wake phrase may complete it
-            # ("clip" ... "and replay" is "clip and replay"). Words still being said keep it held
-            # (the listener finalises a second after the talking stops); a new wake phrase lets
-            # it go as it is
+            # a command is held for a moment: more words may complete it ("clip" ... "and replay"
+            # is "clip and replay"). The hold starts from the first partial result, so the
+            # listener's own wait for silence is not added on top; the same words again (the
+            # final result) keep it held, words still being said extend it, and a different ask
+            # with its own wake phrase lets it go as it is
             p = self._pending
-            if wi < 0 and (partial or now <= p["deadline"]):
-                combined = (p["after"] + " " + " ".join(w for w in ws if w != "unk")).strip()
+            if wi >= 0:
+                after_now = " ".join(w for w in ws[wi + 1:] if w != "unk").strip()
+                if after_now == p["after"]:
+                    return not partial
+                if after_now.startswith(p["after"] + " "):
+                    c2, n2, s2 = self.intent(after_now)
+                    if c2 and c2 != p["cmd"]:
+                        self._pending = None
+                        self._armed_until = 0.0
+                        return self._fire(c2, n2, after_now, s2, now)
+                    p["after"], p["heard"] = after_now, text
+                    p["deadline"] = max(p["deadline"], now + 0.7)
+                    return not partial
+            elif partial or now <= p["deadline"]:
+                new = " ".join(w for w in ws if w != "unk").strip()
+                # the listener re-sends the growing ask ("clip", "clip that"): that is the same ask
+                # grown, not two asks; only words that do not start with it are added on
+                combined = new if new.startswith(p["after"]) else (p["after"] + " " + new).strip()
                 c2, n2, s2 = self.intent(combined)
                 if c2 and c2 != p["cmd"]:
                     self._pending = None
                     self._armed_until = 0.0
                     return self._fire(c2, n2, combined, s2, now)
                 if partial:
-                    p["deadline"] = max(p["deadline"], now + 1.0)
+                    p["deadline"] = max(p["deadline"], now + 0.7)
                     return False
             if not partial:
                 self._flush_pending(now, force=True)
@@ -473,8 +490,13 @@ class Voice:
             if score < 0.87 or name or after.split()[0] in ("show", "switch", "change", "swap", "go", "put", "watch"):
                 return False
             # ...and not a phrase that a longer one begins with: "clip" is the start of "clip and
-            # replay", so acting on it mid-sentence turned "clip and replay" into a plain clip
+            # replay", so acting on it mid-sentence turned "clip and replay" into a plain clip.
+            # It is held from here, so the wait for the final result is not added to the hold
             if self._starts_longer(after):
+                if not self._pending:
+                    self._pending = {"cmd": cmd, "name": name, "after": after, "heard": text, "score": score,
+                                     "deadline": now + GRACE_S}
+                    self._armed_until = 0.0
                 return False
         if not partial and self._starts_longer(after) and not name:
             # "clip", "dual", "replay": a longer ask may follow after a breath. Hold it a moment
