@@ -28,6 +28,7 @@ RING_S = 30                       # seconds of microphone kept for naming
 BEFORE_S, AFTER_S = 8.0, 4.0      # the window around a manual clip that names it
 VOICE_AFTER_S = 7.0               # "kennel clip that" ... then the sentence that names it
 MAX_TITLE_WORDS = 7
+GRACE_S = 1.5          # a command that a longer phrase begins with waits this long for the rest
 
 VOSK_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
 VOSK_DIR = "vosk-model-small-en-us-0.15"
@@ -109,6 +110,7 @@ class Voice:
         self._last_cmd = 0.0
         self._last_clip_cmd = 0.0   # when "kennel clip" was last heard: the name comes after it
         self._last_cmd_name = ""
+        self._pending = None        # a command held for GRACE_S: {cmd, name, after, heard, score, deadline}
         self._got = 0               # samples received since the last level report
         self._sq = 0.0              # their energy
         self._first = True
@@ -234,13 +236,14 @@ class Voice:
         while True:
             with self._q_cv:
                 while not self._q:
-                    self._q_cv.wait(1.0)
+                    self._q_cv.wait(0.2)
                     if not self._q:
-                        continue
+                        self._flush_pending(time.time())
                 chunk = b"".join(self._q)
                 self._q.clear()
             if not self.commands or self._vosk is None:
                 continue
+            self._flush_pending(time.time())
             if rec is None or self._grammar_wake != self.wake:
                 rec = self._recogniser()
             try:
@@ -409,6 +412,24 @@ class Voice:
                     continue
                 wi = k
         now = time.time()
+        if self._pending:
+            # a command is held for a moment: more words without a wake phrase may complete it
+            # ("clip" ... "and replay" is "clip and replay"). Words still being said keep it held
+            # (the listener finalises a second after the talking stops); a new wake phrase lets
+            # it go as it is
+            p = self._pending
+            if wi < 0 and (partial or now <= p["deadline"]):
+                combined = (p["after"] + " " + " ".join(w for w in ws if w != "unk")).strip()
+                c2, n2, s2 = self.intent(combined)
+                if c2 and c2 != p["cmd"]:
+                    self._pending = None
+                    self._armed_until = 0.0
+                    return self._fire(c2, n2, combined, s2, now)
+                if partial:
+                    p["deadline"] = max(p["deadline"], now + 1.0)
+                    return False
+            if not partial:
+                self._flush_pending(now, force=True)
         if wi < 0:
             # no wake phrase in this: it counts only in the few seconds after a bare "hey kennel"
             ws = [w for w in ws if w != "unk"]
@@ -455,16 +476,30 @@ class Voice:
             # replay", so acting on it mid-sentence turned "clip and replay" into a plain clip
             if self._starts_longer(after):
                 return False
+        if not partial and self._starts_longer(after) and not name:
+            # "clip", "dual", "replay": a longer ask may follow after a breath. Hold it a moment
+            self._pending = {"cmd": cmd, "name": name, "after": after, "heard": text, "score": score,
+                             "deadline": now + GRACE_S}
+            self._armed_until = 0.0
+            return True
+        self._armed_until = 0.0
+        return self._fire(cmd, name, text, score, now)
+
+    def _flush_pending(self, now: float, force: bool = False):
+        p = self._pending
+        if p and (force or now > p["deadline"]):
+            self._pending = None
+            self._fire(p["cmd"], p["name"], p["heard"], p["score"], now)
+
+    def _fire(self, cmd: str, name: str, text: str, score: float, now: float) -> bool:
         if cmd == "clip_replay" and self.allow and not ("clip" in self.allow and "replay" in self.allow):
             return True                # one of the two halves is switched off
         if self.allow and cmd not in self.allow and cmd not in ("me", "highlights", "clip_replay"):
             return True                # switched off in the plugin: swallow it, say nothing
-        now = time.time()
         if now - self._last_cmd < 2.0 and cmd == self._last_cmd_name:
             return True                # the same command, heard twice (partial then final)
         self._last_cmd = now
         self._last_cmd_name = cmd
-        self._armed_until = 0.0
         if cmd in ("clip", "clip_replay"):
             self._last_clip_cmd = now
         print(f"[voice] command: {cmd} {name!r} ({score:.2f})  <- {text!r}")
